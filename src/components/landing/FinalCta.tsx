@@ -1,6 +1,7 @@
 import { CtaButton } from "@/components/site/Cta";
 import { Reveal } from "@/components/site/Reveal";
-import { Phone, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { Link } from "react-router";
 import { SectionLabel } from "./SectionLabel";
 
 export function FinalCta({ onQuote }: { onQuote: () => void }) {
@@ -25,7 +26,7 @@ export function FinalCta({ onQuote }: { onQuote: () => void }) {
 
             <div className="relative grid gap-10 lg:grid-cols-[1.25fr_1fr] lg:items-center">
               <div>
-                <SectionLabel index="07" className="text-ink/50">
+                <SectionLabel index="07" className="text-ink/65">
                   Your next chapter
                 </SectionLabel>
                 <h2 className="mt-5 max-w-xl text-balance text-[clamp(2.2rem,4.6vw,3.7rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
@@ -33,9 +34,9 @@ export function FinalCta({ onQuote }: { onQuote: () => void }) {
                   <span className="text-electric">universe.</span>
                 </h2>
                 <p className="mt-4 max-w-md text-[0.93rem] leading-7 text-ink/60">
-                  A quiet conversation, a clear quote, and cover that makes the
-                  future feel a little lighter. No pressure, no jargon, no
-                  obligation.
+                  A quiet conversation and a clear quote, with no price promise
+                  before underwriting and no fabricated certainty. Ask us
+                  anything, including whether you need cover at all.
                 </p>
               </div>
 
@@ -44,18 +45,18 @@ export function FinalCta({ onQuote }: { onQuote: () => void }) {
                   Get a free quote
                 </CtaButton>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:flex-col lg:items-end">
-                  <a
-                    href="tel:+442079460958"
+                  <Link
+                    to="/support/contact"
                     className="group inline-flex items-center gap-2.5 text-sm font-medium text-ink/70 transition-colors hover:text-ink"
                   >
                     <span className="grid size-8 place-items-center rounded-full border border-ink/15 transition-colors group-hover:border-ink/35">
-                      <Phone className="size-3.5" />
+                      <Sparkles className="size-3.5" />
                     </span>
-                    Prefer to talk? 020 7946 0958
-                  </a>
-                  <p className="flex items-center gap-1.5 text-xs text-ink/45 lg:pr-1">
+                    Prefer to ask first? Contact support
+                  </Link>
+                  <p className="flex items-center gap-1.5 text-xs text-ink/60 lg:pr-1">
                     <Sparkles className="size-3.5 text-electric" />
-                    Advisors answer in under 2 hours
+                    No obligation, no pressure, no jargon
                   </p>
                 </div>
               </div>

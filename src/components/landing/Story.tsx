@@ -13,7 +13,7 @@ export function Story() {
     <section id="about" className="relative mt-24 scroll-mt-28 sm:mt-32">
       <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
         <Reveal>
-          <SectionLabel index="01" className="text-ink/55">
+          <SectionLabel index="01" className="text-ink/65">
             Our promise
           </SectionLabel>
         </Reveal>
@@ -24,22 +24,22 @@ export function Story() {
               <div className="relative overflow-hidden rounded-[1.8rem] border border-ink/10 bg-muted">
                 <img
                   src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=1100&q=80"
-                  alt="Two Cosmic Vault advisors meeting with a member"
+                  alt="An illustration of an advisory conversation about insurance"
                   loading="lazy"
                   className="aspect-[4/4.6] w-full object-cover transition-transform duration-[1.4s] ease-out hover:scale-[1.035]"
                 />
                 <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#071227]/60 to-transparent" />
                 <p className="absolute bottom-4 left-4 text-[0.6rem] uppercase tracking-[0.26em] text-bone/75">
-                  Meridian Wharf · London
+                  Insurance for the long horizon
                 </p>
               </div>
 
               <div className="absolute -bottom-6 right-3 rounded-2xl border border-line bg-card px-5 py-4 sm:-right-6">
                 <p className="font-display text-3xl italic leading-none text-electric">
-                  Since 2009
+                  Clear terms
                 </p>
                 <p className="mt-1.5 text-[0.6rem] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  Quietly protecting 24,000 lives
+                  Written to be read, not skimmed
                 </p>
               </div>
             </div>
@@ -68,7 +68,7 @@ export function Story() {
 
             <Reveal delay={0.26}>
               <div className="mt-8 flex flex-wrap items-center gap-6">
-                <CtaLink href="#coverage" variant="ink">
+                <CtaLink to="/cover" variant="ink">
                   Explore our cover
                 </CtaLink>
                 <div className="flex items-center gap-3">
@@ -85,9 +85,9 @@ export function Story() {
                     ))}
                   </div>
                   <p className="text-xs leading-4 text-muted-foreground">
-                    Advisors, not
+                    Real people,
                     <br />
-                    call centres.
+                    on the record.
                   </p>
                 </div>
               </div>

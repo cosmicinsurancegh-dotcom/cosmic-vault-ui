@@ -1,6 +1,6 @@
 import { Reveal } from "@/components/site/Reveal";
 import { AnimatePresence, motion } from "framer-motion";
-import { Minus, Plus, ShieldCheck, Star } from "lucide-react";
+import { Minus, Plus, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -14,12 +14,12 @@ const pillars = [
     text: "One price, shown in full, before you decide. No teaser rates that double in year two and no commission buried in the fine print.",
   },
   {
-    title: "Claims in 48 hours",
-    text: "Nine in ten claims are assessed and settled within two working days. A real person owns your claim from first call to final payment.",
+    title: "Claims decided by a person",
+    text: "Your claim is assessed against the policy by an authorised handler and the decision is recorded with its reasons. We do not publish settlement promises we cannot keep.",
   },
   {
-    title: "Always-on concierge",
-    text: "Storm at 2am, diagnosis on a Friday, a fender bender abroad — your vault line is answered by a human, every hour of every day.",
+    title: "Support that stays with the record",
+    text: "Storm damage, a diagnosis, a fender bender abroad — your request is held against the policy or claim it concerns, so you never explain yourself twice.",
   },
 ];
 
@@ -30,16 +30,15 @@ export function Why() {
     <section className="relative mt-24 sm:mt-32">
       <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
         <Reveal className="mx-auto max-w-2xl text-center">
-          <p className="text-[0.66rem] font-semibold uppercase tracking-[0.30em] text-ink/50">
-            02 — Why Cosmic Vault
+          <p className="text-[0.66rem] font-semibold uppercase tracking-[0.30em] text-ink/65">
+            02 — How we work
           </p>
           <h2 className="mt-4 text-balance text-[clamp(2.1rem,4.6vw,3.7rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
-            Why thousands <span className="text-electric">trust</span> the
-            vault.
+            Why we do it <span className="text-electric">this way.</span>
           </h2>
-          <p className="mx-auto mt-4 max-w-md text-[0.92rem] leading-6 text-muted-foreground">
-            From first homes to final horizons, our members stay for one reason:
-            when something goes wrong, we are already there.
+          <p className="mx-auto mt-4 max-w-lg text-[0.92rem] leading-6 text-muted-foreground">
+            Four decisions shape how Cosmic Vault behaves when a claim, a change
+            or a difficult question lands on someone&apos;s desk.
           </p>
         </Reveal>
 
@@ -118,23 +117,17 @@ export function Why() {
               <div className="relative h-full min-h-[22rem] overflow-hidden rounded-[1.8rem] border border-ink/10">
                 <img
                   src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1100&q=80"
-                  alt="A Cosmic Vault advisor listening to a member"
+                  alt="An illustration of a discussion about an insurance claim"
                   loading="lazy"
                   className="size-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#071227]/80 via-transparent to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
-                  <div className="flex items-center gap-1 text-halo">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <Star key={index} className="size-3.5 fill-halo" />
-                    ))}
-                  </div>
                   <p className="mt-3 font-display text-[1.35rem] italic leading-snug text-bone">
-                    &ldquo;They picked up at 11pm and had us sorted by
-                    morning.&rdquo;
+                    Every claim decision is recorded with the reason behind it.
                   </p>
                   <p className="mt-2 text-[0.65rem] uppercase tracking-[0.2em] text-bone/60">
-                    Member since 2016 · Bristol
+                    How we assess claims
                   </p>
                 </div>
               </div>
@@ -144,9 +137,11 @@ export function Why() {
                   <ShieldCheck className="size-4" />
                 </span>
                 <div className="pr-1">
-                  <p className="text-sm font-semibold leading-none text-ink">98%</p>
+                  <p className="text-sm font-semibold leading-none text-ink">
+                    Manual underwriting
+                  </p>
                   <p className="mt-1 text-[0.58rem] uppercase tracking-[0.16em] text-muted-foreground">
-                    Claims paid in full
+                    Decisions by a person
                   </p>
                 </div>
               </div>

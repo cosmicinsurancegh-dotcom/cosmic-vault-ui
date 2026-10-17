@@ -155,27 +155,29 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
 
           <div className="mt-10 max-w-md rounded-2xl border border-white/12 bg-white/[0.035] p-5">
             <div className="flex items-center gap-3">
-              <img
-                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80"
-                alt=""
-                className="size-9 rounded-full object-cover"
-              />
+              <span className="grid size-9 place-items-center rounded-full border border-white/15 text-electric-soft">
+                <ShieldCheck className="size-4" />
+              </span>
               <div>
-                <p className="text-xs font-medium text-bone">Mira Okafor</p>
-                <p className="text-[0.62rem] text-bone/40">Member since 2019</p>
+                <p className="text-xs font-medium text-bone">
+                  One vault, one record
+                </p>
+                <p className="text-[0.62rem] text-bone/40">
+                  Policies, claims, documents
+                </p>
               </div>
               <Sparkles className="ml-auto size-4 text-electric-soft" />
             </div>
             <p className="mt-3 font-display text-lg italic leading-snug text-bone/80">
-              &ldquo;It&apos;s the first time insurance has felt like someone
-              looking after us, rather than selling to us.&rdquo;
+              Quotes, decisions and documents stay on the same record — so
+              nothing depends on remembering a phone call.
             </p>
           </div>
         </div>
 
         <div className="relative mt-10 flex items-center justify-between border-t border-white/10 pt-5 text-[0.62rem] uppercase tracking-[0.16em] text-bone/35">
-          <span>FCA regulated · FRN 928104</span>
-          <span>Est. 2009</span>
+          <span>Email code sign-in, no password</span>
+          <span>Demonstration platform</span>
         </div>
       </aside>
 
@@ -321,8 +323,10 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
 
                   <p className="mt-5 flex items-start gap-2 text-[0.7rem] leading-5 text-muted-foreground">
                     <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-electric" />
-                    Guest sessions let you explore the vault. Sign in with your
-                    email whenever you want your quotes to stay.
+                    Guest sessions are temporary: they let you explore the vault,
+                    but nothing done as a guest is permanently saved. Sign in with
+                    your email whenever you want your quotes and applications to
+                    stay on a record.
                   </p>
                 </motion.div>
               ) : (
@@ -438,10 +442,24 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
 
         <div className="flex flex-col items-center gap-2 text-center">
           <p className="text-[0.68rem] text-muted-foreground">
-            Protected by 256-bit encryption · Your details stay in the vault.
+            Sign-in is protected by a one-time code sent to your email.
           </p>
           <p className="text-[0.62rem] text-muted-foreground/70">
-            By continuing you agree to our Terms and Privacy Notice.
+            By continuing you agree to our{" "}
+            <a
+              href="/legal/terms"
+              className="underline underline-offset-2 transition-colors hover:text-ink"
+            >
+              Terms
+            </a>{" "}
+            and{" "}
+            <a
+              href="/legal/privacy"
+              className="underline underline-offset-2 transition-colors hover:text-ink"
+            >
+              Privacy Notice
+            </a>
+            .
           </p>
         </div>
       </section>

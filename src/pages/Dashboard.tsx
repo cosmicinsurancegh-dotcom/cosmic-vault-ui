@@ -32,7 +32,6 @@ import {
   coverageLabel,
   formatGBP,
   initials,
-  planByName,
   type CoverageKey,
 } from "@/lib/vault";
 import { cn } from "@/lib/utils";
@@ -47,15 +46,13 @@ import {
   FileText,
   Headset,
   LogOut,
-  Mail,
   Menu,
-  Phone,
   Plus,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
 type Quote = Doc<"quotes">;
@@ -94,7 +91,6 @@ export default function Dashboard() {
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [quoteSession, setQuoteSession] = useState(0);
   const [quoteCoverage, setQuoteCoverage] = useState<CoverageKey>("health");
-  const [quotePlan, setQuotePlan] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     try {
@@ -114,9 +110,8 @@ export default function Dashboard() {
     month: "long",
   });
 
-  const openQuote = (coverage: CoverageKey = "health", plan?: string) => {
+  const openQuote = (coverage: CoverageKey = "health") => {
     setQuoteCoverage(coverage);
-    setQuotePlan(plan);
     setQuoteSession((session) => session + 1);
     setQuoteOpen(true);
   };
@@ -132,10 +127,10 @@ export default function Dashboard() {
   const stats = useMemo(() => {
     const list = quotes ?? [];
     const lines = new Set(list.map((quote) => quote.coverage));
-    const monthly = list.reduce((total, quote) => {
-      const plan = planByName(quote.plan);
-      return total + (quote.monthlyEstimate ?? plan?.monthly ?? 0);
-    }, 0);
+    const monthly = list.reduce(
+      (total, quote) => total + (quote.monthlyEstimate ?? 0),
+      0,
+    );
     const readiness =
       list.length === 0
         ? 22
@@ -171,10 +166,10 @@ export default function Dashboard() {
     const premiumRows: PremiumPoint[] = COVERAGE_OPTIONS.map((option) => {
       const premium = list
         .filter((quote) => quote.coverage === option.key)
-        .reduce((total, quote) => {
-          const plan = planByName(quote.plan);
-          return total + (quote.monthlyEstimate ?? plan?.monthly ?? 0);
-        }, 0);
+        .reduce(
+          (total, quote) => total + (quote.monthlyEstimate ?? 0),
+          0,
+        );
       return { key: option.key, label: option.short, premium };
     }).filter((point) => point.premium > 0);
 
@@ -328,7 +323,6 @@ export default function Dashboard() {
         open={quoteOpen}
         onOpenChange={setQuoteOpen}
         defaultCoverage={quoteCoverage}
-        defaultPlan={quotePlan}
       />
     </div>
   );
@@ -835,47 +829,44 @@ function ConciergeView({
       <div className="starfield relative overflow-hidden rounded-[1.5rem] bg-[#071227] p-6 text-bone sm:p-7">
         <span className="pointer-events-none absolute -right-10 bottom-10 size-40 rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.28),transparent_70%)]" />
         <p className="text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-bone/45">
-          Your named advisor
+          Support
         </p>
         <div className="mt-5 flex items-center gap-4">
-          <span className="relative">
-            <img
-              src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=200&q=80"
-              alt="Maya Chen, Senior Vault Advisor"
-              className="size-16 rounded-full object-cover"
-            />
-            <span className="absolute -bottom-0.5 -right-0.5 size-4 rounded-full border-[3px] border-[#071227] bg-emerald-400" />
+          <span className="relative grid size-16 place-items-center rounded-full border border-white/15 text-electric-soft">
+            <Headset className="size-6" />
           </span>
           <div>
-            <p className="text-lg font-medium tracking-[-0.02em]">Maya Chen</p>
+            <p className="text-lg font-medium tracking-[-0.02em]">
+              Held against your record
+            </p>
             <p className="mt-0.5 text-xs text-bone/50">
-              Senior Vault Advisor · London
+              Policies, claims and payments
             </p>
           </div>
         </div>
         <p className="mt-5 font-display text-[1.35rem] italic leading-snug text-bone/85">
-          &ldquo;I answer my own phone. If something happens, you won&apos;t be
-          starting from scratch with a stranger.&rdquo;
+          Requests reach a person with your file in front of them, and every
+          reply stays on the record.
         </p>
         <div className="mt-6 flex flex-wrap gap-2.5">
-          <a
-            href="tel:+442079460958"
+          <Link
+            to="/support/contact"
             className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-4 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            <Phone className="size-3.5" />
-            020 7946 0958
-          </a>
-          <a
-            href="mailto:concierge@cosmicvault.co"
+            <Headset className="size-3.5" />
+            How support works
+          </Link>
+          <Link
+            to="/help"
             className="inline-flex h-10 items-center gap-2 rounded-full border border-white/15 px-4 text-xs font-medium text-bone/75 transition-colors hover:border-white/35 hover:text-bone"
           >
-            <Mail className="size-3.5" />
-            Email Maya
-          </a>
+            <FileText className="size-3.5" />
+            Help centre
+          </Link>
         </div>
         <div className="mt-6 flex items-center gap-2 border-t border-white/10 pt-4 text-[0.65rem] text-bone/40">
           <Clock className="size-3.5" />
-          Concierge line open 24 hours · average answer 41 seconds
+          No published response time — we answer rather than estimate
         </div>
       </div>
 
@@ -888,9 +879,9 @@ function ConciergeView({
         </p>
         <div className="mt-5 space-y-2.5">
           {HELP_TOPICS.map(({ Icon, title, text }) => (
-            <a
+            <Link
               key={title}
-              href="mailto:concierge@cosmicvault.co"
+              to="/support/contact"
               className="group flex items-start gap-3 rounded-xl border border-line px-4 py-3.5 transition-colors hover:border-primary/30 hover:bg-primary/[0.03]"
             >
               <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-ice text-primary">
@@ -905,7 +896,7 @@ function ConciergeView({
                 </span>
               </span>
               <ArrowUpRight className="mt-1 size-3.5 shrink-0 text-ink/30 transition-colors group-hover:text-primary" />
-            </a>
+            </Link>
           ))}
         </div>
         <button

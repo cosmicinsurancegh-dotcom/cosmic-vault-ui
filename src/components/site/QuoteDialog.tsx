@@ -8,20 +8,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import {
   COVERAGE_ICONS,
   COVERAGE_OPTIONS,
-  PLANS,
-  planByName,
   type CoverageKey,
 } from "@/lib/vault";
 import { api } from "@/convex/_generated/api";
@@ -37,14 +29,12 @@ type QuoteDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultCoverage?: CoverageKey;
-  defaultPlan?: string;
 };
 
 export function QuoteDialog({
   open,
   onOpenChange,
   defaultCoverage = "health",
-  defaultPlan,
 }: QuoteDialogProps) {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -53,7 +43,6 @@ export function QuoteDialog({
   // The parent gives the dialog a fresh key each time it opens, so these
   // initial values are the source of truth for a new request.
   const [coverage, setCoverage] = useState<CoverageKey>(defaultCoverage);
-  const [plan, setPlan] = useState(defaultPlan ?? "recommend");
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [message, setMessage] = useState("");
@@ -64,18 +53,15 @@ export function QuoteDialog({
     event.preventDefault();
     setPending(true);
     try {
-      const chosenPlan = plan === "recommend" ? undefined : plan;
       const result = await requestQuote({
         name,
         email,
         coverage,
-        plan: chosenPlan,
         message: message || undefined,
-        monthlyEstimate: planByName(chosenPlan)?.monthly,
       });
       setReference(result.reference);
       toast.success("Your quote request is in.", {
-        description: `Reference ${result.reference}. A human advisor will be in touch within one business day.`,
+        description: `Reference ${result.reference}. An advisor will review it and reply to your email.`,
       });
     } catch (error) {
       toast.error("We couldn't send that just yet.", {
@@ -108,12 +94,16 @@ export function QuoteDialog({
                 Request received
               </p>
               <h3 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-ink sm:text-4xl">
-                Your universe is in
-                <span className="text-electric"> safe hands.</span>
+                Your request is
+                <span className="text-electric"> on the record.</span>
               </h3>
               <p className="mx-auto mt-4 max-w-sm text-sm leading-6 text-muted-foreground">
-                A named advisor will reach out within one business day with a
-                tailored quote. Keep this reference for your records.
+                An advisor will review what you have sent and reply to your email
+                address. Keep this reference — it is how the request is traced.
+              </p>
+              <p className="mx-auto mt-4 max-w-sm text-xs leading-5 text-muted-foreground">
+                This is a request, not a binding quote. No price is fixed here and
+                nothing is charged until a policy is issued.
               </p>
               <div className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full border border-dashed border-line bg-card px-5 py-2.5 text-sm font-semibold tracking-[0.14em] text-ink">
                 <Sparkles className="size-3.5 text-electric" />
@@ -169,11 +159,11 @@ export function QuoteDialog({
                   Talk to a human
                 </p>
                 <DialogTitle className="text-2xl font-semibold tracking-[-0.03em] text-ink sm:text-[1.75rem]">
-                  Let&apos;s find your <span>perfect cover.</span>
+                  Tell us what to <span>protect.</span>
                 </DialogTitle>
                 <DialogDescription className="text-sm leading-6">
-                  Tell us a little about what you want to protect. An advisor
-                  will shape a plan around it — usually within a day.
+                  Send a request and an advisor will review it. No obligation, and
+                  no price is fixed by this form.
                 </DialogDescription>
               </DialogHeader>
 
@@ -240,28 +230,6 @@ export function QuoteDialog({
                       required
                     />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="quote-plan">Preferred plan (optional)</Label>
-                  <Select value={plan} onValueChange={setPlan}>
-                    <SelectTrigger
-                      id="quote-plan"
-                      className="h-11 w-full rounded-xl bg-card"
-                    >
-                      <SelectValue placeholder="Help me choose" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="recommend">
-                        Help me choose — recommend a plan
-                      </SelectItem>
-                      {PLANS.map((option) => (
-                        <SelectItem key={option.id} value={option.name}>
-                          {option.name} — from £{option.monthly}/mo
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 <div className="space-y-2">

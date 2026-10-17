@@ -1,5 +1,6 @@
 import { ArrowUpRight } from "lucide-react";
 import type { ReactNode } from "react";
+import { Link } from "react-router";
 import { cn } from "@/lib/utils";
 
 type Variant = "primary" | "ink" | "light" | "outline";
@@ -83,21 +84,38 @@ export function CtaButton({
 export function CtaLink({
   children,
   href,
+  to,
   variant = "primary",
   icon = true,
   className,
 }: {
   children: ReactNode;
-  href: string;
+  /** External or same-page anchor target. */
+  href?: string;
+  /** Internal route target, rendered as a client-side link. */
+  to?: string;
   variant?: Variant;
   icon?: boolean;
   className?: string;
 }) {
+  const classes = cn(base, shell[variant], className);
+  const content = (
+    <Content variant={variant} icon={icon}>
+      {children}
+    </Content>
+  );
+
+  if (to) {
+    return (
+      <Link to={to} className={classes}>
+        {content}
+      </Link>
+    );
+  }
+
   return (
-    <a href={href} className={cn(base, shell[variant], className)}>
-      <Content variant={variant} icon={icon}>
-        {children}
-      </Content>
+    <a href={href ?? "#"} className={classes}>
+      {content}
     </a>
   );
 }

@@ -1,6 +1,8 @@
 import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
 import { MissingConvexConfig } from "@/components/site/MissingConvexConfig";
+import { PublicLayout } from "@/components/site/PublicLayout";
+import { PUBLIC_ROUTES } from "@/lib/publicRoutes";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
@@ -198,7 +200,18 @@ createRoot(document.getElementById("root")!).render(
           <RouteSyncer />
           <Suspense fallback={<RouteLoading />}>
             <Routes>
-              <Route path="/" element={<Landing />} />
+              {/* Public marketing site: one shared shell with mega-menu navigation */}
+              <Route element={<PublicLayout />}>
+                <Route index element={<Landing />} />
+                {PUBLIC_ROUTES.map((route) => (
+                  <Route
+                    key={route.path}
+                    path={route.path}
+                    element={route.element}
+                  />
+                ))}
+                <Route path="*" element={<NotFound />} />
+              </Route>
               <Route
                 path="/auth"
                 element={<AuthPage redirectAfterAuth="/dashboard" />}
@@ -250,7 +263,6 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="admin/audit" element={<StaffOnly><RequirePermission permission="audit.view"><AdminAuditPage /></RequirePermission></StaffOnly>} />
                 <Route path="admin/settings" element={<StaffOnly><RequirePermission permission="settings.manage"><AdminSettingsPage /></RequirePermission></StaffOnly>} />
               </Route>
-              <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </BrowserRouter>

@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Link } from "react-router";
 
 export function BrandMark({ className }: { className?: string }) {
   return (
@@ -36,7 +37,7 @@ export function Brand({
   className,
   compact = false,
   as = "a",
-  href = "#top",
+  href = "/",
 }: {
   className?: string;
   compact?: boolean;
@@ -65,7 +66,7 @@ export function Brand({
   );
 
   const classes = cn(
-    "inline-flex items-center gap-2.5 transition-opacity hover:opacity-80",
+    "inline-flex items-center gap-2.5 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     className,
   );
 
@@ -74,8 +75,8 @@ export function Brand({
   }
 
   return (
-    <a href={href} className={classes} aria-label="Cosmic Vault home">
+    <Link to={href} className={classes} aria-label="Cosmic Vault home">
       {content}
-    </a>
+    </Link>
   );
 }

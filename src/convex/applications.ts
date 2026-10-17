@@ -793,7 +793,7 @@ export const issuePolicy = mutation({
         type: "policy.issued",
         title: `Policy ${policyNumber} issued`,
         body: `${product.name} has been issued for your assigned customer.`,
-        href: "/dashboard/broker/policies",
+        href: "/dashboard/policies",
         relatedType: "policies",
         relatedId: policyId,
         dedupeKey: `policy-issued-broker:${policyId}`,
