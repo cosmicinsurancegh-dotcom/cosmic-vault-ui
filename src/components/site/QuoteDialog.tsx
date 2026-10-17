@@ -100,8 +100,8 @@ export function QuoteDialog({
               transition={{ duration: 0.35 }}
               className="px-6 py-9 text-center sm:px-10 sm:py-12"
             >
-              <div className="relative mx-auto grid size-16 place-items-center rounded-full bg-electric text-white">
-                <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-electric/20" />
+              <div className="relative mx-auto grid size-16 place-items-center rounded-full bg-primary text-primary-foreground">
+                <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-primary/20" />
                 <Check className="size-7" strokeWidth={2.4} />
               </div>
               <p className="mt-6 text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
@@ -202,7 +202,7 @@ export function QuoteDialog({
                             className={cn(
                               "grid size-7 shrink-0 place-items-center rounded-full transition-colors",
                               active
-                                ? "bg-electric text-white"
+                                ? "bg-primary text-primary-foreground"
                                 : "bg-ink/[0.05] text-ink/60",
                             )}
                           >

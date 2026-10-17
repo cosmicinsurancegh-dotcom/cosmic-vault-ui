@@ -107,7 +107,7 @@ export function Footer() {
               <button
                 type="submit"
                 aria-label="Subscribe"
-                className="grid size-11 shrink-0 place-items-center rounded-full bg-electric text-white transition-colors hover:bg-[#235fe8]"
+                className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 <ArrowRight className="size-4" />
               </button>

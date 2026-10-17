@@ -1,4 +1,5 @@
 import { Brand } from "@/components/site/Brand";
+import { ThemeToggle } from "@/components/site/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,9 +22,11 @@ import {
 } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { cn } from "@/lib/utils";
 
 interface AuthProps {
   redirectAfterAuth?: string;
+  defaultMode?: "signin" | "signup";
 }
 
 function resolveRedirectAfterAuth(
@@ -36,7 +39,7 @@ function resolveRedirectAfterAuth(
   return fallback;
 }
 
-function Auth({ redirectAfterAuth }: AuthProps = {}) {
+function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
   const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -44,6 +47,12 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     searchParams.get("returnTo"),
     redirectAfterAuth,
   );
+  const [mode, setMode] = useState<"signin" | "signup">(() => {
+    const requested = searchParams.get("mode");
+    if (requested === "signup" || requested === "signin") return requested;
+    return defaultMode ?? "signin";
+  });
+  const isSignup = mode === "signup";
   const [step, setStep] = useState<"signIn" | { email: string }>("signIn");
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -174,16 +183,19 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       <section className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:py-8">
         <div className="flex items-center justify-between">
           <Brand href="/" compact className="text-ink lg:hidden" />
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="group ml-auto inline-flex items-center gap-2 text-xs font-medium text-muted-foreground transition-colors hover:text-ink"
-          >
-            <span className="grid size-7 place-items-center rounded-full border border-line transition-colors group-hover:border-ink/30">
-              <ArrowLeft className="size-3.5" />
-            </span>
-            Back to home
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle className="size-9" />
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              className="group inline-flex items-center gap-2 text-xs font-medium text-muted-foreground transition-colors hover:text-ink"
+            >
+              <span className="grid size-7 place-items-center rounded-full border border-line transition-colors group-hover:border-ink/30">
+                <ArrowLeft className="size-3.5" />
+              </span>
+              Back to home
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-1 items-center justify-center py-10">
@@ -197,15 +209,53 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.3, ease: "easeOut" }}
                 >
-                  <p className="text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-electric">
-                    Welcome back
+                  <div className="relative inline-flex items-center rounded-full border border-line bg-card p-1">
+                    {[
+                      { label: "Sign in", value: "signin" as const },
+                      { label: "Create account", value: "signup" as const },
+                    ].map((option) => {
+                      const active = mode === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setMode(option.value)}
+                          aria-pressed={active}
+                          className={cn(
+                            "relative rounded-full px-4 py-2 text-xs font-medium transition-colors duration-300",
+                            active
+                              ? "text-primary-foreground"
+                              : "text-ink/55 hover:text-ink",
+                          )}
+                        >
+                          {active && (
+                            <motion.span
+                              layoutId="auth-mode-pill"
+                              className="absolute inset-0 rounded-full bg-primary"
+                              transition={{
+                                type: "spring",
+                                stiffness: 380,
+                                damping: 32,
+                              }}
+                            />
+                          )}
+                          <span className="relative">{option.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <p className="mt-6 text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-electric">
+                    {isSignup ? "Get started" : "Welcome back"}
                   </p>
                   <h1 className="mt-3 text-[2.35rem] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
-                    Enter the <span className="text-electric">vault.</span>
+                    {isSignup ? "Create your" : "Enter the"}{" "}
+                    <span className="text-electric">vault.</span>
                   </h1>
                   <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
-                    Use your email and we&apos;ll send a six-digit code. No
-                    password to remember, no account to remember either.
+                    {isSignup
+                      ? "One email, one six-digit code, and your cover starts coming together. No password to remember and no forms in triplicate."
+                      : "Use your email and we'll send a six-digit code. No password to remember, no account to remember either."}
                   </p>
 
                   <form onSubmit={handleEmailSubmit} className="mt-8 space-y-4">
@@ -243,7 +293,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                         </>
                       ) : (
                         <>
-                          Continue with email
+                          {isSignup ? "Create my account" : "Continue with email"}
                           <ArrowRight className="size-4" />
                         </>
                       )}
@@ -302,6 +352,8 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     We sent a six-digit code to{" "}
                     <span className="font-medium text-ink">{step.email}</span>.
                     It should land within a minute.
+                    {isSignup &&
+                      " Your vault opens as soon as you're verified."}
                   </p>
 
                   <form onSubmit={handleOtpSubmit} className="mt-8">

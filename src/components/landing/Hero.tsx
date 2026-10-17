@@ -188,7 +188,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
               initial={reduceMotion ? false : { opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.85, duration: 0.7 }}
-              className="absolute bottom-3 left-3 right-3 flex items-center gap-3 rounded-2xl border border-white/20 bg-bone/95 p-3.5 sm:bottom-6 sm:left-6 sm:right-auto sm:w-[19rem] sm:p-4"
+              className="absolute bottom-3 left-3 right-3 flex items-center gap-3 rounded-2xl border border-line bg-card/95 p-3.5 backdrop-blur sm:bottom-6 sm:left-6 sm:right-auto sm:w-[19rem] sm:p-4"
             >
               <span className="grid size-10 shrink-0 place-items-center rounded-full bg-electric text-white">
                 <ShieldCheck className="size-5" />

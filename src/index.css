@@ -141,9 +141,10 @@
   --ink: oklch(0.97 0.006 240);
   --navy: oklch(0.205 0.04 265);
   --electric: oklch(0.7 0.14 258);
-  --electric-soft: oklch(0.55 0.15 260);
+  --electric-soft: oklch(0.72 0.14 258);
   --ice: oklch(0.24 0.04 255);
-  --bone: oklch(0.16 0.032 265);
+  /* bone stays light in dark mode: it is the on-dark text colour */
+  --bone: oklch(0.97 0.006 92);
   --halo: oklch(0.84 0.055 85);
   --line: oklch(1 0 0 / 14%);
 }
@@ -219,6 +220,12 @@
       radial-gradient(1px 1px at 44% 91%, oklch(1 0 0 / 0.4) 50%, transparent 51%),
       radial-gradient(1.2px 1.2px at 76% 8%, oklch(1 0 0 / 0.45) 50%, transparent 51%);
     background-size: 340px 340px;
+  }
+
+  .dark .vault-grid {
+    background-image:
+      linear-gradient(to right, oklch(1 0 0 / 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(1 0 0 / 0.045) 1px, transparent 1px);
   }
 
   .text-balance {

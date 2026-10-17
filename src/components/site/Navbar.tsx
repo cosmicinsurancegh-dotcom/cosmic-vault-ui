@@ -76,7 +76,7 @@ export function Navbar({ onRequestQuote }: { onRequestQuote: () => void }) {
       <div
         className={cn(
           "relative mx-auto flex max-w-[1180px] items-center justify-between gap-4 rounded-full border border-ink/10 px-3 py-2 backdrop-blur-xl transition-colors duration-500 sm:px-4",
-          scrolled ? "bg-bone/90" : "bg-bone/70",
+          scrolled ? "bg-background/90" : "bg-background/70",
         )}
       >
         <Brand compact className="pl-1.5 text-ink" />
@@ -107,6 +107,14 @@ export function Navbar({ onRequestQuote }: { onRequestQuote: () => void }) {
         </nav>
 
         <div className="flex items-center gap-2">
+          {!isAuthenticated && (
+            <a
+              href="/login"
+              className="hidden rounded-full px-3 py-2 text-[0.83rem] font-medium text-ink/65 transition-colors hover:bg-primary/8 hover:text-primary lg:inline-flex"
+            >
+              Sign in
+            </a>
+          )}
           <button
             type="button"
             onClick={handleCta}
@@ -141,8 +149,18 @@ export function Navbar({ onRequestQuote }: { onRequestQuote: () => void }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.98 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
-              className="absolute inset-x-0 top-[calc(100%+10px)] rounded-[1.5rem] border border-ink/10 bg-bone/95 p-3 backdrop-blur-xl lg:hidden"
+              className="absolute inset-x-0 top-[calc(100%+10px)] rounded-[1.5rem] border border-ink/10 bg-background/95 p-3 backdrop-blur-xl lg:hidden"
             >
+              {!isAuthenticated && (
+                <a
+                  href="/login"
+                  onClick={() => setMenuOpen(false)}
+                  className="mb-2 flex items-center justify-between rounded-xl border border-line px-4 py-3 text-sm font-medium text-ink/75 transition-colors hover:text-ink"
+                >
+                  Sign in to your vault
+                  <ArrowUpRight className="size-3.5" />
+                </a>
+              )}
               <nav aria-label="Mobile" className="flex flex-col">
                 {LINKS.map((link) => (
                   <a

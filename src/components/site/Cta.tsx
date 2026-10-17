@@ -6,18 +6,18 @@ type Variant = "primary" | "ink" | "light" | "outline";
 
 const shell: Record<Variant, string> = {
   primary:
-    "bg-electric text-white hover:bg-[#235fe8] border border-electric/60",
-  ink: "bg-ink text-bone hover:bg-[#12203c] border border-ink",
-  light: "bg-card text-ink hover:bg-white border border-line",
+    "bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/60",
+  ink: "bg-foreground text-background hover:bg-foreground/90 border border-foreground/80",
+  light: "bg-card text-ink hover:bg-accent border border-line",
   outline:
     "bg-transparent text-ink border border-ink/20 hover:border-ink/45 hover:bg-ink/[0.03]",
 };
 
 const chip: Record<Variant, string> = {
-  primary: "bg-white text-ink",
-  ink: "bg-white/12 text-bone",
-  light: "bg-ink text-bone",
-  outline: "bg-ink text-bone",
+  primary: "bg-primary-foreground text-primary",
+  ink: "bg-background/15 text-background",
+  light: "bg-foreground text-background",
+  outline: "bg-foreground text-background",
 };
 
 function Content({

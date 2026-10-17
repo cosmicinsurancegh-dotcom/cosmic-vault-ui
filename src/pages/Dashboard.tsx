@@ -1,5 +1,22 @@
-import { QuoteDialog } from "@/components/site/QuoteDialog";
+import { ChartEmptyState } from "@/components/dashboard/ChartEmptyState";
+import {
+  ActivityChart,
+  CoverageMixChart,
+  PremiumByLineChart,
+  type ActivityPoint,
+  type MixPoint,
+  type PremiumPoint,
+} from "@/components/dashboard/Charts";
+import {
+  DASH_NAV,
+  DashSidebar,
+  SIDEBAR_STORAGE_KEY,
+  type DashView,
+} from "@/components/dashboard/DashSidebar";
+import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { Brand } from "@/components/site/Brand";
+import { QuoteDialog } from "@/components/site/QuoteDialog";
+import { ThemeToggle } from "@/components/site/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -18,6 +35,7 @@ import {
   planByName,
   type CoverageKey,
 } from "@/lib/vault";
+import { cn } from "@/lib/utils";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useQuery } from "convex/react";
@@ -28,8 +46,6 @@ import {
   Clock,
   FileText,
   Headset,
-  LayoutGrid,
-  Loader2,
   LogOut,
   Mail,
   Menu,
@@ -38,19 +54,11 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
-const NAV = [
-  { id: "overview", label: "Overview", Icon: LayoutGrid },
-  { id: "quotes", label: "My quotes", Icon: FileText },
-  { id: "coverage", label: "Coverage", Icon: ShieldCheck },
-  { id: "concierge", label: "Concierge", Icon: Headset },
-] as const;
-
-type View = (typeof NAV)[number]["id"];
+type Quote = Doc<"quotes">;
 
 const HELP_TOPICS = [
   {
@@ -75,11 +83,26 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const quotes = useQuery(api.quotes.myQuotes);
 
-  const [view, setView] = useState<View>("overview");
+  const [view, setView] = useState<DashView>("overview");
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [quoteSession, setQuoteSession] = useState(0);
   const [quoteCoverage, setQuoteCoverage] = useState<CoverageKey>("health");
   const [quotePlan, setQuotePlan] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SIDEBAR_STORAGE_KEY, collapsed ? "1" : "0");
+    } catch {
+      // Storage can be unavailable in sandboxed previews — collapsing still works.
+    }
+  }, [collapsed]);
 
   const displayName = user?.name?.split(" ")[0] || "friend";
   const hour = new Date().getHours();
@@ -114,7 +137,46 @@ export default function Dashboard() {
       return total + (quote.monthlyEstimate ?? plan?.monthly ?? 0);
     }, 0);
     const readiness =
-      list.length === 0 ? 22 : Math.min(98, 48 + lines.size * 10 + Math.min(10, list.length * 4));
+      list.length === 0
+        ? 22
+        : Math.min(98, 48 + lines.size * 10 + Math.min(10, list.length * 4));
+
+    // Requests per month for the last six months.
+    const now = new Date();
+    const activity: ActivityPoint[] = [];
+    for (let index = 5; index >= 0; index -= 1) {
+      const month = new Date(now.getFullYear(), now.getMonth() - index, 1);
+      activity.push({
+        label: month.toLocaleDateString("en-GB", { month: "short" }),
+        requests: 0,
+      });
+    }
+    for (const quote of list) {
+      const created = new Date(quote._creationTime);
+      const monthsAgo =
+        (now.getFullYear() - created.getFullYear()) * 12 +
+        (now.getMonth() - created.getMonth());
+      if (monthsAgo >= 0 && monthsAgo <= 5) {
+        const bucket = activity[5 - monthsAgo];
+        if (bucket) bucket.requests += 1;
+      }
+    }
+
+    const mix: MixPoint[] = COVERAGE_OPTIONS.map((option) => ({
+      key: option.key,
+      label: option.short,
+      value: list.filter((quote) => quote.coverage === option.key).length,
+    })).filter((point) => point.value > 0);
+
+    const premiumRows: PremiumPoint[] = COVERAGE_OPTIONS.map((option) => {
+      const premium = list
+        .filter((quote) => quote.coverage === option.key)
+        .reduce((total, quote) => {
+          const plan = planByName(quote.plan);
+          return total + (quote.monthlyEstimate ?? plan?.monthly ?? 0);
+        }, 0);
+      return { key: option.key, label: option.short, premium };
+    }).filter((point) => point.premium > 0);
 
     return {
       list,
@@ -122,97 +184,36 @@ export default function Dashboard() {
       monthly,
       readiness,
       open: list.filter((quote) => quote.status === "in_review").length,
+      activity,
+      mix,
+      premiumRows,
     };
   }, [quotes]);
 
   const firstName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+  const userName = user?.name ?? "Vault member";
+  const userEmail = user?.email ?? "Anonymous session";
 
   return (
-    <div className="min-h-screen bg-background text-ink">
-      {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[268px] flex-col border-r border-line bg-background px-5 py-6 lg:flex">
-        <Brand href="/" className="px-1.5 text-ink" />
+    <div className="flex min-h-screen bg-background text-ink">
+      <DashSidebar
+        collapsed={collapsed}
+        onToggle={() => setCollapsed((value) => !value)}
+        view={view}
+        onNavigate={setView}
+        quoteCount={stats.list.length}
+        initials={initials(user?.name ?? user?.email)}
+        userName={userName}
+        userEmail={userEmail}
+        onSignOut={handleSignOut}
+      />
 
-        <nav aria-label="Vault" className="mt-10 space-y-1">
-          <p className="px-3 pb-3 text-[0.6rem] font-semibold uppercase tracking-[0.26em] text-ink/35">
-            Member vault
-          </p>
-          {NAV.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setView(id)}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                view === id
-                  ? "bg-ink text-bone"
-                  : "text-ink/60 hover:bg-ink/[0.045] hover:text-ink",
-              )}
-            >
-              <Icon className="size-4" strokeWidth={1.9} />
-              {label}
-              {id === "quotes" && stats.list.length > 0 && (
-                <span
-                  className={cn(
-                    "ml-auto rounded-full px-2 py-0.5 text-[0.62rem] font-semibold",
-                    view === id ? "bg-white/15 text-bone" : "bg-ink/8 text-ink/60",
-                  )}
-                >
-                  {stats.list.length}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
-
-        <div className="mt-auto space-y-4">
-          <div className="starfield relative overflow-hidden rounded-2xl bg-[#071227] p-4 text-bone">
-            <span className="absolute -right-6 -top-6 size-20 rounded-full bg-electric/30 blur-2xl" />
-            <p className="text-[0.6rem] uppercase tracking-[0.22em] text-bone/45">
-              Concierge
-            </p>
-            <p className="mt-2 text-sm font-medium leading-5">
-              A human is awake, whenever you need one.
-            </p>
-            <button
-              type="button"
-              onClick={() => setView("concierge")}
-              className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-electric-soft transition-colors hover:text-white"
-            >
-              Open the line
-              <ArrowUpRight className="size-3.5" />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2.5 border-t border-line px-1 pt-4">
-            <span className="grid size-9 place-items-center rounded-full bg-ink text-[0.68rem] font-semibold text-bone">
-              {initials(user?.name ?? user?.email)}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-ink">
-                {user?.name ?? "Vault member"}
-              </p>
-              <p className="truncate text-[0.68rem] text-muted-foreground">
-                {user?.email ?? "Anonymous session"}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              aria-label="Sign out"
-              className="grid size-8 place-items-center rounded-full text-ink/45 transition-colors hover:bg-ink/[0.06] hover:text-ink"
-            >
-              <LogOut className="size-3.5" />
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      <div className="lg:pl-[268px]">
+      <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile top bar */}
-        <div className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-background/90 px-5 py-3 backdrop-blur-xl lg:hidden">
+        <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-line bg-background/90 px-5 py-3 backdrop-blur-xl lg:hidden">
           <Brand href="/" compact className="text-ink" />
           <div className="flex items-center gap-2">
+            <ThemeToggle className="size-9" />
             <Button
               size="sm"
               className="h-9 rounded-full px-4"
@@ -235,7 +236,7 @@ export default function Dashboard() {
                 <SheetTitle className="sr-only">Vault navigation</SheetTitle>
                 <Brand href="/" className="text-ink" />
                 <nav className="mt-8 space-y-1">
-                  {NAV.map(({ id, label, Icon }) => (
+                  {DASH_NAV.map(({ id, label, Icon }) => (
                     <button
                       key={id}
                       type="button"
@@ -243,8 +244,8 @@ export default function Dashboard() {
                       className={cn(
                         "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors",
                         view === id
-                          ? "bg-ink text-bone"
-                          : "text-ink/60 hover:bg-ink/[0.045] hover:text-ink",
+                          ? "bg-primary text-primary-foreground"
+                          : "text-ink/60 hover:bg-primary/8 hover:text-primary",
                       )}
                     >
                       <Icon className="size-4" />
@@ -265,56 +266,60 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <main className="mx-auto max-w-[1080px] px-5 py-8 sm:px-8 sm:py-10">
+        <main className="mx-auto w-full max-w-[1080px] flex-1 px-5 py-8 sm:px-8 sm:py-10">
           <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="flex flex-wrap items-center gap-2 text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground">
                 Member vault
-                <span className="size-1 rounded-full bg-electric" />
+                <span className="size-1 rounded-full bg-primary" />
                 {today}
               </p>
               <h1 className="mt-2.5 text-[clamp(1.8rem,3.5vw,2.6rem)] font-semibold leading-none tracking-[-0.045em] text-ink">
                 {greeting}, {firstName}.
               </h1>
             </div>
-            <Button
-              className="h-11 self-start rounded-full px-5 sm:self-auto"
-              onClick={() => openQuote()}
-            >
-              <Plus className="size-4" />
-              New quote
-            </Button>
+            <div className="flex items-center gap-2.5 self-start sm:self-auto">
+              <ThemeToggle />
+              <Button
+                className="h-11 rounded-full px-5"
+                onClick={() => openQuote()}
+              >
+                <Plus className="size-4" />
+                New quote
+              </Button>
+            </div>
           </header>
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={view}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.28, ease: "easeOut" }}
-              className="mt-8"
-            >
-              {quotes === undefined ? (
-                <div className="flex min-h-[40vh] items-center justify-center">
-                  <Loader2 className="size-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : view === "overview" ? (
-                <Overview
-                  stats={stats}
-                  onQuote={openQuote}
-                  onViewQuotes={() => setView("quotes")}
-                  onConcierge={() => setView("concierge")}
-                />
-              ) : view === "quotes" ? (
-                <QuotesView quotes={stats.list} onQuote={openQuote} />
-              ) : view === "coverage" ? (
-                <CoverageView quotes={stats.list} onQuote={openQuote} />
-              ) : (
-                <ConciergeView onQuote={openQuote} />
-              )}
-            </motion.div>
-          </AnimatePresence>
+          <div className="mt-8">
+            {quotes === undefined ? (
+              <DashboardSkeleton />
+            ) : (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={view}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.28, ease: "easeOut" }}
+                >
+                  {view === "overview" ? (
+                    <Overview
+                      stats={stats}
+                      onQuote={openQuote}
+                      onViewQuotes={() => setView("quotes")}
+                      onConcierge={() => setView("concierge")}
+                    />
+                  ) : view === "quotes" ? (
+                    <QuotesView quotes={stats.list} onQuote={openQuote} />
+                  ) : view === "coverage" ? (
+                    <CoverageView quotes={stats.list} onQuote={openQuote} />
+                  ) : (
+                    <ConciergeView onQuote={openQuote} />
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            )}
+          </div>
         </main>
       </div>
 
@@ -329,8 +334,6 @@ export default function Dashboard() {
   );
 }
 
-type Quote = Doc<"quotes">;
-
 function Overview({
   stats,
   onQuote,
@@ -343,6 +346,9 @@ function Overview({
     monthly: number;
     readiness: number;
     open: number;
+    activity: ActivityPoint[];
+    mix: MixPoint[];
+    premiumRows: PremiumPoint[];
   };
   onQuote: (coverage?: CoverageKey, plan?: string) => void;
   onViewQuotes: () => void;
@@ -350,12 +356,13 @@ function Overview({
 }) {
   const missing = COVERAGE_OPTIONS.filter(
     (option) => !stats.lines.has(option.key),
-  ).slice(0, 2);
+  ).slice(0, 4);
 
   const circumference = 2 * Math.PI * 42;
 
   return (
     <div className="space-y-5">
+      {/* Readiness */}
       <div className="starfield relative overflow-hidden rounded-[1.6rem] bg-[#071227] p-6 text-bone sm:p-8">
         <span className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.35),transparent_65%)]" />
         <div className="relative grid gap-7 sm:grid-cols-[1fr_auto] sm:items-center">
@@ -378,12 +385,12 @@ function Overview({
             </h2>
             <p className="mt-3 max-w-md text-sm leading-6 text-bone/55">
               {stats.list.length === 0
-                ? "Request a quote and a named advisor will shape your cover within one business day. Everything you track will live here."
+                ? "Request a quote and a named advisor will shape your cover within one business day. Every chart below fills in as your vault grows."
                 : `You're tracking ${stats.lines.size} of 4 cover lines. Your advisor reviews every request personally — nothing is auto-approved or sold on.`}
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Button
-                className="h-10 rounded-full bg-electric px-5 text-white hover:bg-[#235fe8]"
+                className="h-10 rounded-full bg-primary px-5 text-primary-foreground hover:bg-primary/90"
                 onClick={() => onQuote()}
               >
                 {stats.list.length === 0 ? "Request your first quote" : "Add cover"}
@@ -436,6 +443,7 @@ function Overview({
         </div>
       </div>
 
+      {/* Metric tiles */}
       <div className="grid gap-4 sm:grid-cols-3">
         {[
           {
@@ -456,27 +464,44 @@ function Overview({
             helper: "Based on selected plans",
             Icon: Sparkles,
           },
-        ].map(({ label, value, helper, Icon }) => (
-          <div
+        ].map(({ label, value, helper, Icon }, index) => (
+          <motion.div
             key={label}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: index * 0.06 }}
             className="rounded-[1.2rem] border border-line bg-card p-5"
           >
             <div className="flex items-center justify-between">
               <p className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 {label}
               </p>
-              <Icon className="size-4 text-electric" />
+              <Icon className="size-4 text-primary" />
             </div>
             <p className="mt-4 text-[1.75rem] font-semibold leading-none tracking-[-0.04em] text-ink">
               {value}
             </p>
             <p className="mt-2 text-[0.7rem] text-muted-foreground">{helper}</p>
-          </div>
+          </motion.div>
         ))}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-        <div className="rounded-[1.4rem] border border-line bg-card p-5 sm:p-6">
+      {/* Charts */}
+      <div className="grid gap-5 lg:grid-cols-[1.35fr_1fr]">
+        <ActivityChart
+          data={stats.activity}
+          onAction={() => onQuote()}
+        />
+        <CoverageMixChart data={stats.mix} onAction={() => onQuote()} />
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-[1fr_1.45fr]">
+        <PremiumByLineChart
+          data={stats.premiumRows}
+          onAction={() => onQuote("health", "Signature")}
+        />
+
+        <section className="rounded-[1.4rem] border border-line bg-card p-5 sm:p-6">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold tracking-[-0.02em] text-ink">
               Recent requests
@@ -485,7 +510,7 @@ function Overview({
               <button
                 type="button"
                 onClick={onViewQuotes}
-                className="text-xs font-medium text-electric transition-colors hover:text-ink"
+                className="text-xs font-medium text-primary transition-colors hover:text-ink"
               >
                 View all
               </button>
@@ -493,32 +518,25 @@ function Overview({
           </div>
 
           {stats.list.length === 0 ? (
-            <div className="mt-6 flex flex-col items-start gap-3 rounded-xl border border-dashed border-line bg-ink/[0.015] px-5 py-7">
-              <span className="grid size-10 place-items-center rounded-full bg-ice text-electric">
-                <FileText className="size-4" />
-              </span>
-              <p className="text-sm font-medium text-ink">No requests yet.</p>
-              <p className="max-w-sm text-xs leading-5 text-muted-foreground">
-                Your first quote takes about two minutes. An advisor does the
-                rest and you can track every step here.
-              </p>
-              <button
-                type="button"
-                onClick={() => onQuote()}
-                className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-electric"
-              >
-                Start a request
-                <ArrowUpRight className="size-3.5" />
-              </button>
+            <div className="mt-5">
+              <ChartEmptyState
+                icon={FileText}
+                title="No requests yet"
+                description="Your first quote takes about two minutes. An advisor does the rest and you can track every step here."
+                actionLabel="Start a request"
+                onAction={() => onQuote()}
+                footnote="Typically answered in one business day"
+              />
             </div>
           ) : (
             <ul className="mt-4 divide-y divide-line">
-              {stats.list.slice(0, 3).map((quote) => {
+              {stats.list.slice(0, 4).map((quote) => {
                 const Icon = COVERAGE_ICONS[quote.coverage];
-                const status = STATUS_META[quote.status] ?? STATUS_META.in_review;
+                const status =
+                  STATUS_META[quote.status] ?? STATUS_META.in_review;
                 return (
                   <li key={quote._id} className="flex items-center gap-3 py-3.5">
-                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-ice text-electric">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-ice text-primary">
                       <Icon className="size-4" />
                     </span>
                     <div className="min-w-0 flex-1">
@@ -527,10 +545,10 @@ function Overview({
                       </p>
                       <p className="mt-0.5 text-[0.68rem] text-muted-foreground">
                         {quote.reference} ·{" "}
-                        {new Date(quote._creationTime).toLocaleDateString("en-GB", {
-                          day: "numeric",
-                          month: "short",
-                        })}
+                        {new Date(quote._creationTime).toLocaleDateString(
+                          "en-GB",
+                          { day: "numeric", month: "short" },
+                        )}
                       </p>
                     </div>
                     <span
@@ -546,52 +564,55 @@ function Overview({
               })}
             </ul>
           )}
-        </div>
-
-        <div className="rounded-[1.4rem] border border-line bg-card p-5 sm:p-6">
-          <h3 className="text-base font-semibold tracking-[-0.02em] text-ink">
-            Next in your universe
-          </h3>
-          <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-            Small additions that make a life measurably safer.
-          </p>
-          <div className="mt-4 space-y-2.5">
-            {missing.length === 0 ? (
-              <div className="rounded-xl border border-line bg-ice/60 px-4 py-4">
-                <p className="text-sm font-medium text-ink">All four lines covered.</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Beautifully done. Ask your advisor about an annual vault review.
-                </p>
-              </div>
-            ) : (
-              missing.map((option) => {
-                const Icon = COVERAGE_ICONS[option.key];
-                return (
-                  <button
-                    key={option.key}
-                    type="button"
-                    onClick={() => onQuote(option.key)}
-                    className="group flex w-full items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-left transition-colors hover:border-electric/30 hover:bg-electric/[0.03]"
-                  >
-                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-ink/[0.04] text-ink/60 transition-colors group-hover:bg-electric group-hover:text-white">
-                      <Icon className="size-3.5" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-xs font-medium text-ink">
-                        Add {option.short.toLowerCase()} cover
-                      </span>
-                      <span className="mt-0.5 block text-[0.65rem] text-muted-foreground">
-                        {option.from}
-                      </span>
-                    </span>
-                    <ArrowUpRight className="size-3.5 text-ink/30 transition-colors group-hover:text-electric" />
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
+        </section>
       </div>
+
+      {/* Next steps */}
+      <section className="rounded-[1.4rem] border border-line bg-card p-5 sm:p-6">
+        <h3 className="text-base font-semibold tracking-[-0.02em] text-ink">
+          Next in your universe
+        </h3>
+        <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+          Small additions that make a life measurably safer.
+        </p>
+        <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+          {missing.length === 0 ? (
+            <div className="rounded-xl border border-line bg-ice/60 px-4 py-4 sm:col-span-2">
+              <p className="text-sm font-medium text-ink">
+                All four lines covered.
+              </p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Beautifully done. Ask your advisor about an annual vault review.
+              </p>
+            </div>
+          ) : (
+            missing.map((option) => {
+              const Icon = COVERAGE_ICONS[option.key];
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => onQuote(option.key)}
+                  className="group flex w-full items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-left transition-colors hover:border-primary/30 hover:bg-primary/[0.03]"
+                >
+                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-ink/[0.04] text-ink/60 transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                    <Icon className="size-3.5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-medium text-ink">
+                      Add {option.short.toLowerCase()} cover
+                    </span>
+                    <span className="mt-0.5 block text-[0.65rem] text-muted-foreground">
+                      {option.from}
+                    </span>
+                  </span>
+                  <ArrowUpRight className="size-3.5 text-ink/30 transition-colors group-hover:text-primary" />
+                </button>
+              );
+            })
+          )}
+        </div>
+      </section>
     </div>
   );
 }
@@ -627,24 +648,15 @@ function QuotesView({
       </div>
 
       {quotes.length === 0 ? (
-        <div className="flex flex-col items-center px-6 py-16 text-center">
-          <span className="grid size-14 place-items-center rounded-full bg-ice text-electric">
-            <FileText className="size-6" />
-          </span>
-          <p className="mt-5 text-base font-medium text-ink">
-            A blank page, in the best way.
-          </p>
-          <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-            Tell us what matters and we&apos;ll bring back a clear, itemised
-            quote — usually within a day.
-          </p>
-          <Button
-            className="mt-5 h-10 rounded-full px-5"
-            onClick={() => onQuote()}
-          >
-            Request a quote
-            <ArrowUpRight className="size-4" />
-          </Button>
+        <div className="p-5 sm:p-7">
+          <ChartEmptyState
+            icon={FileText}
+            title="A blank page, in the best way"
+            description="Tell us what matters and we'll bring back a clear, itemised quote — usually within a day."
+            actionLabel="Request a quote"
+            onAction={() => onQuote()}
+            footnote="No obligation, no credit check"
+          />
         </div>
       ) : (
         <ul className="divide-y divide-line">
@@ -656,7 +668,7 @@ function QuotesView({
                 key={quote._id}
                 className="flex flex-col gap-3 px-5 py-5 transition-colors hover:bg-ink/[0.02] sm:flex-row sm:items-center sm:px-7"
               >
-                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-ice text-electric">
+                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-ice text-primary">
                   <Icon className="size-4.5" />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -674,7 +686,11 @@ function QuotesView({
                     </span>
                   </div>
                   <p className="mt-1 text-[0.7rem] text-muted-foreground">
-                    {quote.reference} · {quote.plan ? `${quote.plan} plan` : "Plan recommendation requested"} ·{" "}
+                    {quote.reference} ·{" "}
+                    {quote.plan
+                      ? `${quote.plan} plan`
+                      : "Plan recommendation requested"}{" "}
+                    ·{" "}
                     {new Date(quote._creationTime).toLocaleDateString("en-GB", {
                       day: "numeric",
                       month: "long",
@@ -747,7 +763,7 @@ function CoverageView({
               className={cn(
                 "group relative overflow-hidden rounded-[1.3rem] border bg-card p-5 transition-all duration-400 sm:p-6",
                 isCovered
-                  ? "border-electric/25"
+                  ? "border-primary/25"
                   : "border-line hover:-translate-y-0.5 hover:border-ink/20",
               )}
             >
@@ -756,14 +772,14 @@ function CoverageView({
                   className={cn(
                     "grid size-11 place-items-center rounded-full",
                     isCovered
-                      ? "bg-electric text-white"
-                      : "bg-ice text-electric",
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-ice text-primary",
                   )}
                 >
                   <Icon className="size-4.5" />
                 </span>
                 {isCovered && (
-                  <span className="rounded-full border border-electric/20 bg-electric/[0.06] px-2.5 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-electric">
+                  <span className="rounded-full border border-primary/20 bg-primary/[0.06] px-2.5 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-primary">
                     In your vault
                   </span>
                 )}
@@ -781,7 +797,7 @@ function CoverageView({
                 <button
                   type="button"
                   onClick={() => onQuote(option.key)}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-ink transition-colors hover:text-electric"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-ink transition-colors hover:text-primary"
                 >
                   {isCovered ? "Add another" : "Add cover"}
                   <ArrowUpRight className="size-3.5" />
@@ -800,7 +816,7 @@ function CoverageView({
         <button
           type="button"
           onClick={() => onQuote()}
-          className="shrink-0 text-xs font-medium text-electric"
+          className="shrink-0 text-xs font-medium text-primary"
         >
           Request a review →
         </button>
@@ -832,7 +848,9 @@ function ConciergeView({
           </span>
           <div>
             <p className="text-lg font-medium tracking-[-0.02em]">Maya Chen</p>
-            <p className="mt-0.5 text-xs text-bone/50">Senior Vault Advisor · London</p>
+            <p className="mt-0.5 text-xs text-bone/50">
+              Senior Vault Advisor · London
+            </p>
           </div>
         </div>
         <p className="mt-5 font-display text-[1.35rem] italic leading-snug text-bone/85">
@@ -842,7 +860,7 @@ function ConciergeView({
         <div className="mt-6 flex flex-wrap gap-2.5">
           <a
             href="tel:+442079460958"
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-electric px-4 text-xs font-medium text-white transition-colors hover:bg-[#235fe8]"
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-4 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             <Phone className="size-3.5" />
             020 7946 0958
@@ -873,25 +891,27 @@ function ConciergeView({
             <a
               key={title}
               href="mailto:concierge@cosmicvault.co"
-              className="group flex items-start gap-3 rounded-xl border border-line px-4 py-3.5 transition-colors hover:border-electric/30 hover:bg-electric/[0.03]"
+              className="group flex items-start gap-3 rounded-xl border border-line px-4 py-3.5 transition-colors hover:border-primary/30 hover:bg-primary/[0.03]"
             >
-              <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-ice text-electric">
+              <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-ice text-primary">
                 <Icon className="size-3.5" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-ink">{title}</span>
+                <span className="block text-sm font-medium text-ink">
+                  {title}
+                </span>
                 <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
                   {text}
                 </span>
               </span>
-              <ArrowUpRight className="mt-1 size-3.5 shrink-0 text-ink/30 transition-colors group-hover:text-electric" />
+              <ArrowUpRight className="mt-1 size-3.5 shrink-0 text-ink/30 transition-colors group-hover:text-primary" />
             </a>
           ))}
         </div>
         <button
           type="button"
           onClick={() => onQuote()}
-          className="mt-5 inline-flex items-center gap-2 text-xs font-medium text-electric"
+          className="mt-5 inline-flex items-center gap-2 text-xs font-medium text-primary"
         >
           Request a callback instead
           <ArrowUpRight className="size-3.5" />

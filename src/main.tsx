@@ -3,6 +3,7 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
+import { ThemeProvider } from "next-themes";
 import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
@@ -114,6 +115,12 @@ createRoot(document.getElementById("root")!).render(
         <VlyToolbar />
       </ToolbarErrorBoundary>
       <ConvexAuthProvider client={convex}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
         <BrowserRouter>
           <RouteSyncer />
           <Suspense fallback={<RouteLoading />}>
@@ -122,6 +129,18 @@ createRoot(document.getElementById("root")!).render(
               <Route
                 path="/auth"
                 element={<AuthPage redirectAfterAuth="/dashboard" />}
+              />
+              <Route
+                path="/login"
+                element={
+                  <AuthPage redirectAfterAuth="/dashboard" defaultMode="signin" />
+                }
+              />
+              <Route
+                path="/signup"
+                element={
+                  <AuthPage redirectAfterAuth="/dashboard" defaultMode="signup" />
+                }
               />
               <Route
                 path="/dashboard"
@@ -138,6 +157,7 @@ createRoot(document.getElementById("root")!).render(
             </Routes>
           </Suspense>
         </BrowserRouter>
+        </ThemeProvider>
         <Toaster />
       </ConvexAuthProvider>
     </RootErrorBoundary>

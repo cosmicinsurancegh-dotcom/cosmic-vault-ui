@@ -152,7 +152,7 @@ export function Testimonials() {
                   type="button"
                   onClick={() => go(1)}
                   aria-label="Next story"
-                  className="grid size-9 place-items-center rounded-full bg-ink text-bone transition-colors hover:bg-electric"
+                  className="grid size-9 place-items-center rounded-full bg-foreground text-background transition-colors hover:bg-primary hover:text-primary-foreground"
                 >
                   <ArrowRight className="size-4" />
                 </button>

@@ -157,14 +157,17 @@ export const STATUS_META: Record<
 > = {
   in_review: {
     label: "In review",
-    className: "bg-halo/25 text-[#6b4e18] border-halo/40",
+    className:
+      "bg-halo/25 text-[#6b4e18] border-halo/40 dark:bg-halo/15 dark:text-halo dark:border-halo/30",
   },
   quoted: {
     label: "Quote ready",
-    className: "bg-electric/10 text-electric border-electric/25",
+    className:
+      "bg-primary/10 text-primary border-primary/25 dark:text-electric-soft",
   },
   active: {
     label: "Cover active",
-    className: "bg-emerald-500/10 text-emerald-700 border-emerald-500/25",
+    className:
+      "bg-emerald-500/10 text-emerald-700 border-emerald-500/25 dark:text-emerald-400",
   },
 };

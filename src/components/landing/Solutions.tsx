@@ -60,11 +60,11 @@ export function Solutions({
                 <button
                   type="button"
                   onClick={() => onQuote(option.key)}
-                  className="group relative h-full w-full overflow-hidden rounded-[1.5rem] border border-white/80 bg-card p-6 text-left transition-all duration-500 hover:-translate-y-1 hover:border-electric/30 sm:p-7"
+                  className="group relative h-full w-full overflow-hidden rounded-[1.5rem] border border-line bg-card p-6 text-left transition-all duration-500 hover:-translate-y-1 hover:border-primary/30 sm:p-7"
                 >
                   <span className="pointer-events-none absolute -right-16 -top-16 size-40 rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.10),transparent_70%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
                   <div className="relative flex items-start justify-between">
-                    <span className="grid size-12 place-items-center rounded-full bg-ice text-electric transition-colors duration-500 group-hover:bg-electric group-hover:text-white">
+                    <span className="grid size-12 place-items-center rounded-full bg-ice text-primary transition-colors duration-500 group-hover:bg-primary group-hover:text-primary-foreground">
                       <Icon className="size-5" strokeWidth={1.8} />
                     </span>
                     <span className="text-[0.62rem] font-semibold tracking-[0.22em] text-ink/25">
@@ -83,7 +83,7 @@ export function Solutions({
                     <span className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-ink/45">
                       {option.from}
                     </span>
-                    <span className="grid size-9 place-items-center rounded-full border border-ink/12 text-ink transition-all duration-500 group-hover:rotate-45 group-hover:border-electric group-hover:bg-electric group-hover:text-white">
+                    <span className="grid size-9 place-items-center rounded-full border border-ink/12 text-ink transition-all duration-500 group-hover:rotate-45 group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
                       <ArrowUpRight className="size-4" />
                     </span>
                   </div>
@@ -94,7 +94,7 @@ export function Solutions({
         </div>
 
         <Reveal delay={0.15}>
-          <div className="mt-8 flex flex-col items-start justify-between gap-4 rounded-[1.4rem] border border-ink/10 bg-white/50 px-6 py-5 sm:flex-row sm:items-center">
+          <div className="mt-8 flex flex-col items-start justify-between gap-4 rounded-[1.4rem] border border-line bg-card/60 px-6 py-5 sm:flex-row sm:items-center">
             <p className="text-sm text-ink/70">
               <span className="font-medium text-ink">Not sure what you need?</span>{" "}
               Take the two-minute vault check and we&apos;ll suggest a
