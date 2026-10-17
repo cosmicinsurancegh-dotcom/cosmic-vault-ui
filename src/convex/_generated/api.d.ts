@@ -17,6 +17,7 @@ import type * as brokers from "../brokers.js";
 import type * as claims from "../claims.js";
 import type * as crons from "../crons.js";
 import type * as customers from "../customers.js";
+import type * as demoSeed from "../demoSeed.js";
 import type * as documents from "../documents.js";
 import type * as email from "../email.js";
 import type * as http from "../http.js";
@@ -61,6 +62,7 @@ declare const fullApi: ApiFromModules<{
   claims: typeof claims;
   crons: typeof crons;
   customers: typeof customers;
+  demoSeed: typeof demoSeed;
   documents: typeof documents;
   email: typeof email;
   http: typeof http;

@@ -254,6 +254,16 @@ The marketing landing page (`/`), `/auth`, `/login`, `/signup` and the vault
 routes all render; the landing page's quote dialog posts to
 `quotes.requestQuote`, which is the only write path for public traffic.
 
+### Demonstration dataset
+
+`docs/DEMO_DATA.md` documents the protected `demoSeed` workflow, its dry-run and
+verification commands, the `insureflow-demo-v1` marker/cleanup rules, and the
+current sandbox dataset. The demo identities use `@insureflow.demo` addresses;
+because sign-in is email OTP only, those identities are not sign-in capable
+until deliverable inboxes complete the normal OTP flow (or the seed is run with
+`identityEmails` overrides for real inboxes). No auth accounts, credentials or
+verification codes are created by the seed.
+
 ### Known limitations
 
 - Card acquiring is not connected; payments are verified manually by staff.

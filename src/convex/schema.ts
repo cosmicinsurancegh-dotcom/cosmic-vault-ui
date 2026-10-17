@@ -126,6 +126,20 @@ export const quoteStatusValidator = v.union(
 );
 export type QuoteStatus = Infer<typeof quoteStatusValidator>;
 
+/**
+ * Additive provenance metadata for records created by the protected demo seed
+ * workflow (`convex/demoSeed.ts`). These fields are never read by authorization
+ * logic: they only let the seed and its cleanup (and only those) find exactly
+ * the rows they own. `demoKey` is stable per record so re-running the seed is
+ * idempotent instead of duplicating rows.
+ */
+const demoFields = {
+  isDemo: v.optional(v.boolean()),
+  seedBatch: v.optional(v.string()),
+  seededAt: v.optional(v.number()),
+  demoKey: v.optional(v.string()),
+};
+
 const schema = defineSchema(
   {
     // default auth tables using convex auth.
@@ -146,6 +160,7 @@ const schema = defineSchema(
       status: v.optional(accountStatusValidator),
       suspendedReason: v.optional(v.string()),
       lastRoleChangeAt: v.optional(v.number()),
+      ...demoFields,
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
     // Quote requests created from the landing page or the member vault.
@@ -236,6 +251,7 @@ const schema = defineSchema(
       notes: v.optional(v.string()),
       createdAt: v.number(),
       updatedAt: v.number(),
+      ...demoFields,
     })
       .index("by_user", ["userId"])
       .index("by_reference", ["reference"])
@@ -256,6 +272,7 @@ const schema = defineSchema(
       commissionRate: v.number(), // percent, 0-100
       createdAt: v.number(),
       updatedAt: v.number(),
+      ...demoFields,
     })
       .index("by_user", ["userId"])
       .index("by_status", ["status"]),
@@ -268,6 +285,7 @@ const schema = defineSchema(
       note: v.optional(v.string()),
       createdAt: v.number(),
       revokedAt: v.optional(v.number()),
+      ...demoFields,
     })
       .index("by_broker", ["brokerUserId", "status"])
       .index("by_customer", ["customerUserId", "status"]),
@@ -337,6 +355,7 @@ const schema = defineSchema(
       publishedAt: v.optional(v.number()),
       createdAt: v.number(),
       updatedAt: v.number(),
+      ...demoFields,
     })
       .index("by_code", ["code"])
       .index("by_status", ["status"])
@@ -416,6 +435,7 @@ const schema = defineSchema(
       policyId: v.optional(v.id("policies")),
       createdAt: v.number(),
       updatedAt: v.number(),
+      ...demoFields,
     })
       .index("by_customer", ["customerUserId"])
       .index("by_broker", ["brokerUserId"])
@@ -441,6 +461,7 @@ const schema = defineSchema(
       toStatus: v.optional(v.string()),
       internal: v.boolean(),
       createdAt: v.number(),
+      ...demoFields,
     }).index("by_application", ["applicationId"]),
 
     /** Policies ------------------------------------------------------------ */
@@ -483,6 +504,7 @@ const schema = defineSchema(
       ),
       createdAt: v.number(),
       updatedAt: v.number(),
+      ...demoFields,
     })
       .index("by_customer", ["customerUserId"])
       .index("by_broker", ["brokerUserId"])
@@ -559,6 +581,7 @@ const schema = defineSchema(
       reportedAt: v.number(),
       createdAt: v.number(),
       updatedAt: v.number(),
+      ...demoFields,
     })
       .index("by_customer", ["customerUserId"])
       .index("by_policy", ["policyId"])
@@ -583,6 +606,7 @@ const schema = defineSchema(
       toStatus: v.optional(v.string()),
       internal: v.boolean(),
       createdAt: v.number(),
+      ...demoFields,
     }).index("by_claim", ["claimId"]),
 
     /** Money --------------------------------------------------------------- */
@@ -614,6 +638,7 @@ const schema = defineSchema(
       dueDate: v.optional(v.number()),
       createdAt: v.number(),
       updatedAt: v.number(),
+      ...demoFields,
     })
       .index("by_customer", ["customerUserId"])
       .index("by_policy", ["policyId"])
@@ -648,6 +673,7 @@ const schema = defineSchema(
       issuedBy: v.optional(v.id("users")),
       issuedAt: v.number(),
       createdAt: v.number(),
+      ...demoFields,
     })
       .index("by_owner", ["ownerUserId"])
       .index("by_policy", ["policyId"])
@@ -669,6 +695,7 @@ const schema = defineSchema(
       emailAttempts: v.number(),
       emailError: v.optional(v.string()),
       createdAt: v.number(),
+      ...demoFields,
     })
       .index("by_user", ["userId"])
       .index("by_dedupe", ["dedupeKey"])
@@ -718,6 +745,7 @@ const schema = defineSchema(
       reason: v.optional(v.string()),
       requestId: v.optional(v.string()),
       at: v.number(),
+      ...demoFields,
     })
       .index("by_entity", ["entityType", "entityId"])
       .index("by_actor", ["actorId"])
