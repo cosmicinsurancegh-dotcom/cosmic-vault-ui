@@ -10,6 +10,10 @@ This project uses the following tech stack:
 - Lucide Icons (for icons)
 - Convex (for backend & database)
 - Convex Auth (for authentication)
+- Supabase (for Postgres, Storage and Realtime as a second data plane)
+  - `@supabase/supabase-js` v2 — browser client in `src/lib/supabase.ts` (anon key, no session store)
+  - Server-side access only through the `"use node"` Convex actions in `src/convex/supabase.ts` (service role key)
+  - Identity stays with Convex Auth; Supabase is not a second login provider
 - Framer Motion (for animations)
 - Three js (for 3d models)
 
