@@ -48,7 +48,7 @@ function Content({
 }
 
 const base =
-  "group inline-flex items-center gap-3 rounded-full py-1.5 pl-5 pr-1.5 text-[0.92rem] font-medium tracking-[-0.01em] transition-all duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60";
+  "group inline-flex items-center gap-3 rounded-full py-1.5 pl-5 pr-1.5 text-[0.92rem] font-medium tracking-[-0.01em] transition-all duration-300 cursor-pointer active:scale-[0.975] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60";
 
 export function CtaButton({
   children,

@@ -10,6 +10,7 @@ import {
   SiteButton,
 } from "@/components/site/PageShell";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { IMAGES } from "@/lib/imagery";
 import { useAuth } from "@/hooks/use-auth";
 import {
   CreditCard,
@@ -39,6 +40,7 @@ export default function ContactSupport() {
         eyebrow="Claims & support · Contact support"
         title="Reach a person, not a phone tree."
         intro="Support requests are recorded against your account and linked to the policy, claim, application or payment they concern. That means the person answering already has the context."
+        media={{ image: IMAGES.advisor, caption: "The context travels with the request" }}
         aside={{
           title: "Fastest route",
           body: "Sign in and open a request from your vault. It creates a reference, keeps the thread together, and links the record.",

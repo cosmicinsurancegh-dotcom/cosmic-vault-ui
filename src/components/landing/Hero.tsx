@@ -1,14 +1,27 @@
 import { CtaButton } from "@/components/site/Cta";
+import { Media } from "@/components/site/Media";
 import { Reveal } from "@/components/site/Reveal";
+import { ADVISOR_FACES, IMAGES, coverImage } from "@/lib/imagery";
+import { cn } from "@/lib/utils";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
-import { ArrowDown, BadgeCheck, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowUpRight, BadgeCheck, ShieldCheck, Sparkles } from "lucide-react";
 import { useRef } from "react";
+import { Link } from "react-router";
 
 const facts = [
   "Six cover lines configured",
   "Every application reviewed by a person",
   "Decisions recorded with reasons",
   "Documents held in one vault",
+];
+
+const coverLines = [
+  { label: "Home", slug: "home" },
+  { label: "Motor", slug: "motor" },
+  { label: "Travel", slug: "travel" },
+  { label: "Health", slug: "health" },
+  { label: "Life", slug: "life" },
+  { label: "Business", slug: "business" },
 ];
 
 export function Hero({ onQuote }: { onQuote: () => void }) {
@@ -18,7 +31,6 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
     target: sectionRef,
     offset: ["start start", "end start"],
   });
-  const imageY = useTransform(scrollYProgress, [0, 1], ["0%", "12%"]);
   const orbitRotate = useTransform(scrollYProgress, [0, 1], [0, 60]);
 
   return (
@@ -110,19 +122,36 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
       <div className="relative mx-auto mt-6 max-w-[1180px] px-5 sm:px-8">
         <Reveal y={40} delay={0.1}>
           <div className="relative overflow-hidden rounded-[1.6rem] border border-ink/10 bg-ink sm:rounded-[2.2rem]">
-            <motion.div
-              style={reduceMotion ? undefined : { y: imageY }}
-              className="relative aspect-[4/3.3] w-full sm:aspect-[16/9] lg:aspect-[16/7.2]"
-            >
-              <img
-                src="https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1900&q=80"
-                alt="An illustration of a conversation about insurance cover"
-                className="size-full scale-[1.06] object-cover"
-                loading="eager"
+            <div className="group relative">
+              <Media
+                image={IMAGES.hero}
+                eager
+                parallax={26}
+                overlay="cosmic"
+                className="aspect-[4/3.3] w-full sm:aspect-[16/9] lg:aspect-[16/7.2]"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#04101f]/75 via-[#04101f]/10 to-transparent" />
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(76,125,255,0.18),transparent_45%)]" />
-            </motion.div>
+
+              <motion.div
+                initial={reduceMotion ? false : { opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.55, duration: 0.6 }}
+                className="absolute left-3 top-3 hidden items-center gap-2.5 rounded-full border border-white/15 bg-[#071227]/65 py-1.5 pl-1.5 pr-4 backdrop-blur-md sm:left-6 sm:top-6 sm:flex"
+              >
+                <div className="flex -space-x-2">
+                  {ADVISOR_FACES.map((face) => (
+                    <Media
+                      key={face.src}
+                      image={face}
+                      className="size-7 rounded-full border border-white/25"
+                      imgClassName="scale-105"
+                    />
+                  )).reverse()}
+                </div>
+                <span className="text-[0.62rem] font-medium uppercase tracking-[0.18em] text-bone/80">
+                  Advisors, not bots
+                </span>
+              </motion.div>
+            </div>
 
             {/* Your vault summary */}
             <motion.div
@@ -178,13 +207,29 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
           <p className="text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground/80">
             Cover lines configured today
           </p>
-          <div className="flex flex-wrap items-center gap-x-8 gap-y-3 font-display text-lg text-ink/60 sm:gap-x-10 sm:text-xl">
-            <span>Home</span>
-            <span className="italic">Motor</span>
-            <span>Travel</span>
-            <span className="italic">Health</span>
-            <span>Life</span>
-            <span className="italic">Business</span>
+          <div className="flex flex-wrap items-center gap-2">
+            {coverLines.map((line, index) => (
+              <Link
+                key={line.slug}
+                to={`/cover/${line.slug}`}
+                className="group/chip group flex items-center gap-2 rounded-full border border-line bg-card/70 py-1 pl-1 pr-3.5 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-card hover:shadow-[0_10px_24px_-18px_rgba(8,18,39,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+                <Media
+                  image={coverImage(line.slug)}
+                  className="size-8 rounded-full"
+                  imgClassName="scale-105"
+                />
+                <span
+                  className={cn(
+                    "text-[0.92rem] text-ink/65 transition-colors group-hover/chip:text-primary",
+                    index % 2 === 1 ? "font-display italic" : "font-medium",
+                  )}
+                >
+                  {line.label}
+                </span>
+                <ArrowUpRight className="size-3 -translate-x-1 text-ink/0 transition-all duration-300 group-hover/chip:translate-x-0 group-hover/chip:text-primary" />
+              </Link>
+            ))}
           </div>
         </div>
       </div>

@@ -1,4 +1,7 @@
+import { Media } from "@/components/site/Media";
 import { Reveal } from "@/components/site/Reveal";
+import { SpotlightCard } from "@/components/site/SpotlightCard";
+import { coverImage } from "@/lib/imagery";
 import { COVERAGE_ICONS, COVERAGE_OPTIONS, type CoverageKey } from "@/lib/vault";
 import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router";
@@ -44,7 +47,7 @@ export function Solutions() {
             </p>
             <Link
               to="/cover"
-              className="group mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-ink transition-colors hover:text-electric"
+              className="link-slide group mt-4 inline-flex w-fit items-center gap-1.5 pb-0.5 text-sm font-medium text-ink transition-colors hover:text-electric"
             >
               See all six cover lines
               <ArrowUpRight className="size-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
@@ -57,36 +60,42 @@ export function Solutions() {
             const Icon = COVERAGE_ICONS[option.key];
             return (
               <Reveal key={option.key} delay={index * 0.07}>
-                <Link
+                <SpotlightCard
                   to={COVER_HREF[option.key]}
-                  className="group relative flex h-full w-full flex-col overflow-hidden rounded-[1.5rem] border border-line bg-card p-6 text-left transition-all duration-500 hover:-translate-y-1 hover:border-primary/30 sm:p-7"
+                  className="flex h-full w-full flex-col rounded-[1.5rem] border border-line bg-card text-left transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-1 hover:border-primary/30 hover:shadow-[0_28px_60px_-44px_rgba(8,18,39,0.55)]"
                 >
-                  <span className="pointer-events-none absolute -right-16 -top-16 size-40 rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.10),transparent_70%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-                  <div className="relative flex items-start justify-between">
-                    <span className="grid size-12 place-items-center rounded-full bg-ice text-primary transition-colors duration-500 group-hover:bg-primary group-hover:text-primary-foreground">
+                  <div className="relative overflow-hidden">
+                    <Media
+                      image={coverImage(option.key === "auto" ? "motor" : option.key)}
+                      overlay="soft"
+                      className="aspect-[16/9] w-full"
+                    />
+                    <span className="absolute left-5 top-5 grid size-11 place-items-center rounded-full bg-background/92 text-primary shadow-sm backdrop-blur transition-colors duration-500 group-hover:bg-primary group-hover:text-primary-foreground sm:left-6">
                       <Icon className="size-5" strokeWidth={1.8} />
                     </span>
-                    <span className="text-[0.62rem] font-semibold tracking-[0.22em] text-ink/25">
+                    <span className="absolute right-5 top-5 text-[0.62rem] font-semibold tracking-[0.22em] text-bone/75 sm:right-6">
                       0{index + 1}
                     </span>
                   </div>
 
-                  <span className="mt-7 block text-[1.35rem] font-semibold tracking-[-0.025em] text-ink">
-                    {option.label}
-                  </span>
-                  <span className="mt-2 block max-w-[24rem] flex-1 text-sm leading-6 text-muted-foreground">
-                    {option.blurb}
-                  </span>
+                  <div className="flex flex-1 flex-col p-6 sm:p-7">
+                    <span className="block text-[1.35rem] font-semibold tracking-[-0.025em] text-ink">
+                      {option.label}
+                    </span>
+                    <span className="mt-2 block max-w-[24rem] flex-1 text-sm leading-6 text-muted-foreground">
+                      {option.blurb}
+                    </span>
 
-                  <span className="mt-6 flex items-center justify-between">
-                    <span className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-ink/60">
-                      Explore this cover
+                    <span className="mt-6 flex items-center justify-between">
+                      <span className="link-slide text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-ink/60 transition-colors group-hover:text-primary">
+                        Explore this cover
+                      </span>
+                      <span className="grid size-9 place-items-center rounded-full border border-ink/12 text-ink transition-all duration-500 group-hover:rotate-45 group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
+                        <ArrowUpRight className="size-4" />
+                      </span>
                     </span>
-                    <span className="grid size-9 place-items-center rounded-full border border-ink/12 text-ink transition-all duration-500 group-hover:rotate-45 group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
-                      <ArrowUpRight className="size-4" />
-                    </span>
-                  </span>
-                </Link>
+                  </div>
+                </SpotlightCard>
               </Reveal>
             );
           })}
@@ -105,7 +114,7 @@ export function Solutions() {
               to="/cover/understanding"
               className="group inline-flex items-center gap-2 text-sm font-medium text-electric"
             >
-              Understanding your coverage
+              <span className="link-slide">Understanding your coverage</span>
               <span className="grid size-7 place-items-center rounded-full bg-electric text-white transition-transform duration-300 group-hover:rotate-45">
                 <ArrowUpRight className="size-3.5" />
               </span>

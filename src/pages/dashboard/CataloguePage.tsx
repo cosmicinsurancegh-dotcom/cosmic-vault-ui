@@ -4,7 +4,6 @@ import {
   LoadingState,
   PageHeader,
   Panel,
-  PanelHeader,
   StatusPill,
 } from "@/components/dashboard/PlatformUI";
 import { Button } from "@/components/ui/button";
@@ -18,10 +17,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Media } from "@/components/site/Media";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { formatMoney } from "@/lib/format";
+import { coverImage } from "@/lib/imagery";
 import { normalizeRole } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
@@ -116,17 +117,22 @@ export default function CataloguePage() {
           {catalogue.products.map((product) => (
             <article
               key={product._id}
-              className="flex flex-col rounded-[1.3rem] border border-line bg-card p-5 transition-colors hover:border-primary/30"
+              className="group flex flex-col overflow-hidden rounded-[1.3rem] border border-line bg-card p-5 transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_24px_48px_-40px_rgba(8,18,39,0.5)]"
             >
-              <div className="flex items-start justify-between gap-2">
-                <span className="rounded-full border border-line bg-ice px-2.5 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-primary">
+              <div className="relative -mx-5 -mt-5 mb-4 overflow-hidden">
+                <Media
+                  image={coverImage(product.categoryKey)}
+                  overlay="soft"
+                  className="aspect-[16/7] w-full"
+                />
+                <span className="absolute left-4 top-4 rounded-full border border-white/20 bg-white/12 px-2.5 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-bone backdrop-blur-md">
                   {categories.find((item) => item.key === product.categoryKey)?.name ?? product.categoryKey}
                 </span>
-                <span className="text-[0.6rem] uppercase tracking-[0.14em] text-muted-foreground">
+                <span className="absolute right-4 top-4 text-[0.6rem] uppercase tracking-[0.14em] text-bone/75">
                   v{product.version}
                 </span>
               </div>
-              <h2 className="mt-4 text-base font-semibold tracking-[-0.02em] text-ink">{product.name}</h2>
+              <h2 className="text-base font-semibold tracking-[-0.02em] text-ink">{product.name}</h2>
               <p className="mt-2 flex-1 text-xs leading-5 text-muted-foreground">{product.description}</p>
               <dl className="mt-4 space-y-1.5 border-t border-line pt-4 text-[0.7rem]">
                 <div className="flex justify-between gap-2">

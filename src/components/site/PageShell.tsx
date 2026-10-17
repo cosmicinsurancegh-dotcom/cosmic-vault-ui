@@ -1,4 +1,6 @@
+import { Media } from "@/components/site/Media";
 import { Reveal } from "@/components/site/Reveal";
+import type { VaultImage } from "@/lib/imagery";
 import { cn } from "@/lib/utils";
 import {
   ArrowUpRight,
@@ -51,7 +53,7 @@ export function SiteButton({
   icon?: boolean;
 }) {
   const classes = cn(
-    "group inline-flex h-11 items-center justify-between gap-3 rounded-full pl-5 pr-2 text-[0.88rem] font-medium tracking-[-0.01em] transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    "group inline-flex h-11 items-center justify-between gap-3 rounded-full pl-5 pr-2 text-[0.88rem] font-medium tracking-[-0.01em] transition-all duration-300 active:scale-[0.975] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     actionStyles[variant],
     className,
   );
@@ -105,6 +107,7 @@ export function PageHero({
   intro,
   actions,
   aside,
+  media,
   children,
 }: {
   eyebrow: string;
@@ -112,6 +115,8 @@ export function PageHero({
   intro: string;
   actions?: ReactNode;
   aside?: { title: string; body: string; items?: { label: string; href: string }[] };
+  /** A wide photograph under the heading, with an optional caption. */
+  media?: { image: VaultImage; caption?: string };
   children?: ReactNode;
 }) {
   return (
@@ -198,6 +203,31 @@ export function PageHero({
         </div>
 
         {children}
+
+        {media && (
+          <Reveal y={24} delay={0.18}>
+            <figure className="group media-frame relative mt-10 overflow-hidden rounded-[1.4rem] border border-ink/10 sm:mt-12">
+              <Media
+                image={media.image}
+                eager
+                parallax={18}
+                overlay="strong"
+                className="aspect-[4/3] w-full sm:aspect-[16/7]"
+              />
+              {media.caption && (
+                <figcaption className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-4 sm:p-5">
+                  <span className="flex items-center gap-2 text-[0.6rem] font-semibold uppercase tracking-[0.24em] text-bone/80">
+                    <span className="h-px w-6 bg-electric-soft" />
+                    {media.caption}
+                  </span>
+                  <span className="hidden text-[0.6rem] uppercase tracking-[0.2em] text-bone/45 sm:block">
+                    Cosmic Vault
+                  </span>
+                </figcaption>
+              )}
+            </figure>
+          </Reveal>
+        )}
       </div>
     </section>
   );
@@ -299,11 +329,11 @@ export function FeatureGrid({
       {items.map(({ title, body, icon: Icon }) => (
         <div
           key={title}
-          className="rounded-[1.3rem] border border-line bg-card p-6 transition-colors hover:border-primary/25"
+          className="group rounded-[1.3rem] border border-line bg-card p-6 transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_24px_50px_-44px_rgba(8,18,39,0.5)]"
         >
           {Icon && (
-            <span className="grid size-10 place-items-center rounded-full bg-ice text-primary">
-              <Icon className="size-4" strokeWidth={1.8} />
+            <span className="grid size-10 place-items-center rounded-full bg-ice text-primary transition-colors duration-500 group-hover:bg-primary group-hover:text-primary-foreground">
+              <Icon className="size-4 transition-transform duration-500 group-hover:scale-110" strokeWidth={1.8} />
             </span>
           )}
           <h3 className="mt-5 text-[1.02rem] font-semibold tracking-[-0.02em] text-ink">

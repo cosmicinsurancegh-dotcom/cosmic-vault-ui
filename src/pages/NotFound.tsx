@@ -1,5 +1,6 @@
 import { PageHero, PageSection, SiteButton } from "@/components/site/PageShell";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { IMAGES } from "@/lib/imagery";
 import { Link } from "react-router";
 
 const SUGGESTIONS = [
@@ -23,6 +24,7 @@ export default function NotFound() {
         eyebrow="Error 404"
         title="This page has drifted out of orbit."
         intro="The address you followed does not exist — it may have been renamed, or a link may be out of date. Nothing is broken on your account, and your policy records are unaffected."
+        media={{ image: IMAGES.orbit, caption: "Off this route, but still in the vault" }}
         actions={
           <>
             <SiteButton to="/">Back to the homepage</SiteButton>

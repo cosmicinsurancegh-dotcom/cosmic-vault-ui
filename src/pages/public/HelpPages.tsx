@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { FAQS, FAQ_CATEGORIES, type FaqCategory } from "@/lib/faqs";
+import { IMAGES } from "@/lib/imagery";
 import { cn } from "@/lib/utils";
 import {
   BookOpen,
@@ -100,6 +101,7 @@ export function HelpCentre() {
         eyebrow="Claims & support · Help centre"
         title="Find the answer, or reach a person."
         intro="Every answer below is drawn from the same library the FAQ page uses, so search results are real content rather than placeholder text."
+        media={{ image: IMAGES.support, caption: "Search first, then reach a person" }}
         aside={{
           title: "Still stuck?",
           body: "Support requests are recorded against your account, so the thread stays with the policy, claim or application it concerns.",
@@ -332,6 +334,7 @@ export function Faqs() {
         eyebrow="Support · Frequently asked questions"
         title="Questions, answered properly."
         intro={`${FAQS.length} answers covering the whole relationship — from what a quotation really is, to what happens when a payment fails or a claim is declined.`}
+        media={{ image: IMAGES.workspaces, caption: "Answers kept in one library" }}
         aside={{
           title: "If it is not here",
           body: "Search first, then ask. Support requests are recorded against your account so nothing is repeated twice.",

@@ -1,4 +1,7 @@
 import { Brand } from "@/components/site/Brand";
+import { Media } from "@/components/site/Media";
+import { COVERS } from "@/lib/covers";
+import { coverImage } from "@/lib/imagery";
 import { FOOTER_COLUMNS } from "@/lib/navigation";
 import { ArrowRight, ArrowUp, ShieldCheck } from "lucide-react";
 import { Link } from "react-router";
@@ -50,7 +53,7 @@ export function Footer() {
                     <li key={link.href}>
                       <Link
                         to={link.href}
-                        className="text-[0.8rem] leading-5 text-bone/60 transition-colors hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric-soft/60"
+                        className="link-slide text-[0.8rem] leading-5 text-bone/60 transition-colors hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric-soft/60"
                       >
                         {link.label}
                       </Link>
@@ -65,15 +68,17 @@ export function Footer() {
         <div className="mt-12 flex flex-col gap-5 border-t border-white/10 pt-7 text-[0.7rem] text-bone/55 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} Cosmic Vault</p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <Link to="/legal/terms" className="transition-colors hover:text-bone">
+            <Link to="/legal/terms"              className="link-slide transition-colors hover:text-bone"
+            >
               Terms
             </Link>
-            <Link to="/legal/privacy" className="transition-colors hover:text-bone">
+            <Link to="/legal/privacy"              className="link-slide transition-colors hover:text-bone"
+            >
               Privacy
             </Link>
             <Link
               to="/legal/regulatory"
-              className="transition-colors hover:text-bone"
+              className="link-slide transition-colors hover:text-bone"
             >
               Regulatory information
             </Link>
@@ -101,6 +106,35 @@ export function Footer() {
           </Link>{" "}
           for the current status.
         </p>
+      </div>
+
+      <div className="mx-auto max-w-[1180px] px-5 pb-10 sm:px-8">
+        <div className="flex items-center justify-between gap-4 border-t border-white/10 pt-7">
+          <p className="text-[0.6rem] font-semibold uppercase tracking-[0.24em] text-bone/45">
+            The cover lines
+          </p>
+          <Link
+            to="/cover"
+            className="group inline-flex items-center gap-1.5 text-[0.72rem] font-medium text-bone/60 transition-colors hover:text-bone"
+          >
+            <span className="link-slide">All six</span>
+            <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-6">
+          {COVERS.map((cover) => (
+            <Link
+              key={cover.slug}
+              to={`/cover/${cover.slug}`}
+              className="group relative aspect-[4/3] overflow-hidden rounded-[0.85rem] border border-white/10 transition-transform duration-500 hover:-translate-y-1"
+            >
+              <Media image={coverImage(cover.slug)} overlay="strong" className="size-full" />
+              <span className="absolute inset-x-2 bottom-1.5 block truncate text-[0.58rem] font-medium leading-4 tracking-[0.02em] text-bone">
+                {cover.name.replace(" insurance", "")}
+              </span>
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="overflow-hidden border-t border-white/[0.06]">

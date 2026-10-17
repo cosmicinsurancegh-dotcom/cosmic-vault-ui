@@ -240,4 +240,74 @@
       transparent
     );
   }
+
+  /* An underline that draws itself in from the left. */
+  .link-slide {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 1px;
+    transition: background-size 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .link-slide:hover,
+  .link-slide:focus-visible {
+    background-size: 100% 1px;
+  }
+
+  /* A deliberate, short press response for buttons. */
+  .press {
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .press:active {
+    transform: scale(0.975);
+  }
+
+  /* A soft shadow for photography, so frames sit above the page. */
+  .media-frame {
+    box-shadow: 0 34px 80px -48px rgba(8, 18, 39, 0.55);
+  }
+
+  /* Fades the ends of horizontal rails without cutting the content. */
+  .marquee-mask {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 6%,
+      black 94%,
+      transparent
+    );
+  }
+}
+
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes sheen {
+  0% {
+    transform: translateX(-120%);
+  }
+  60%,
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

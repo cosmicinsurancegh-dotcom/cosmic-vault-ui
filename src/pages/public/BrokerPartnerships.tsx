@@ -11,6 +11,7 @@ import {
   StepList,
 } from "@/components/site/PageShell";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { IMAGES } from "@/lib/imagery";
 import {
   ClipboardList,
   Handshake,
@@ -33,6 +34,7 @@ export default function BrokerPartnerships() {
         eyebrow="About · Broker partnerships"
         title="Working with intermediaries."
         intro="The broker desk is part of the platform rather than a separate system: brokers work with customers assigned to them, record consent before preparing terms, and see only what the assignment allows."
+        media={{ image: IMAGES.story, caption: "One desk, one shared record" }}
         aside={{
           title: "The model in one line",
           body: "A broker prepares and progresses a customer's quotation and application, with the customer's consent recorded and the customer retaining full visibility in their own vault.",

@@ -11,6 +11,22 @@ import {
 } from "@/components/site/PageShell";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import type { ContentBlock, ContentPageConfig } from "@/lib/contentPages";
+import { IMAGES, type VaultImage } from "@/lib/imagery";
+
+/** Editorial photography per guidance page, with a caption that carries the idea. */
+const PAGE_MEDIA: Record<string, { image: VaultImage; caption: string }> = {
+  "cover-understanding": { image: IMAGES.homeInterior, caption: "Limits, excess, exclusion, disclosure" },
+  "cover-limits": { image: IMAGES.claimReview, caption: "The parts worth reading twice" },
+  "how-it-works": { image: IMAGES.workspaces, caption: "Manual where it matters" },
+  "how-it-works-apply": { image: IMAGES.story, caption: "From quotation to policy" },
+  "how-it-works-policy": { image: IMAGES.support, caption: "A schedule you can actually read" },
+  "how-it-works-renewals": { image: IMAGES.auth, caption: "Keeping cover up to date" },
+  "claims-payments": { image: IMAGES.earth, caption: "Every movement, on the record" },
+  "support-report": { image: IMAGES.claimReview, caption: "Tell us what went wrong" },
+  about: { image: IMAGES.story, caption: "Built for the decades, not the quarter" },
+  "about-principles": { image: IMAGES.workspaces, caption: "The standards we hold" },
+  "about-commitment": { image: IMAGES.advisor, caption: "A person at the end of every route" },
+};
 
 function Block({ block }: { block: ContentBlock }) {
   switch (block.kind) {
@@ -107,6 +123,7 @@ export default function ContentPage({ config }: { config: ContentPageConfig }) {
         eyebrow={config.eyebrow}
         title={config.title}
         intro={config.intro}
+        media={PAGE_MEDIA[config.slug]}
         aside={config.aside}
         actions={
           <>

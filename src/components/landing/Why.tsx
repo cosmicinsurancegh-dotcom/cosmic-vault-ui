@@ -1,30 +1,47 @@
+import { Media } from "@/components/site/Media";
 import { Reveal } from "@/components/site/Reveal";
+import { IMAGES, type VaultImage } from "@/lib/imagery";
 import { AnimatePresence, motion } from "framer-motion";
 import { Minus, Plus, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-const pillars = [
+const pillars: { title: string; text: string; image: VaultImage; caption: string }[] = [
   {
     title: "Personal service",
     text: "Every plan is drawn up with a named advisor who knows your household, your history, and the details that actually matter. You'll never explain yourself twice.",
+    image: IMAGES.advisor,
+    caption: "A named advisor, not a queue",
   },
   {
     title: "Fair, legible pricing",
     text: "One price, shown in full, before you decide. No teaser rates that double in year two and no commission buried in the fine print.",
+    image: IMAGES.workspaces,
+    caption: "One price, written in full",
   },
   {
     title: "Claims decided by a person",
     text: "Your claim is assessed against the policy by an authorised handler and the decision is recorded with its reasons. We do not publish settlement promises we cannot keep.",
+    image: IMAGES.claimReview,
+    caption: "Every decision carries its reason",
   },
   {
     title: "Support that stays with the record",
     text: "Storm damage, a diagnosis, a fender bender abroad — your request is held against the policy or claim it concerns, so you never explain yourself twice.",
+    image: IMAGES.support,
+    caption: "Support that stays on the record",
   },
 ];
 
 export function Why() {
   const [active, setActive] = useState(0);
+  const [visual, setVisual] = useState(0);
+  const shown = pillars[visual];
+
+  const select = (index: number) => {
+    setVisual(index);
+    setActive((current) => (current === index ? -1 : index));
+  };
 
   return (
     <section className="relative mt-24 sm:mt-32">
@@ -56,7 +73,7 @@ export function Why() {
                   >
                     <button
                       type="button"
-                      onClick={() => setActive(isOpen ? -1 : index)}
+                      onClick={() => select(index)}
                       aria-expanded={isOpen}
                       className="group flex w-full cursor-pointer items-start gap-4 py-6 text-left sm:gap-5"
                     >
@@ -113,26 +130,46 @@ export function Why() {
           </div>
 
           <Reveal y={30} delay={0.1} className="lg:col-span-5">
-            <div className="relative h-full">
+            <div className="group sticky top-28">
               <div className="relative h-full min-h-[22rem] overflow-hidden rounded-[1.8rem] border border-ink/10">
-                <img
-                  src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1100&q=80"
-                  alt="An illustration of a discussion about an insurance claim"
-                  loading="lazy"
-                  className="size-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#071227]/80 via-transparent to-transparent" />
+                <AnimatePresence initial={false}>
+                  <motion.div
+                    key={shown.image.src}
+                    initial={{ opacity: 0, scale: 1.04 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute inset-0"
+                  >
+                    <Media
+                      image={shown.image}
+                      overlay="floor"
+                      className="size-full"
+                    />
+                  </motion.div>
+                </AnimatePresence>
+
                 <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
-                  <p className="mt-3 font-display text-[1.35rem] italic leading-snug text-bone">
-                    Every claim decision is recorded with the reason behind it.
-                  </p>
-                  <p className="mt-2 text-[0.65rem] uppercase tracking-[0.2em] text-bone/60">
-                    How we assess claims
-                  </p>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={shown.caption}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.35 }}
+                    >
+                      <p className="font-display text-[1.35rem] italic leading-snug text-bone">
+                        {shown.caption}
+                      </p>
+                      <p className="mt-2 text-[0.65rem] uppercase tracking-[0.2em] text-bone/60">
+                        0{visual + 1} — How we work
+                      </p>
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
               </div>
 
-              <div className="absolute -left-3 top-5 flex items-center gap-2.5 rounded-full border border-line bg-card/95 px-4 py-2.5 backdrop-blur sm:-left-5">
+              <div className="absolute -left-3 top-5 flex items-center gap-2.5 rounded-full border border-line bg-card/95 px-4 py-2.5 backdrop-blur transition-transform duration-500 group-hover:-translate-y-1 sm:-left-5">
                 <span className="grid size-8 place-items-center rounded-full bg-electric/10 text-electric">
                   <ShieldCheck className="size-4" />
                 </span>

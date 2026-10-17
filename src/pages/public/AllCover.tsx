@@ -8,8 +8,12 @@ import {
   RelatedLinks,
   SiteButton,
 } from "@/components/site/PageShell";
+import { Media } from "@/components/site/Media";
+import { Reveal } from "@/components/site/Reveal";
+import { SpotlightCard } from "@/components/site/SpotlightCard";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { COVERS } from "@/lib/covers";
+import { IMAGES, coverImage } from "@/lib/imagery";
 import {
   ClipboardCheck,
   FileCheck2,
@@ -18,7 +22,6 @@ import {
   ScrollText,
   UserRound,
 } from "lucide-react";
-import { Link } from "react-router";
 
 export default function AllCover() {
   usePageMeta(
@@ -32,6 +35,7 @@ export default function AllCover() {
         eyebrow="Cover · All products"
         title="Every cover line, in one place."
         intro="Six products are configured in the platform today. Each has its own questions, rating rules, limits and exclusions — so the terms you are quoted are the terms that apply."
+        media={{ image: IMAGES.homeInterior, caption: "The things worth protecting" }}
         aside={{
           title: "Only what exists",
           body: "We advertise the cover lines that are genuinely configured and available for application. There are no coming-soon products on this page.",
@@ -57,38 +61,42 @@ export default function AllCover() {
       >
         <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
           {COVERS.map((cover, index) => (
-            <Link
-              key={cover.slug}
-              to={`/cover/${cover.slug}`}
-              className="group relative flex flex-col overflow-hidden rounded-[1.5rem] border border-line bg-card p-6 transition-all duration-500 hover:-translate-y-1 hover:border-primary/30 sm:p-7"
-            >
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute -right-16 -top-16 size-40 rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.10),transparent_70%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-              />
-              <div className="relative flex items-start justify-between gap-4">
-                <span className="rounded-full border border-line bg-ice px-2.5 py-1 text-[0.56rem] font-semibold uppercase tracking-[0.16em] text-primary">
-                  {cover.productName}
-                </span>
-                <span className="text-[0.58rem] font-semibold tracking-[0.18em] text-ink/25">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-              </div>
+            <Reveal key={cover.slug} delay={(index % 2) * 0.06}>
+              <SpotlightCard
+                to={`/cover/${cover.slug}`}
+                className="flex h-full flex-col rounded-[1.5rem] border border-line bg-card transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-1 hover:border-primary/30 hover:shadow-[0_28px_60px_-44px_rgba(8,18,39,0.55)]"
+              >
+                <div className="relative overflow-hidden">
+                  <Media
+                    image={coverImage(cover.slug)}
+                    overlay="soft"
+                    className="aspect-[16/9] w-full"
+                  />
+                  <span className="absolute left-5 top-5 rounded-full border border-white/20 bg-white/12 px-2.5 py-1 text-[0.56rem] font-semibold uppercase tracking-[0.16em] text-bone backdrop-blur-md">
+                    {cover.productName}
+                  </span>
+                  <span className="absolute right-5 top-5 text-[0.58rem] font-semibold tracking-[0.18em] text-bone/70">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                </div>
 
-              <h3 className="relative mt-6 text-[1.35rem] font-semibold tracking-[-0.03em] text-ink">
-                {cover.name}
-              </h3>
-              <p className="relative mt-2 max-w-[26rem] flex-1 text-[0.86rem] leading-6 text-muted-foreground">
-                {cover.summary}
-              </p>
+                <div className="flex flex-1 flex-col p-6 sm:p-7">
+                  <h3 className="relative text-[1.35rem] font-semibold tracking-[-0.03em] text-ink">
+                    {cover.name}
+                  </h3>
+                  <p className="relative mt-2 max-w-[26rem] flex-1 text-[0.86rem] leading-6 text-muted-foreground">
+                    {cover.summary}
+                  </p>
 
-              <span className="relative mt-6 inline-flex items-center gap-2 text-[0.8rem] font-medium text-ink transition-colors group-hover:text-primary">
-                Explore this cover
-                <span className="grid size-7 place-items-center rounded-full border border-ink/12 transition-colors group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
-                  <ScanLine className="size-3.5" />
-                </span>
-              </span>
-            </Link>
+                  <span className="relative mt-6 inline-flex items-center justify-between gap-2 text-[0.8rem] font-medium text-ink transition-colors group-hover:text-primary">
+                    <span className="link-slide">Explore this cover</span>
+                    <span className="grid size-7 place-items-center rounded-full border border-ink/12 transition-all duration-500 group-hover:rotate-45 group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
+                      <ScanLine className="size-3.5" />
+                    </span>
+                  </span>
+                </div>
+              </SpotlightCard>
+            </Reveal>
           ))}
         </div>
 

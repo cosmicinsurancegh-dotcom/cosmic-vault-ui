@@ -8,6 +8,7 @@ import {
   SiteButton,
 } from "@/components/site/PageShell";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { IMAGES } from "@/lib/imagery";
 import {
   Handshake,
   Headset,
@@ -30,6 +31,7 @@ export default function Contact() {
         eyebrow="About · Contact us"
         title="How to reach us."
         intro="Every route below reaches a monitored, recorded channel. There is no published telephone number or postal address on this page, and that is deliberate — see the note further down."
+        media={{ image: IMAGES.support, caption: "Monitored, recorded, answered" }}
         aside={{
           title: "For account holders",
           body: "Signed-in members get the fastest route: a support request linked directly to the policy, claim or payment it concerns.",

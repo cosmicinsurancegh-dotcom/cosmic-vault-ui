@@ -1,3 +1,5 @@
+import type { VaultImage } from "@/lib/imagery";
+import { IMAGES } from "@/lib/imagery";
 import {
   BookOpen,
   Briefcase,
@@ -43,6 +45,8 @@ export type MenuFeature = {
   eyebrow: string;
   title: string;
   body: string;
+  /** Photography for the panel's feature card. */
+  image?: VaultImage;
   primary: MenuLink;
   secondary?: MenuLink;
 };
@@ -138,6 +142,7 @@ export const NAV_SECTIONS: NavSection[] = [
       eyebrow: "Start here",
       title: "A quote, not a sales call.",
       body: "Tell us what you want to protect. An advisor reviews every request and the final terms always come from the policy wording.",
+      image: IMAGES.homeInterior,
       primary: { label: "Get a quote", href: "/quote" },
       secondary: { label: "How cover is priced", href: "/how-it-works" },
     },
@@ -194,6 +199,7 @@ export const NAV_SECTIONS: NavSection[] = [
       eyebrow: "No surprises",
       title: "Underwriting stays human.",
       body: "Applications are reviewed by a person. We do not promise automatic approval, and an indicative premium is never a binding price.",
+      image: IMAGES.workspaces,
       primary: { label: "Start with a quote", href: "/quote" },
       secondary: { label: "Read the FAQs", href: "/faqs" },
     },
@@ -273,6 +279,7 @@ export const NAV_SECTIONS: NavSection[] = [
       eyebrow: "A real person",
       title: "Support that stays with the record.",
       body: "Support requests are held separately from claim decisions and payments. Signed-in members can follow every update in their vault.",
+      image: IMAGES.claimReview,
       primary: { label: "Contact support", href: "/support/contact" },
       secondary: { label: "Open the help centre", href: "/help" },
     },
@@ -346,6 +353,7 @@ export const NAV_SECTIONS: NavSection[] = [
       eyebrow: "Long horizon",
       title: "Insurance for the long horizon.",
       body: "We are building for the decades, not the quarter. That means clear wording, careful decisions, and service that does not disappear after the sale.",
+      image: IMAGES.earth,
       primary: { label: "Read our story", href: "/about" },
       secondary: { label: "Broker partnerships", href: "/about/brokers" },
     },

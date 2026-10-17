@@ -1,4 +1,5 @@
 import { Brand } from "@/components/site/Brand";
+import { Media } from "@/components/site/Media";
 import { ThemeToggle } from "@/components/site/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import {
 import { Label } from "@/components/ui/label";
 
 import { useAuth } from "@/hooks/use-auth";
+import { IMAGES } from "@/lib/imagery";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -139,7 +141,25 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
 
         <Brand href="/" className="relative text-bone" />
 
-        <div className="relative mt-auto">
+        <div className="group relative mt-8 min-h-[12rem] flex-1 overflow-hidden rounded-[1.5rem] border border-white/10">
+          <Media
+            image={IMAGES.auth}
+            overlay="cosmic"
+            parallax={18}
+            eager
+            className="absolute inset-0"
+          />
+          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
+            <p className="text-[0.58rem] font-semibold uppercase tracking-[0.24em] text-bone/75">
+              Insurance for the long horizon
+            </p>
+            <span className="grid size-7 shrink-0 place-items-center rounded-full border border-white/25 bg-white/10 text-bone backdrop-blur transition-transform duration-500 group-hover:rotate-45">
+              <ArrowRight className="size-3.5" />
+            </span>
+          </div>
+        </div>
+
+        <div className="relative mt-auto pt-8">
           <p className="flex items-center gap-3 text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-bone/45">
             <span className="h-px w-7 bg-bone/30" />
             Member access

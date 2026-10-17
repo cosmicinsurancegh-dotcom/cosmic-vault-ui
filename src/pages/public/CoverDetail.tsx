@@ -11,6 +11,7 @@ import {
 } from "@/components/site/PageShell";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { COVERS, coverBySlug } from "@/lib/covers";
+import { coverImage } from "@/lib/imagery";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { Link } from "react-router";
 
@@ -37,6 +38,7 @@ export default function CoverDetail({ slug }: { slug: string }) {
         eyebrow={cover.eyebrow}
         title={cover.headline}
         intro={cover.intro}
+        media={{ image: coverImage(cover.slug), caption: cover.productName }}
         aside={{
           title: "At a glance",
           body: cover.summary,

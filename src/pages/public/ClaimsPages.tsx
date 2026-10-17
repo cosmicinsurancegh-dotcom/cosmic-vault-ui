@@ -11,6 +11,7 @@ import {
   StepList,
 } from "@/components/site/PageShell";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { IMAGES } from "@/lib/imagery";
 import {
   Briefcase,
   Car,
@@ -43,6 +44,7 @@ export function ClaimsOverview() {
         eyebrow="Claims & support · Overview"
         title="When something goes wrong, this is the route."
         intro="A claim is a review, not an argument. You tell us what happened, a handler assesses it against the policy, and the decision is recorded with its reasons."
+        media={{ image: IMAGES.claimReview, caption: "Assessed by a person, decided with reasons" }}
         aside={{
           title: "The essentials",
           body: "Have the policy, the date, a clear description and whatever evidence supports it. Everything else can follow.",
@@ -302,6 +304,7 @@ export function MakeClaim() {
         eyebrow="Claims & support · Make a claim"
         title="Tell us what happened."
         intro="A clear account, evidence and the right policy is usually all it takes to get a claim moving. This page explains exactly what to prepare before you open it."
+        media={{ image: IMAGES.support, caption: "Everything you gather stays on the claim" }}
         aside={{
           title: "Where claims are submitted",
           body: "Claims are submitted inside your vault, against an active policy, so the whole review stays on the record.",

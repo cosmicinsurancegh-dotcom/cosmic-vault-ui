@@ -14,7 +14,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Media } from "@/components/site/Media";
 import { useAuth } from "@/hooks/use-auth";
+import { IMAGES } from "@/lib/imagery";
 import { NAV_SECTIONS, type NavSection } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -73,7 +75,7 @@ function MegaPanel({
       className="absolute inset-x-0 top-full z-50 pt-2"
     >
       <div className="overflow-hidden rounded-[1.35rem] border border-line bg-popover/98 shadow-[0_28px_80px_-36px_rgba(8,18,39,0.5)] backdrop-blur-xl">
-        <div className="flex flex-col gap-8 p-5 sm:p-6 xl:flex-row">
+        <div className="flex flex-col gap-8 p-5 sm:p-6 lg:flex-row">
           <div className="flex flex-1 flex-wrap gap-x-8 gap-y-7">
             {section.groups.map((group) => (
               <div key={group.title} className="min-w-[13.5rem] flex-1">
@@ -81,10 +83,19 @@ function MegaPanel({
                   {group.title}
                 </p>
                 <ul className="mt-3 space-y-0.5">
-                  {group.links.map((link) => {
+                  {group.links.map((link, index) => {
                     const Icon = link.icon;
                     return (
-                      <li key={link.href}>
+                      <motion.li
+                        key={link.href}
+                        initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          duration: 0.22,
+                          delay: reduceMotion ? 0 : Math.min(index * 0.014, 0.14),
+                          ease: "easeOut",
+                        }}
+                      >
                         <Link
                           to={link.href}
                           onClick={onClose}
@@ -96,7 +107,7 @@ function MegaPanel({
                             </span>
                           )}
                           <span className="min-w-0">
-                            <span className="block text-[0.82rem] font-medium leading-5 text-ink transition-colors group-hover:text-primary">
+                            <span className="link-slide block w-fit text-[0.82rem] font-medium leading-5 text-ink transition-colors group-hover:text-primary">
                               {link.label}
                             </span>
                             {link.description && (
@@ -106,7 +117,7 @@ function MegaPanel({
                             )}
                           </span>
                         </Link>
-                      </li>
+                      </motion.li>
                     );
                   })}
                 </ul>
@@ -114,39 +125,52 @@ function MegaPanel({
             ))}
           </div>
 
-          <div className="hidden w-[17rem] shrink-0 flex-col justify-between rounded-2xl border border-line bg-ice/70 p-5 xl:flex">
-            <div>
-              <p className="text-[0.56rem] font-semibold uppercase tracking-[0.24em] text-ink/55">
-                {section.feature.eyebrow}
-              </p>
-              <p className="mt-3 text-[1.02rem] font-semibold leading-5 tracking-[-0.02em] text-ink">
-                {section.feature.title}
-              </p>
-              <p className="mt-2 text-[0.75rem] leading-5 text-muted-foreground">
-                {section.feature.body}
-              </p>
-            </div>
-            <div className="mt-5 space-y-2">
-              <Link
-                to={section.feature.primary.href}
-                onClick={onClose}
-                className="group flex items-center justify-between gap-2 rounded-full bg-primary py-2 pl-4 pr-1.5 text-[0.78rem] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                {section.feature.primary.label}
-                <span className="grid size-6 place-items-center rounded-full bg-primary-foreground/20">
-                  <ArrowUpRight className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+          <div className="group hidden w-[16.5rem] shrink-0 flex-col overflow-hidden rounded-2xl border border-line bg-card lg:flex xl:w-[18.5rem]">
+            <Media
+              image={section.feature.image ?? IMAGES.workspaces}
+              overlay="cosmic"
+              className="h-[8.25rem] w-full shrink-0"
+            >
+              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-4">
+                <p className="text-[0.56rem] font-semibold uppercase tracking-[0.24em] text-bone/80">
+                  {section.feature.eyebrow}
+                </p>
+                <span className="grid size-7 place-items-center rounded-full border border-white/25 bg-white/10 text-bone backdrop-blur transition-transform duration-500 group-hover:rotate-45">
+                  <ArrowUpRight className="size-3.5" />
                 </span>
-              </Link>
-              {section.feature.secondary && (
+              </div>
+            </Media>
+            <div className="flex flex-1 flex-col justify-between p-4">
+              <div>
+                <p className="text-[1.02rem] font-semibold leading-5 tracking-[-0.02em] text-ink">
+                  {section.feature.title}
+                </p>
+                <p className="mt-2 text-[0.75rem] leading-5 text-muted-foreground">
+                  {section.feature.body}
+                </p>
+              </div>
+              <div className="mt-4 space-y-2">
                 <Link
-                  to={section.feature.secondary.href}
+                  to={section.feature.primary.href}
                   onClick={onClose}
-                  className="flex items-center justify-between gap-2 rounded-full border border-ink/12 px-4 py-2 text-[0.75rem] font-medium text-ink/70 transition-colors hover:border-ink/30 hover:text-ink"
+                  className="group/btn flex items-center justify-between gap-2 rounded-full bg-primary py-1.5 pl-4 pr-1.5 text-[0.78rem] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                 >
-                  {section.feature.secondary.label}
-                  <ArrowRight className="size-3.5" />
+                  {section.feature.primary.label}
+                  <span className="grid size-6 place-items-center rounded-full bg-primary-foreground/20">
+                    <ArrowUpRight className="size-3.5 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+                  </span>
                 </Link>
-              )}
+                {section.feature.secondary && (
+                  <Link
+                    to={section.feature.secondary.href}
+                    onClick={onClose}
+                    className="flex items-center justify-between gap-2 rounded-full border border-ink/12 px-4 py-2 text-[0.75rem] font-medium text-ink/70 transition-colors hover:border-ink/30 hover:text-ink"
+                  >
+                    {section.feature.secondary.label}
+                    <ArrowRight className="size-3.5 transition-transform duration-300 group-hover/btn:translate-x-0.5" />
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -413,8 +437,18 @@ export function Navbar() {
                 <Accordion type="single" collapsible className="px-5">
                   {NAV_SECTIONS.map((section) => (
                     <AccordionItem key={section.id} value={section.id}>
-                      <AccordionTrigger className="min-h-[52px] py-3 text-[0.95rem] font-medium text-ink hover:no-underline">
-                        {section.label}
+                      <AccordionTrigger className="group min-h-[52px] py-3 text-[0.95rem] font-medium text-ink hover:no-underline">
+                        <span className="flex items-center gap-3">
+                          <Media
+                            image={{
+                              ...(section.feature.image ?? IMAGES.workspaces),
+                              alt: "",
+                            }}
+                            className="size-9 shrink-0 rounded-full border border-line"
+                            imgClassName="grayscale-[35%] transition-all duration-500 group-hover:grayscale-0"
+                          />
+                          {section.label}
+                        </span>
                       </AccordionTrigger>
                       <AccordionContent className="pb-3">
                         <div className="space-y-5">

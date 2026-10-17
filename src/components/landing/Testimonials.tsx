@@ -1,4 +1,6 @@
+import { Media } from "@/components/site/Media";
 import { Reveal } from "@/components/site/Reveal";
+import { IMAGES } from "@/lib/imagery";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, ArrowUpRight } from "lucide-react";
@@ -20,6 +22,7 @@ const commitments = [
     label: "Commitment 01 · Decisions",
     href: "/about/principles",
     linkLabel: "Read our principles",
+    image: IMAGES.claimReview,
   },
   {
     statement:
@@ -29,6 +32,7 @@ const commitments = [
     label: "Commitment 02 · Clarity",
     href: "/how-it-works/your-policy",
     linkLabel: "Understanding your policy",
+    image: IMAGES.homeInterior,
   },
   {
     statement: "A person at the end of every route, including the difficult ones.",
@@ -37,6 +41,7 @@ const commitments = [
     label: "Commitment 03 · Service",
     href: "/claims",
     linkLabel: "How claims work",
+    image: IMAGES.support,
   },
 ];
 
@@ -74,80 +79,112 @@ export function Testimonials() {
 
         <Reveal y={30}>
           <div className="relative mt-10 overflow-hidden rounded-[2rem] border border-line bg-card">
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute -right-20 -top-16 select-none font-display text-[18rem] italic leading-none text-ink/[0.035] sm:text-[24rem]"
-            >
-              &rdquo;
-            </span>
-
-            <div className="relative px-6 py-10 sm:px-12 sm:py-14 lg:px-16">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={item.label}
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -12 }}
-                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  <p className="text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-ink/55">
-                    {item.label}
-                  </p>
-                  <blockquote className="mt-5 max-w-4xl text-[clamp(1.35rem,2.6vw,2.1rem)] font-medium leading-[1.28] tracking-[-0.028em] text-ink">
-                    {item.statement}
-                  </blockquote>
-                  <p className="mt-6 max-w-2xl text-[0.9rem] leading-7 text-muted-foreground">
-                    {item.detail}
-                  </p>
-                  <Link
-                    to={item.href}
-                    className="group mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-primary"
+            <div className="grid lg:grid-cols-[0.78fr_1.22fr]">
+              <div className="group relative min-h-[15rem] overflow-hidden sm:min-h-[19rem] lg:min-h-full">
+                <AnimatePresence initial={false}>
+                  <motion.div
+                    key={item.image.src}
+                    initial={{ opacity: 0, scale: 1.05 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute inset-0"
                   >
-                    {item.linkLabel}
-                    <ArrowUpRight className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                  </Link>
-                </motion.div>
-              </AnimatePresence>
-            </div>
+                    <Media image={item.image} overlay="floor" className="size-full" />
+                  </motion.div>
+                </AnimatePresence>
 
-            <div className="flex items-center justify-between border-t border-line px-6 py-4 sm:px-12">
-              <div className="flex items-center gap-2">
-                {commitments.map((entry, dotIndex) => (
-                  <button
-                    key={entry.label}
-                    type="button"
-                    onClick={() => setIndex(dotIndex)}
-                    aria-label={`Show ${entry.label}`}
-                    aria-current={dotIndex === index}
-                    className={cn(
-                      "h-1.5 rounded-full transition-all duration-300",
-                      dotIndex === index
-                        ? "w-7 bg-electric"
-                        : "w-1.5 bg-ink/15 hover:bg-ink/30",
-                    )}
-                  />
-                ))}
-                <span className="ml-3 text-[0.66rem] font-medium tracking-[0.18em] text-muted-foreground">
-                  0{index + 1} / 0{commitments.length}
-                </span>
+                <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-5">
+                  <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-bone backdrop-blur">
+                    On the record
+                  </span>
+                  <span className="font-display text-sm italic text-bone/70">
+                    0{index + 1} / 0{commitments.length}
+                  </span>
+                </div>
+
+                <div className="absolute inset-x-0 bottom-0 p-5">
+                  <p className="max-w-[15rem] text-[0.72rem] leading-5 text-bone/70">
+                    Standards the platform is built to hold itself to — not
+                    testimonials we cannot verify.
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => go(-1)}
-                  aria-label="Previous commitment"
-                  className="grid size-9 place-items-center rounded-full border border-line text-ink/60 transition-colors hover:border-ink/30 hover:text-ink"
+
+              <div className="relative flex flex-col justify-between">
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -right-10 -top-14 select-none font-display text-[14rem] italic leading-none text-ink/[0.04] sm:text-[18rem]"
                 >
-                  <ArrowLeft className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => go(1)}
-                  aria-label="Next commitment"
-                  className="grid size-9 place-items-center rounded-full bg-foreground text-background transition-colors hover:bg-primary hover:text-primary-foreground"
-                >
-                  <ArrowRight className="size-4" />
-                </button>
+                  &rdquo;
+                </span>
+
+                <div className="relative px-6 py-10 sm:px-10 sm:py-12">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={item.label}
+                      initial={{ opacity: 0, y: 18 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -12 }}
+                      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-ink/55">
+                        {item.label}
+                      </p>
+                      <blockquote className="mt-5 max-w-2xl text-[clamp(1.3rem,2.3vw,1.9rem)] font-medium leading-[1.28] tracking-[-0.028em] text-ink">
+                        {item.statement}
+                      </blockquote>
+                      <p className="mt-6 max-w-xl text-[0.9rem] leading-7 text-muted-foreground">
+                        {item.detail}
+                      </p>
+                      <Link
+                        to={item.href}
+                        className="group mt-6 inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary"
+                      >
+                        <span className="link-slide">{item.linkLabel}</span>
+                        <ArrowUpRight className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                      </Link>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-line px-6 py-4 sm:px-10">
+                  <div className="flex items-center gap-2">
+                    {commitments.map((entry, dotIndex) => (
+                      <button
+                        key={entry.label}
+                        type="button"
+                        onClick={() => setIndex(dotIndex)}
+                        aria-label={`Show ${entry.label}`}
+                        aria-current={dotIndex === index}
+                        className={cn(
+                          "h-1.5 rounded-full transition-all duration-300",
+                          dotIndex === index
+                            ? "w-7 bg-electric"
+                            : "w-1.5 bg-ink/15 hover:bg-ink/30",
+                        )}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => go(-1)}
+                      aria-label="Previous commitment"
+                      className="press grid size-9 place-items-center rounded-full border border-line text-ink/60 transition-colors hover:border-ink/30 hover:text-ink"
+                    >
+                      <ArrowLeft className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => go(1)}
+                      aria-label="Next commitment"
+                      className="press grid size-9 place-items-center rounded-full bg-foreground text-background transition-colors hover:bg-primary hover:text-primary-foreground"
+                    >
+                      <ArrowRight className="size-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

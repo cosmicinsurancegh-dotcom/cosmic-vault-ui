@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { IMAGES } from "@/lib/imagery";
 import { useAuth } from "@/hooks/use-auth";
 import { COVERAGE_ICONS, COVERAGE_OPTIONS, type CoverageKey } from "@/lib/vault";
 import { cn } from "@/lib/utils";
@@ -77,6 +78,7 @@ export default function QuotePage() {
         eyebrow="How it works · Getting a quote"
         title="A quote without the theatre."
         intro="There are two honest ways to get terms from us: ask an advisor, or answer the product questions yourself and receive an indicative premium calculated from the published rating rules."
+        media={{ image: IMAGES.hero, caption: "A conversation, then a number" }}
         aside={{
           title: "Neither route is binding",
           body: "A quotation records an indicative premium for a specific product version. Cover begins only after underwriting approval, payment, and policy issue.",

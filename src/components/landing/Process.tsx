@@ -1,5 +1,7 @@
 import { CtaButton } from "@/components/site/Cta";
+import { Media } from "@/components/site/Media";
 import { Reveal } from "@/components/site/Reveal";
+import { IMAGES } from "@/lib/imagery";
 import { SectionLabel } from "./SectionLabel";
 import { Sparkles } from "lucide-react";
 
@@ -8,16 +10,19 @@ const steps = [
     number: "01",
     title: "Get a free quote",
     text: "Tell us what you're protecting. We'll come back within one business day with a clear, itemised quote — no calls you didn't ask for.",
+    image: IMAGES.hero,
   },
   {
     number: "02",
     title: "Choose your plan",
     text: "Pick the cover that fits, adjust the details with your advisor, and sign in minutes. Everything is written in plain English.",
+    image: IMAGES.workspaces,
   },
   {
     number: "03",
     title: "Live, quietly protected",
     text: "Your vault opens: documents, claims, and a concierge line that reaches an actual person, any hour of any day.",
+    image: IMAGES.auth,
   },
 ];
 
@@ -27,6 +32,16 @@ export function Process({ onQuote }: { onQuote: () => void }) {
       <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
         <Reveal y={36}>
           <div className="starfield relative overflow-hidden rounded-[2rem] bg-[#071227] px-6 py-14 text-bone sm:rounded-[2.5rem] sm:px-12 sm:py-20">
+            <Media
+              image={IMAGES.cosmos}
+              parallax={34}
+              className="pointer-events-none absolute inset-0 opacity-35"
+              imgClassName="scale-105"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#071227]/70 via-[#071227]/40 to-[#071227]"
+            />
             <div
               aria-hidden="true"
               className="pointer-events-none absolute -left-24 -top-24 size-[26rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.28),transparent_65%)]"
@@ -70,6 +85,12 @@ export function Process({ onQuote }: { onQuote: () => void }) {
                         <span className="hidden h-px w-10 bg-white/10 md:block" />
                       )}
                     </div>
+                    <Media
+                      image={step.image}
+                      overlay="soft"
+                      className="mt-5 aspect-[16/9] w-full rounded-[1rem] border border-white/10 opacity-85 transition-opacity duration-500 group-hover:opacity-100"
+                      imgClassName="grayscale-[18%]"
+                    />
                     <h3 className="mt-5 text-lg font-medium tracking-[-0.02em] text-bone">
                       {step.title}
                     </h3>
