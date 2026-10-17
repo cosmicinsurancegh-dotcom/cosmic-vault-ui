@@ -51,8 +51,8 @@
   --color-halo: var(--halo);
   --color-line: var(--line);
 
-  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-sans: "Urbanist", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Urbanist", ui-sans-serif, system-ui, sans-serif;
 
   --animate-marquee: marquee 38s linear infinite;
   --animate-orbit: orbit 34s linear infinite;
