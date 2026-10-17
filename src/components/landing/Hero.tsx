@@ -1,6 +1,7 @@
 import { CtaButton } from "@/components/site/Cta";
 import { Media } from "@/components/site/Media";
 import { ADVISOR_FACES, coverImage } from "@/lib/imagery";
+import { SectionLabel } from "./SectionLabel";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
@@ -244,7 +245,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
         className="pointer-events-none absolute left-[-14%] top-[46%] size-[24rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.55),transparent_70%)] blur-2xl"
       />
 
-      <div className="relative mx-auto max-w-[1240px] px-4 pt-4 sm:px-6 sm:pt-6">
+      <div className="relative mx-auto max-w-[1180px] px-5 pt-6 sm:px-8 sm:pt-10">
         <div
           role="region"
           aria-roledescription="carousel"
@@ -272,7 +273,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
               setKeyboardFocus(false);
             }
           }}
-          className="group/hero relative isolate flex touch-pan-y flex-col overflow-hidden rounded-[1.5rem] bg-[#050c1a] text-bone shadow-[0_44px_100px_-60px_rgba(6,16,35,0.9)] outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:rounded-[2rem]"
+          className="media-frame group/hero relative isolate flex touch-pan-y flex-col overflow-hidden rounded-[1.6rem] bg-[#071227] text-bone outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:rounded-[2.2rem]"
         >
           {/* Slide photography, stacked and cross-faded */}
           <div aria-hidden="true" className="absolute inset-0 -z-10">
@@ -301,30 +302,31 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
               );
             })}
 
-            <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(4,11,24,0.97)_0%,rgba(4,11,24,0.85)_34%,rgba(4,11,24,0.56)_62%,rgba(4,11,24,0.6)_100%)]" />
-            <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,rgba(4,11,24,0.9)_0%,rgba(4,11,24,0.5)_42%,rgba(4,11,24,0.05)_76%)] lg:block" />
+            <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(4,16,31,0.97)_0%,rgba(4,16,31,0.9)_34%,rgba(4,16,31,0.75)_62%,rgba(4,16,31,0.6)_100%)]" />
+            <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,rgba(4,16,31,0.9)_0%,rgba(4,16,31,0.5)_42%,rgba(4,16,31,0.05)_76%)] lg:block" />
+            <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#04101f]/85 to-transparent sm:h-32" />
           </div>
 
           {/* Top bar */}
           <div className="relative z-10 flex items-start justify-between gap-3 px-5 pt-5 sm:px-7 sm:pt-7 lg:px-10 lg:pt-8">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] py-1.5 pl-2 pr-3.5 backdrop-blur-md">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 py-1.5 pl-2 pr-3.5 backdrop-blur-md">
                 <span className="relative flex size-1.5">
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-halo opacity-70" />
-                  <span className="relative inline-flex size-1.5 rounded-full bg-halo" />
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-electric-soft opacity-70" />
+                  <span className="relative inline-flex size-1.5 rounded-full bg-electric-soft" />
                 </span>
-                <span className="text-[0.6rem] font-semibold uppercase tracking-[0.22em] text-bone/80">
+                <span className="text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-bone/80">
                   Insurance for the long horizon
                 </span>
               </span>
-              <span className="hidden items-center gap-2 text-[0.6rem] font-medium uppercase tracking-[0.22em] text-bone/45 md:flex">
-                <Sparkles className="size-3.5 text-halo" />
+              <span className="hidden items-center gap-2 text-[0.62rem] font-medium uppercase tracking-[0.22em] text-bone/65 md:flex">
+                <Sparkles className="size-3.5 text-electric-soft" />
                 Manual underwriting, by design
               </span>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="hidden text-[0.66rem] uppercase tracking-[0.2em] text-bone/45 sm:block">
+              <span className="hidden text-[0.66rem] uppercase tracking-[0.2em] text-bone/65 sm:block">
                 Directly arranged cover
               </span>
               {!reduceMotion && (
@@ -332,7 +334,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                   type="button"
                   onClick={togglePlayback}
                   aria-label={paused ? "Play slide show" : "Pause slide show"}
-                  className="grid size-9 place-items-center rounded-full border border-white/15 bg-white/[0.06] text-bone/70 backdrop-blur-md transition-colors hover:border-white/35 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-halo/60"
+                  className="grid size-9 place-items-center rounded-full border border-white/15 bg-white/[0.06] text-bone/70 backdrop-blur-md transition-colors hover:border-white/35 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   {paused ? (
                     <Play className="size-3.5" />
@@ -365,20 +367,16 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                       ease: [0.22, 1, 0.36, 1],
                     }}
                   >
-                    <div className="flex items-center gap-3 text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-bone/55">
-                      <span className="text-halo">{pad(index)}</span>
-                      <span className="h-px w-6 bg-bone/25" />
-                      <span>{slide.kicker}</span>
-                    </div>
+                    <SectionLabel index={pad(index)} className="text-bone/70">
+                      {slide.kicker}
+                    </SectionLabel>
 
                     <h1 className="mt-4 max-w-[23ch] text-[clamp(2.35rem,5.6vw,4.5rem)] font-semibold leading-[0.97] tracking-[-0.045em] text-bone">
                       {slide.title}{" "}
-                      <span className="font-display font-light italic text-halo">
-                        {slide.emphasis}
-                      </span>
+                      <span className="text-electric-soft">{slide.emphasis}</span>
                     </h1>
 
-                    <p className="mt-5 max-w-lg text-[0.92rem] leading-7 text-bone/70">
+                    <p className="mt-5 max-w-lg text-[0.93rem] leading-7 text-bone/65">
                       {slide.body}
                     </p>
                   </motion.div>
@@ -386,15 +384,13 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
               </div>
 
               <div className="mt-7 flex flex-wrap items-center gap-3">
-                <CtaButton onClick={onQuote} variant="light">
-                  Get a quote
-                </CtaButton>
+                <CtaButton onClick={onQuote}>Get a quote</CtaButton>
                 <Link
                   to={`/cover/${slide.slug}`}
-                  className="group/explore inline-flex items-center gap-2.5 rounded-full px-2 py-2 text-[0.86rem] font-medium text-bone/70 transition-colors hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-halo/60"
+                  className="group/explore inline-flex items-center gap-2.5 rounded-full px-2 py-2 text-[0.86rem] font-medium text-bone/70 transition-colors hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
-                  Explore this cover
-                  <span className="grid size-8 place-items-center rounded-full border border-white/20 transition-colors group-hover/explore:border-halo/70">
+                  <span className="link-slide">Explore this cover</span>
+                  <span className="grid size-8 place-items-center rounded-full border border-white/20 transition-colors group-hover/explore:border-white/45">
                     <ArrowUpRight className="size-3.5 transition-transform duration-300 group-hover/explore:-translate-y-0.5 group-hover/explore:translate-x-0.5" />
                   </span>
                 </Link>
@@ -414,13 +410,13 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                     delay: reduceMotion ? 0 : 0.06,
                     ease: [0.22, 1, 0.36, 1],
                   }}
-                  className="rounded-[1.35rem] border border-white/12 bg-[#071427]/55 p-5 backdrop-blur-md"
+                  className="rounded-[1.35rem] border border-white/12 bg-[#071227]/85 p-5 backdrop-blur-md"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <p className="text-[0.56rem] font-semibold uppercase tracking-[0.24em] text-bone/45">
+                    <p className="text-[0.56rem] font-semibold uppercase tracking-[0.24em] text-bone/55">
                       On this cover line
                     </p>
-                    <ShieldCheck className="size-4 text-halo" />
+                    <ShieldCheck className="size-4 text-electric-soft" />
                   </div>
                   <p className="mt-2 font-display text-xl leading-tight text-bone">
                     {slide.product}
@@ -429,16 +425,16 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                     {slide.features.map((feature) => (
                       <li
                         key={feature}
-                        className="flex items-start gap-2.5 text-[0.8rem] leading-5 text-bone/70"
+                        className="flex items-start gap-2.5 text-[0.8rem] leading-5 text-bone/65"
                       >
-                        <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full bg-white/10 text-halo">
+                        <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full bg-white/10 text-electric-soft">
                           <Check className="size-2.5" strokeWidth={3} />
                         </span>
                         {feature}
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-5 border-t border-white/10 pt-3.5 text-[0.62rem] leading-5 text-bone/40">
+                  <p className="mt-5 border-t border-white/10 pt-3.5 text-[0.62rem] leading-5 text-bone/55">
                     Indicative pricing, reviewed by an underwriter before cover
                     begins. The schedule states the terms that apply.
                   </p>
@@ -448,7 +444,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
           </div>
 
           {/* Chapter rail */}
-          <div className="relative z-10 border-t border-white/10 bg-[#050c1a]/40 px-4 py-3.5 backdrop-blur-md sm:px-6 lg:px-8">
+          <div className="relative z-10 border-t border-white/10 bg-[#071227]/40 px-4 py-3.5 backdrop-blur-md sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
               <div
                 role="tablist"
@@ -467,66 +463,64 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                       aria-controls="hero-slide-panel"
                       onClick={() => go(itemIndex)}
                       className={cn(
-                        "group/tab relative flex shrink-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-halo/60",
-                        active
-                          ? "bg-white/[0.09]"
-                          : "hover:bg-white/[0.05]",
+                        "group/tab relative flex shrink-0 items-center gap-2.5 rounded-full px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#071227]",
+                        !active && "hover:bg-white/[0.05]",
                       )}
                     >
+                      {active && (
+                        <motion.span
+                          layoutId="hero-tab-pill"
+                          transition={{
+                            duration: reduceMotion ? 0 : 0.35,
+                            ease: [0.22, 1, 0.36, 1],
+                          }}
+                          className="absolute inset-0 rounded-full bg-white/10"
+                        />
+                      )}
                       <span
                         className={cn(
-                          "text-[0.6rem] font-semibold tabular-nums transition-colors",
-                          active ? "text-halo" : "text-bone/35",
+                          "relative text-[0.62rem] font-semibold tabular-nums transition-colors",
+                          active ? "text-electric-soft" : "text-bone/40",
                         )}
                       >
                         {pad(itemIndex)}
                       </span>
                       <span
                         className={cn(
-                          "text-[0.78rem] transition-colors",
+                          "relative text-[0.78rem] transition-colors",
                           active
                             ? "font-medium text-bone"
-                            : "text-bone/50 group-hover/tab:text-bone/75",
+                            : "text-bone/55 group-hover/tab:text-bone/80",
                         )}
                       >
                         {item.tab}
                       </span>
-                      {active && (
-                        <motion.span
-                          layoutId="hero-tab-line"
-                          transition={{
-                            duration: reduceMotion ? 0 : 0.35,
-                            ease: [0.22, 1, 0.36, 1],
-                          }}
-                          className="absolute inset-x-2.5 bottom-0.5 h-px bg-halo/80"
-                        />
-                      )}
                     </button>
                   );
                 })}
               </div>
 
               <div className="flex items-center gap-3 border-l border-white/10 pl-3 sm:pl-4">
-                <span className="hidden font-display text-xs tabular-nums text-bone/50 sm:block">
+                <span className="hidden font-display text-sm italic tabular-nums text-bone/70 sm:block">
                   {pad(index)}{" "}
-                  <span className="text-bone/25">/ {pad(slides.length - 1)}</span>
+                  <span className="text-bone/40">/ {pad(slides.length - 1)}</span>
                 </span>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => go(index - 1)}
                     aria-label="Previous cover line"
-                    className="grid size-8 place-items-center rounded-full border border-white/15 text-bone/65 transition-colors hover:border-white/40 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-halo/60"
+                    className="press grid size-9 place-items-center rounded-full border border-white/15 text-bone/65 transition-colors hover:border-white/40 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#071227]"
                   >
-                    <ArrowLeft className="size-3.5" />
+                    <ArrowLeft className="size-4" />
                   </button>
                   <button
                     type="button"
                     onClick={() => go(index + 1)}
                     aria-label="Next cover line"
-                    className="grid size-8 place-items-center rounded-full border border-white/15 text-bone/65 transition-colors hover:border-white/40 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-halo/60"
+                    className="press grid size-9 place-items-center rounded-full border border-white/15 text-bone/65 transition-colors hover:border-white/40 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#071227]"
                   >
-                    <ArrowRight className="size-3.5" />
+                    <ArrowRight className="size-4" />
                   </button>
                 </div>
               </div>
@@ -537,14 +531,14 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
           <div aria-hidden="true" className="relative z-10 h-[2px] w-full bg-white/10">
             <span
               ref={progressRef}
-              className="block h-full origin-left bg-halo"
+              className="block h-full origin-left bg-electric-soft"
               style={{ transform: "scaleX(0)" }}
             />
           </div>
         </div>
 
         {/* Trust bar */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-1 sm:px-2">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-line px-1 pb-6 sm:px-2">
           <div className="flex items-center gap-3">
             <div className="flex -space-x-2">
               {ADVISOR_FACES.map((face) => (
@@ -561,7 +555,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
               Every application is read by a person.
             </p>
           </div>
-          <div className="hidden items-center gap-4 text-[0.58rem] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:flex">
+          <div className="hidden items-center gap-4 text-[0.62rem] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:flex">
             <span>Six cover lines</span>
             <span className="h-3 w-px bg-line" />
             <span>One vault</span>
