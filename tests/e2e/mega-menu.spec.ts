@@ -1,0 +1,164 @@
+import type { Locator, Page } from "@playwright/test";
+import { NAV_SECTIONS } from "../../src/lib/navigation";
+import { expect, expectRoute, test } from "./support/fixtures";
+
+/**
+ * Destinations that require a session. The public link is really a redirect
+ * into the sign-in flow, which is covered in `auth-redirect.spec.ts`; here we
+ * only confirm the menu points at the right destination.
+ */
+const PROTECTED: Record<string, string> = {
+  "/claims/track": "/dashboard/claims",
+  "/claims/policy-documents": "/dashboard/documents",
+};
+
+const primaryNav = (page: Page) =>
+  page.getByRole("navigation", { name: "Primary" });
+
+/**
+ * Opens a panel with the keyboard. Focus + Enter is how the menu is designed
+ * to open for keyboard and assistive-technology users, and unlike hover it
+ * cannot be closed by a stray pointer crossing the grace period.
+ */
+async function openMenu(trigger: Locator) {
+  await trigger.focus();
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await trigger.press("Enter");
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+}
+
+test.describe("mega-menu", () => {
+  test("the landing page renders the public shell", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByRole("heading", { level: 1, name: /your life, your world/i }),
+    ).toBeVisible();
+    await expect(page.getByRole("banner")).toBeVisible();
+    await expect(page.getByRole("contentinfo")).toBeVisible();
+  });
+
+  test("hovering a trigger opens the panel and the grace period closes it", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const trigger = primaryNav(page).getByRole("button", {
+      name: "Cover",
+      exact: true,
+    });
+    const panel = page.getByRole("region", { name: "Cover menu" });
+
+    await trigger.hover();
+    await expect(panel).toBeVisible();
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+    // Moving away closes it once the 160ms grace period expires.
+    await page.mouse.move(5, 700);
+    await expect(panel).toHaveCount(0);
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  for (const section of NAV_SECTIONS) {
+    test(`${section.label}: every link navigates`, async ({ page }) => {
+      await page.goto("/");
+
+      const trigger = primaryNav(page).getByRole("button", {
+        name: section.label,
+        exact: true,
+      });
+      const panel = page.locator(`#mega-${section.id}`);
+      const panelRegion = page.getByRole("region", {
+        name: `${section.label} menu`,
+      });
+
+      const expectedCount =
+        section.groups.reduce((total, group) => total + group.links.length, 0) +
+        1 + // feature primary
+        (section.feature.secondary ? 1 : 0) +
+        1; // "section overview" in the panel footer
+
+      await expect(trigger).toBeVisible();
+      await expect(trigger).toHaveAttribute("aria-haspopup", "true");
+      await expect(trigger).toHaveAttribute("aria-expanded", "false");
+      await expect(panel).toHaveCount(0);
+
+      await openMenu(trigger);
+      await expect(panelRegion).toBeVisible();
+      await expect(panelRegion.getByRole("link")).toHaveCount(expectedCount);
+
+      const links = panelRegion.getByRole("link");
+
+      for (let index = 0; index < expectedCount; index += 1) {
+        const link = links.nth(index);
+        const href = await link.getAttribute("href");
+        const label = (await link.innerText()).replace(/\s+/g, " ").trim();
+
+        expect(
+          href,
+          `${section.label} link ${index} (${label}) needs an internal href`,
+        ).toMatch(/^\/[^/]/);
+
+        const protectedDestination = href ? PROTECTED[href] : undefined;
+
+        // The panel closes on pointer movement and on route change, and the
+        // click is the last pointer action of the loop, so re-open and retry if
+        // the menu closed underneath it.
+        await expect(async () => {
+          if (!(await panelRegion.isVisible())) await openMenu(trigger);
+          await links.nth(index).click({ timeout: 5_000 });
+        }, `${label} should be clickable from the open menu`).toPass({
+          timeout: 30_000,
+        });
+
+        if (protectedDestination) {
+          await expect
+            .poll(() => new URL(page.url()).pathname, {
+              message: `${label} should hand off to sign-in`,
+            })
+            .toBe("/auth");
+          expect(new URL(page.url()).searchParams.get("returnTo")).toBe(
+            protectedDestination,
+          );
+          // /auth sits outside the public shell, so return to it explicitly.
+          await page.goto("/");
+        } else if (href) {
+          await expectRoute(page, href);
+        }
+
+        await expect(
+          panel,
+          `${section.label} menu should close after choosing ${label}`,
+        ).toHaveCount(0);
+
+        if (index < expectedCount - 1) {
+          await openMenu(trigger);
+          await expect(panelRegion).toBeVisible();
+        }
+      }
+    });
+
+    test(`${section.label}: keyboard opens, focuses and closes the menu`, async ({
+      page,
+    }) => {
+      await page.goto("/");
+
+      const trigger = primaryNav(page).getByRole("button", {
+        name: section.label,
+        exact: true,
+      });
+      const panelRegion = page.getByRole("region", {
+        name: `${section.label} menu`,
+      });
+
+      await openMenu(trigger);
+      await expect(panelRegion).toBeVisible();
+
+      // Focus moves into the panel so keyboard users continue from there.
+      await expect(panelRegion.getByRole("link").first()).toBeFocused();
+
+      await page.keyboard.press("Escape");
+      await expect(panelRegion).toHaveCount(0);
+      await expect(trigger).toHaveAttribute("aria-expanded", "false");
+      await expect(trigger).toBeFocused();
+    });
+  }
+});

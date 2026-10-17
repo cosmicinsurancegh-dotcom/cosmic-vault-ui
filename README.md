@@ -33,6 +33,20 @@ results and known limitations are documented in [`docs/PLATFORM.md`](docs/PLATFO
 
 This project is set up already and running on a cloud environment, as well as a convex development in the sandbox.
 
+## Testing
+
+- `bun run test` — Vitest unit tests for the Convex functions (`tests/*.test.ts`).
+- `bun run test:e2e` — Playwright browser suite (`tests/e2e`). It starts Vite on
+  port 4174 with `tests/e2e/vite.e2e.config.ts`, which aliases `convex/react`,
+  `@convex-dev/auth/react` and the generated api to the doubles in
+  `tests/e2e/stubs`, so no deployment, credentials or network are needed. The
+  suite clicks every mega-menu link, every footer link, and drives the sign-in
+  redirect flow (protected link → `/auth?returnTo=…` → destination).
+- `bun run test:e2e:types` — type-checks the browser suite and its stubs.
+
+Install the browser once with `bunx playwright install chromium` if it is not
+already present on the machine.
+
 ## Environment Variables
 
 The project is set up with project specific CONVEX_DEPLOYMENT and VITE_CONVEX_URL environment variables on the client side.

@@ -11,6 +11,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:types": "tsc -p tests/e2e/tsconfig.json",
     "format": "prettier --write .",
     "preview": "vite preview",
     "deploy:vercel": "bunx vercel --prod --yes",
@@ -79,6 +81,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "1.49.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
