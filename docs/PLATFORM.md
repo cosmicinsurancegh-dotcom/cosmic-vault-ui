@@ -214,9 +214,18 @@ administrator) created through the app's own mutations.
 | Audit trail | records product, application, policy, payment, claim, settlement, broker assignment events |
 | Support ticket create + staff queue | ticket `SUP-VAU7QHS52` visible to staff |
 | Email delivery state | attempts recorded as `failed` with provider reason (sandbox recipient), proving the adapter path |
+| Marketing quote request (`quotes.requestQuote`) from the landing `QuoteDialog` | stored as `CV-JLB3KN2`: name/email trimmed, email lower-cased, `status: in_review`, no `userId` for a signed-out visitor |
+| Quote request with a 1-character name / an invalid email | rejected: "Please add your full name." / "Please add a valid email address." |
+| Quote request with an unsupported coverage value | rejected by argument validation |
+| Signed-in quote request | stored with `userId`, immediately listed by `quotes.myQuotes` |
+| Landing lead whose email matches a member who signs in later | appears in that member's `quotes.myQuotes` even though the lead has no `userId` |
+| `quotes.myQuotes` for a signed-out visitor | `[]` (no leak of other members' leads) |
+| ESLint on the landing, auth and quote modules | passes |
+| Vite transforms for every landing section, the quote dialog, the auth page and the vault pages | 200, no transform errors |
 
-Landing page, `/auth`, `/login`, `/signup` and the existing public routes are
-unchanged and still render.
+The marketing landing page (`/`), `/auth`, `/login`, `/signup` and the vault
+routes all render; the landing page's quote dialog posts to
+`quotes.requestQuote`, which is the only write path for public traffic.
 
 ### Known limitations
 
@@ -229,4 +238,12 @@ unchanged and still render.
   regulatory content itself needs review per market.
 - The dev deployment contains records created during verification
   (`qa.*@example.com`, `POL-QQ4SE8JBD`, `CLM-S35HW2UV7`); remove them before
-  going live if a clean dataset is preferred.
+  going live if a clean dataset is preferred. (Landing-page leads created while
+  testing `quotes.requestQuote` were deleted again.)
+- Landing-page quote requests are stored and matched to a member by email, but
+  no dashboard screen lists them yet: the member vault's `/dashboard/quotes`
+  shows catalogue quotations (`quotations.mine`), and staff have no lead inbox.
+  Add a `quotes.myQuotes` panel or a staff lead list before running the funnel
+  for real — the data is already captured and scoped correctly.
+- `src/pages/Dashboard.tsx` is an orphaned earlier draft of the member vault
+  (it still queries `quotes.myQuotes`); nothing routes to it.
