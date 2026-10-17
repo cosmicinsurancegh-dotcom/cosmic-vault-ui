@@ -1,1 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 96.81 96.81"><rect width="96.81" height="96.81" rx="18"/><g fill="#fff"><rect x="24.67" y="24.67" width="47.47" height="11.87"/><rect x="24.67" y="36.54" width="11.87" height="35.61"/><rect x="40.06" y="39.98" width="23.74" height="11.87"/><rect x="40.06" y="51.85" width="11.87" height="20.3"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <rect width="48" height="48" rx="12" fill="#081227"/>
+  <circle cx="24" cy="24" r="12.5" stroke="#F4F1EA" stroke-width="1.6" opacity="0.85"/>
+  <ellipse cx="24" cy="24" rx="18" ry="6.4" stroke="#4C7DFF" stroke-width="1.8" transform="rotate(-28 24 24)"/>
+  <circle cx="24" cy="24" r="4.6" fill="#4C7DFF"/>
+  <circle cx="24" cy="24" r="1.7" fill="#F4F1EA"/>
+  <circle cx="38.2" cy="15.4" r="2" fill="#F4F1EA"/>
+</svg>

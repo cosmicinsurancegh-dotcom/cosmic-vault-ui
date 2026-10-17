@@ -1,11 +1,11 @@
 {
-  "name": "freebuff.com application",
-  "short_name": "freebuff.com",
-  "description": "freebuff.com application",
+  "name": "Cosmic Vault — Insurance for the long horizon",
+  "short_name": "Cosmic Vault",
+  "description": "Modern health, home, auto and life insurance with human advisors and 48-hour claims.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#F7F5EF",
+  "theme_color": "#071227",
   "icons": [
     {
       "src": "/logo.svg",

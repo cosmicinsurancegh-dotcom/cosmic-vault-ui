@@ -16,6 +16,21 @@ export const roleValidator = v.union(
 );
 export type Role = Infer<typeof roleValidator>;
 
+export const coverageValidator = v.union(
+  v.literal("health"),
+  v.literal("home"),
+  v.literal("auto"),
+  v.literal("life"),
+);
+export type CoverageType = Infer<typeof coverageValidator>;
+
+export const quoteStatusValidator = v.union(
+  v.literal("in_review"),
+  v.literal("quoted"),
+  v.literal("active"),
+);
+export type QuoteStatus = Infer<typeof quoteStatusValidator>;
+
 const schema = defineSchema(
   {
     // default auth tables using convex auth.
@@ -32,12 +47,20 @@ const schema = defineSchema(
       role: v.optional(roleValidator), // role of the user. do not remove
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
-    // add other tables here
-
-    // tableName: defineTable({
-    //   ...
-    //   // table fields
-    // }).index("by_field", ["field"])
+    // Quote requests created from the landing page or the member vault.
+    quotes: defineTable({
+      userId: v.optional(v.id("users")),
+      reference: v.string(),
+      name: v.string(),
+      email: v.string(),
+      coverage: coverageValidator,
+      plan: v.optional(v.string()),
+      message: v.optional(v.string()),
+      status: quoteStatusValidator,
+      monthlyEstimate: v.optional(v.number()),
+    })
+      .index("by_user", ["userId"])
+      .index("by_email", ["email"]),
   },
   {
     schemaValidation: false,

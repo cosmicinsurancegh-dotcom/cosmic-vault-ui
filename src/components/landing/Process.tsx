@@ -1,0 +1,100 @@
+import { CtaButton } from "@/components/site/Cta";
+import { Reveal } from "@/components/site/Reveal";
+import { SectionLabel } from "./SectionLabel";
+import { Sparkles } from "lucide-react";
+
+const steps = [
+  {
+    number: "01",
+    title: "Get a free quote",
+    text: "Tell us what you're protecting. We'll come back within one business day with a clear, itemised quote — no calls you didn't ask for.",
+  },
+  {
+    number: "02",
+    title: "Choose your plan",
+    text: "Pick the cover that fits, adjust the details with your advisor, and sign in minutes. Everything is written in plain English.",
+  },
+  {
+    number: "03",
+    title: "Live, quietly protected",
+    text: "Your vault opens: documents, claims, and a concierge line that reaches an actual person, any hour of any day.",
+  },
+];
+
+export function Process({ onQuote }: { onQuote: () => void }) {
+  return (
+    <section id="process" className="mt-24 scroll-mt-24 sm:mt-32">
+      <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
+        <Reveal y={36}>
+          <div className="starfield relative overflow-hidden rounded-[2rem] bg-[#071227] px-6 py-14 text-bone sm:rounded-[2.5rem] sm:px-12 sm:py-20">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -left-24 -top-24 size-[26rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.28),transparent_65%)]"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -bottom-32 -right-10 size-[24rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.13),transparent_65%)]"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-20 top-1/2 hidden size-[24rem] -translate-y-1/2 rounded-full border border-white/[0.07] lg:block"
+            >
+              <span className="absolute inset-12 rounded-full border border-white/[0.05]" />
+              <span className="absolute left-1/2 top-0 size-1.5 -translate-x-1/2 rounded-full bg-electric-soft" />
+            </div>
+
+            <div className="relative mx-auto max-w-2xl text-center">
+              <SectionLabel index="04" className="justify-center text-bone/45">
+                The process
+              </SectionLabel>
+              <h2 className="mt-5 text-balance text-[clamp(2.1rem,4.7vw,3.7rem)] font-semibold leading-[1.02] tracking-[-0.045em]">
+                Easy, transparent,{" "}
+                <span className="font-display font-normal italic text-electric-soft">
+                  human.
+                </span>
+              </h2>
+              <p className="mx-auto mt-4 max-w-md text-[0.93rem] leading-7 text-bone/55">
+                Three steps, no forms in triplicate, no waiting on hold. The
+                whole thing takes about as long as a coffee.
+              </p>
+            </div>
+
+            <div className="relative mt-14 grid gap-8 sm:mt-16 md:grid-cols-3 md:gap-6">
+              {steps.map((step, index) => (
+                <Reveal key={step.number} delay={index * 0.1}>
+                  <div className="group relative border-t border-white/12 pt-6">
+                    <span className="absolute -top-[3px] left-0 size-1.5 rounded-full bg-electric-soft transition-transform duration-500 group-hover:scale-150" />
+                    <div className="flex items-baseline justify-between">
+                      <span className="font-display text-5xl italic leading-none text-bone/20 transition-colors duration-500 group-hover:text-electric-soft sm:text-6xl">
+                        {step.number}
+                      </span>
+                      {index < steps.length - 1 && (
+                        <span className="hidden h-px w-10 bg-white/10 md:block" />
+                      )}
+                    </div>
+                    <h3 className="mt-5 text-lg font-medium tracking-[-0.02em] text-bone">
+                      {step.title}
+                    </h3>
+                    <p className="mt-2.5 text-sm leading-6 text-bone/55">
+                      {step.text}
+                    </p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+
+            <Reveal delay={0.2}>
+              <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                <CtaButton onClick={onQuote}>Start your quote</CtaButton>
+                <p className="flex items-center gap-2 text-xs text-bone/45">
+                  <Sparkles className="size-3.5 text-electric-soft" />
+                  Two minutes · no credit check · no obligation
+                </p>
+              </div>
+            </Reveal>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}

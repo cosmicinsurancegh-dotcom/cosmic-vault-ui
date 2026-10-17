@@ -126,7 +126,10 @@ createRoot(document.getElementById("root")!).render(
               <Route
                 path="/dashboard"
                 element={
-                  <RequireAuth>
+                  <RequireAuth
+                    title="Sign in to open your vault"
+                    description="Your quotes, coverage, and concierge live here."
+                  >
                     <Dashboard />
                   </RequireAuth>
                 }

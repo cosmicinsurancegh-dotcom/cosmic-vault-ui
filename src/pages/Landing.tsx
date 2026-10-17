@@ -1,51 +1,68 @@
-// TODO: REPLACE THIS LANDING PAGE WITH AN ELEGANT, THEMATIC, AND WELL-DESIGNED LANDING PAGE RELEVANT TO THE PROJECT
-import { motion } from "framer-motion";
-import { Loader } from "lucide-react";
-import logo from "@/assets/logo.svg";
+import { FinalCta } from "@/components/landing/FinalCta";
+import { Hero } from "@/components/landing/Hero";
+import { Plans } from "@/components/landing/Plans";
+import { Process } from "@/components/landing/Process";
+import { Solutions } from "@/components/landing/Solutions";
+import { Story } from "@/components/landing/Story";
+import { Testimonials } from "@/components/landing/Testimonials";
+import { Why } from "@/components/landing/Why";
+import { Footer } from "@/components/site/Footer";
+import { Navbar } from "@/components/site/Navbar";
+import { QuoteDialog } from "@/components/site/QuoteDialog";
+import type { CoverageKey } from "@/lib/vault";
+import { motion, useScroll, useSpring } from "framer-motion";
+import { useState } from "react";
 
 export default function Landing() {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="min-h-screen flex flex-col"
-    >
+  const [quoteOpen, setQuoteOpen] = useState(false);
+  const [quoteSession, setQuoteSession] = useState(0);
+  const [coverage, setCoverage] = useState<CoverageKey>("health");
+  const [plan, setPlan] = useState<string | undefined>(undefined);
 
-      
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center">
-        <div className="max-w-5xl mx-auto relative px-4">
-        {/* TODO: landing page goes here; replace with the landing page */}
-        <div className="flex justify-center">
-          <img
-            src={logo}
-            alt="Lock Icon"
-            width={64}
-            height={64}
-            className="rounded-lg mb-8 mt-24"
-          />
-        </div>
-        <div className="flex items-center justify-center text-foreground">
-          <Loader className="h-8 w-8 animate-spin mr-4 shrink-0" />
-          <span className="text-base">
-            <a
-              href="https://freebuff.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary underline hover:text-primary/80 transition-colors font-medium"
-            >
-              freebuff.com
-            </a>
-            {" "}is generating your project...
-          </span>
-        </div>
-        <p className="text-center text-muted-foreground py-6 text-sm mt-2">
-          Check progress on your project page.
-        </p>
-        
-        </div>
-      </div>
-    </motion.div>
+  const { scrollYProgress } = useScroll();
+  const progress = useSpring(scrollYProgress, {
+    stiffness: 140,
+    damping: 26,
+    restDelta: 0.001,
+  });
+
+  const openQuote = (options?: { coverage?: CoverageKey; plan?: string }) => {
+    setCoverage(options?.coverage ?? "health");
+    setPlan(options?.plan);
+    setQuoteSession((session) => session + 1);
+    setQuoteOpen(true);
+  };
+
+  return (
+    <div className="relative min-h-screen overflow-x-clip bg-background">
+      <motion.div
+        aria-hidden="true"
+        style={{ scaleX: progress }}
+        className="fixed inset-x-0 top-0 z-50 h-[2px] origin-left bg-electric"
+      />
+
+      <Navbar onRequestQuote={() => openQuote()} />
+
+      <main>
+        <Hero onQuote={() => openQuote()} />
+        <Story />
+        <Why />
+        <Solutions onQuote={(selected) => openQuote({ coverage: selected })} />
+        <Process onQuote={() => openQuote()} />
+        <Plans onQuote={(selectedPlan) => openQuote({ plan: selectedPlan })} />
+        <Testimonials />
+        <FinalCta onQuote={() => openQuote()} />
+      </main>
+
+      <Footer />
+
+      <QuoteDialog
+        key={quoteSession}
+        open={quoteOpen}
+        onOpenChange={setQuoteOpen}
+        defaultCoverage={coverage}
+        defaultPlan={plan}
+      />
+    </div>
   );
 }
