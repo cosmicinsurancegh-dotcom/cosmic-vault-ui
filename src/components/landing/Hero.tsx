@@ -1,247 +1,575 @@
 import { CtaButton } from "@/components/site/Cta";
 import { Media } from "@/components/site/Media";
-import { Reveal } from "@/components/site/Reveal";
-import { ADVISOR_FACES, IMAGES, coverImage } from "@/lib/imagery";
+import { ADVISOR_FACES, coverImage } from "@/lib/imagery";
 import { cn } from "@/lib/utils";
-import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
-import { ArrowDown, ArrowUpRight, BadgeCheck, ShieldCheck, Sparkles } from "lucide-react";
-import { useRef } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  Pause,
+  Play,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
 import { Link } from "react-router";
 
-const facts = [
-  "Six cover lines configured",
-  "Every application reviewed by a person",
-  "Decisions recorded with reasons",
-  "Documents held in one vault",
+const AUTOPLAY_MS = 7200;
+
+type Slide = {
+  slug: string;
+  tab: string;
+  kicker: string;
+  product: string;
+  title: string;
+  emphasis: string;
+  body: string;
+  features: string[];
+};
+
+const slides: Slide[] = [
+  {
+    slug: "home",
+    tab: "Home",
+    kicker: "Home & contents",
+    product: "Vault Home & Contents",
+    title: "The roof above you.",
+    emphasis: "The life inside it.",
+    body: "Buildings and contents written on the property you actually live in — not a postcode average — and reviewed by a person before any cover begins.",
+    features: [
+      "Buildings, contents, or both on one policy",
+      "Rated on the rebuild value you declare",
+      "Escape of water and storm damage considered",
+    ],
+  },
+  {
+    slug: "motor",
+    tab: "Motor",
+    kicker: "Motor",
+    product: "Vault Comprehensive Motor",
+    title: "For every mile",
+    emphasis: "you mean to drive.",
+    body: "Comprehensive private car cover for up to three vehicles on one policy, with the excess and the exclusions stated plainly in the schedule.",
+    features: [
+      "Up to three vehicles on one policy",
+      "A named claims handler, not a queue",
+      "Glass cover and limited European use",
+    ],
+  },
+  {
+    slug: "travel",
+    tab: "Travel",
+    kicker: "Travel",
+    product: "Vault Worldwide Travel",
+    title: "Cover that travels",
+    emphasis: "wherever you land.",
+    body: "Single-trip or annual cover with emergency medical treatment and repatriation at its centre, and one assistance number that answers from anywhere.",
+    features: [
+      "Emergency medical treatment and repatriation",
+      "Cancellation, curtailment and baggage",
+      "An assistance line staffed day and night",
+    ],
+  },
+  {
+    slug: "health",
+    tab: "Health",
+    kicker: "Health",
+    product: "Vault Private Health",
+    title: "Care that doesn't",
+    emphasis: "wait in a queue.",
+    body: "Consultant-led diagnostics, second opinions and mental-health support without needing a referral first — with pre-existing conditions assessed individually.",
+    features: [
+      "Consultant and diagnostic care",
+      "Mental-health support without a referral",
+      "Dental and optical option available",
+    ],
+  },
+  {
+    slug: "life",
+    tab: "Life",
+    kicker: "Life & family",
+    product: "Vault Term Life",
+    title: "A promise that",
+    emphasis: "outlasts you.",
+    body: "Level term cover for a fixed sum over a fixed term, with an optional critical illness element and guidance on putting the policy in trust.",
+    features: [
+      "A fixed sum assured for a fixed term",
+      "Critical illness option where accepted",
+      "Trust wording guidance included",
+    ],
+  },
+  {
+    slug: "business",
+    tab: "Business",
+    kicker: "Business",
+    product: "Vault Business Liability",
+    title: "Built by you.",
+    emphasis: "Backed by us.",
+    body: "Public and employers' liability for owner-managed businesses, rated on sector, headcount and turnover, with an account handler who knows the file.",
+    features: [
+      "Public and employers' liability",
+      "Business interruption option",
+      "Legal expenses helpline",
+    ],
+  },
 ];
 
-const coverLines = [
-  { label: "Home", slug: "home" },
-  { label: "Motor", slug: "motor" },
-  { label: "Travel", slug: "travel" },
-  { label: "Health", slug: "health" },
-  { label: "Life", slug: "life" },
-  { label: "Business", slug: "business" },
-];
+const pad = (value: number) => String(value + 1).padStart(2, "0");
 
 export function Hero({ onQuote }: { onQuote: () => void }) {
-  const sectionRef = useRef<HTMLElement>(null);
   const reduceMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end start"],
-  });
-  const orbitRotate = useTransform(scrollYProgress, [0, 1], [0, 60]);
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [keyboardFocus, setKeyboardFocus] = useState(false);
+  const [pageHidden, setPageHidden] = useState(false);
+  const progressRef = useRef<HTMLSpanElement | null>(null);
+  const elapsedRef = useRef(0);
+  const swipeRef = useRef<{ x: number; y: number } | null>(null);
+  const suppressHoverRef = useRef(false);
+
+  const slide = slides[index];
+  const playing =
+    !paused && !hovered && !keyboardFocus && !pageHidden && !reduceMotion;
+
+  const go = useCallback((next: number) => {
+    elapsedRef.current = 0;
+    setIndex(((next % slides.length) + slides.length) % slides.length);
+  }, []);
+
+  /* Resuming from the explicit control should also lift the temporary hover
+     and focus holds, otherwise the show appears not to restart until the
+     pointer leaves the panel. */
+  const togglePlayback = () => {
+    const next = !paused;
+    setPaused(next);
+    if (!next) {
+      suppressHoverRef.current = true;
+      setHovered(false);
+      setKeyboardFocus(false);
+    }
+  };
+
+  /* Pause the show while the tab is in the background. */
+  useEffect(() => {
+    const onVisibility = () => setPageHidden(document.hidden);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () =>
+      document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
+  /* Drive the autoplay line directly on the element, so the frames do not
+     re-render the whole slider. Hovering, focusing or pausing holds the line
+     where it was, and it picks up from the same point afterwards. */
+  useEffect(() => {
+    const bar = progressRef.current;
+    if (reduceMotion) {
+      if (bar) bar.style.transform = "scaleX(1)";
+      return;
+    }
+    if (!playing) return;
+
+    const startedAt = performance.now() - elapsedRef.current * AUTOPLAY_MS;
+    let frame = 0;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / AUTOPLAY_MS);
+      elapsedRef.current = progress;
+      if (bar) bar.style.transform = `scaleX(${progress})`;
+      if (progress >= 1) {
+        elapsedRef.current = 0;
+        setIndex((current) => (current + 1) % slides.length);
+        return;
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [index, playing, reduceMotion]);
+
+  /* A change of slide always starts its own line from zero. */
+  useEffect(() => {
+    if (progressRef.current) progressRef.current.style.transform = "scaleX(0)";
+  }, [index]);
+
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      go(index + 1);
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      go(index - 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      go(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      go(slides.length - 1);
+    }
+  };
+
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    swipeRef.current = { x: event.clientX, y: event.clientY };
+  };
+
+  const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    const start = swipeRef.current;
+    swipeRef.current = null;
+    if (!start) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 1.35) {
+      go(index + (dx < 0 ? 1 : -1));
+    }
+  };
 
   return (
-    <section
-      id="top"
-      ref={sectionRef}
-      className="relative scroll-mt-24 overflow-hidden"
-    >
-      {/* Ambient cosmic light */}
+    <section id="top" className="relative overflow-hidden">
+      {/* Ambient light */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -top-40 right-[-10%] size-[34rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.22),transparent_65%)] blur-2xl"
+        className="pointer-events-none absolute -top-40 right-[-10%] size-[34rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.18),transparent_65%)] blur-2xl"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-[-14%] top-[38%] size-[26rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.65),transparent_70%)] blur-2xl"
+        className="pointer-events-none absolute left-[-14%] top-[46%] size-[24rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.55),transparent_70%)] blur-2xl"
       />
 
-      <div className="relative mx-auto max-w-[1180px] px-5 pb-4 pt-10 sm:px-8 sm:pt-16">
-        <Reveal y={12}>
-          <div className="flex items-center gap-4 text-[0.66rem] font-semibold uppercase tracking-[0.28em] text-ink/65">
-            <span className="flex items-center gap-2">
-              <span className="relative flex size-1.5">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-electric opacity-60" />
-                <span className="relative inline-flex size-1.5 rounded-full bg-electric" />
-              </span>
-              Insurance for the long horizon
-            </span>
-            <span className="hidden h-px flex-1 bg-line sm:block" />
-            <span className="hidden sm:block">Directly arranged cover</span>
-          </div>
-        </Reveal>
-
-        <motion.h1
-          initial={reduceMotion ? false : { opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-8 max-w-5xl text-[clamp(2.85rem,6.6vw,5.7rem)] font-semibold leading-[0.94] tracking-[-0.048em] text-ink"
+      <div className="relative mx-auto max-w-[1240px] px-4 pt-4 sm:px-6 sm:pt-6">
+        <div
+          role="region"
+          aria-roledescription="carousel"
+          aria-label="Cover lines from Cosmic Vault"
+          tabIndex={0}
+          onKeyDown={onKeyDown}
+          onPointerDown={onPointerDown}
+          onPointerUp={onPointerUp}
+          onPointerCancel={() => (swipeRef.current = null)}
+          onMouseEnter={() => {
+            if (!suppressHoverRef.current) setHovered(true);
+          }}
+          onMouseLeave={() => {
+            suppressHoverRef.current = false;
+            setHovered(false);
+          }}
+          onFocusCapture={(event) => {
+            /* Only a keyboard focus should stop the show — a click should not. */
+            if ((event.target as HTMLElement).matches?.(":focus-visible")) {
+              setKeyboardFocus(true);
+            }
+          }}
+          onBlurCapture={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+              setKeyboardFocus(false);
+            }
+          }}
+          className="group/hero relative isolate flex touch-pan-y flex-col overflow-hidden rounded-[1.5rem] bg-[#050c1a] text-bone shadow-[0_44px_100px_-60px_rgba(6,16,35,0.9)] outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:rounded-[2rem]"
         >
-          Your life, your world,
-          <br className="hidden sm:block" />{" "}
-          <span className="text-electric">held beautifully.</span>
-        </motion.h1>
+          {/* Slide photography, stacked and cross-faded */}
+          <div aria-hidden="true" className="absolute inset-0 -z-10">
+            {slides.map((item, itemIndex) => {
+              const active = itemIndex === index;
+              return (
+                <motion.div
+                  key={item.slug}
+                  className="absolute inset-0"
+                  initial={false}
+                  animate={{
+                    opacity: active ? 1 : 0,
+                    scale: active && !reduceMotion ? 1.05 : 1,
+                  }}
+                  transition={{
+                    opacity: { duration: reduceMotion ? 0 : 1.1, ease: "easeOut" },
+                    scale: { duration: 10, ease: "linear" },
+                  }}
+                >
+                  <Media
+                    image={coverImage(item.slug)}
+                    eager={itemIndex === 0}
+                    className="size-full"
+                  />
+                </motion.div>
+              );
+            })}
 
-        <div className="mt-9 grid gap-6 lg:grid-cols-12 lg:items-end">
-          <Reveal delay={0.15} className="lg:col-span-7">
-            <div className="flex flex-wrap items-center gap-3">
-              <CtaButton onClick={onQuote}>Get a quote</CtaButton>
-              <a
-                href="#process"
-                className="group inline-flex items-center gap-2.5 rounded-full px-2 py-2 text-[0.88rem] font-medium text-ink/70 transition-colors hover:text-ink"
-              >
-                <span className="grid size-8 place-items-center rounded-full border border-ink/15 transition-colors group-hover:border-ink/40">
-                  <ArrowDown className="size-3.5 transition-transform duration-300 group-hover:translate-y-0.5" />
+            <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(4,11,24,0.97)_0%,rgba(4,11,24,0.85)_34%,rgba(4,11,24,0.56)_62%,rgba(4,11,24,0.6)_100%)]" />
+            <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,rgba(4,11,24,0.9)_0%,rgba(4,11,24,0.5)_42%,rgba(4,11,24,0.05)_76%)] lg:block" />
+          </div>
+
+          {/* Top bar */}
+          <div className="relative z-10 flex items-start justify-between gap-3 px-5 pt-5 sm:px-7 sm:pt-7 lg:px-10 lg:pt-8">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] py-1.5 pl-2 pr-3.5 backdrop-blur-md">
+                <span className="relative flex size-1.5">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-halo opacity-70" />
+                  <span className="relative inline-flex size-1.5 rounded-full bg-halo" />
                 </span>
-                How it works
-              </a>
+                <span className="text-[0.6rem] font-semibold uppercase tracking-[0.22em] text-bone/80">
+                  Insurance for the long horizon
+                </span>
+              </span>
+              <span className="hidden items-center gap-2 text-[0.6rem] font-medium uppercase tracking-[0.22em] text-bone/45 md:flex">
+                <Sparkles className="size-3.5 text-halo" />
+                Manual underwriting, by design
+              </span>
             </div>
-          </Reveal>
 
-          <Reveal delay={0.22} className="lg:col-span-5 lg:pb-1">
-            <p className="max-w-sm text-[0.95rem] leading-7 text-muted-foreground lg:ml-auto">
-              Protection for your home, your car, your health and the people you
-              love — shaped by a real advisor and written in language you can
-              actually check.
-            </p>
-          </Reveal>
+            <div className="flex items-center gap-2">
+              <span className="hidden text-[0.66rem] uppercase tracking-[0.2em] text-bone/45 sm:block">
+                Directly arranged cover
+              </span>
+              {!reduceMotion && (
+                <button
+                  type="button"
+                  onClick={togglePlayback}
+                  aria-label={paused ? "Play slide show" : "Pause slide show"}
+                  className="grid size-9 place-items-center rounded-full border border-white/15 bg-white/[0.06] text-bone/70 backdrop-blur-md transition-colors hover:border-white/35 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-halo/60"
+                >
+                  {paused ? (
+                    <Play className="size-3.5" />
+                  ) : (
+                    <Pause className="size-3.5" />
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Slide copy */}
+          <div className="relative z-10 mt-auto grid gap-8 px-5 pb-8 pt-20 sm:px-7 sm:pt-28 lg:grid-cols-12 lg:items-end lg:gap-10 lg:px-10 lg:pb-10 lg:pt-32">
+            <div className="lg:col-span-7">
+              <div
+                role="tabpanel"
+                id="hero-slide-panel"
+                aria-labelledby={`hero-tab-${slide.slug}`}
+                aria-live="off"
+                className="min-h-[15.5rem] sm:min-h-[17rem]"
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={slide.slug}
+                    initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
+                    transition={{
+                      duration: reduceMotion ? 0 : 0.45,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                  >
+                    <div className="flex items-center gap-3 text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-bone/55">
+                      <span className="text-halo">{pad(index)}</span>
+                      <span className="h-px w-6 bg-bone/25" />
+                      <span>{slide.kicker}</span>
+                    </div>
+
+                    <h1 className="mt-4 max-w-[23ch] text-[clamp(2.35rem,5.6vw,4.5rem)] font-semibold leading-[0.97] tracking-[-0.045em] text-bone">
+                      {slide.title}{" "}
+                      <span className="font-display font-light italic text-halo">
+                        {slide.emphasis}
+                      </span>
+                    </h1>
+
+                    <p className="mt-5 max-w-lg text-[0.92rem] leading-7 text-bone/70">
+                      {slide.body}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                <CtaButton onClick={onQuote} variant="light">
+                  Get a quote
+                </CtaButton>
+                <Link
+                  to={`/cover/${slide.slug}`}
+                  className="group/explore inline-flex items-center gap-2.5 rounded-full px-2 py-2 text-[0.86rem] font-medium text-bone/70 transition-colors hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-halo/60"
+                >
+                  Explore this cover
+                  <span className="grid size-8 place-items-center rounded-full border border-white/20 transition-colors group-hover/explore:border-halo/70">
+                    <ArrowUpRight className="size-3.5 transition-transform duration-300 group-hover/explore:-translate-y-0.5 group-hover/explore:translate-x-0.5" />
+                  </span>
+                </Link>
+              </div>
+            </div>
+
+            {/* What is inside the cover line */}
+            <div className="hidden lg:col-span-5 lg:block">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={slide.slug}
+                  initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+                  transition={{
+                    duration: reduceMotion ? 0 : 0.45,
+                    delay: reduceMotion ? 0 : 0.06,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  className="rounded-[1.35rem] border border-white/12 bg-[#071427]/55 p-5 backdrop-blur-md"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-[0.56rem] font-semibold uppercase tracking-[0.24em] text-bone/45">
+                      On this cover line
+                    </p>
+                    <ShieldCheck className="size-4 text-halo" />
+                  </div>
+                  <p className="mt-2 font-display text-xl leading-tight text-bone">
+                    {slide.product}
+                  </p>
+                  <ul className="mt-4 space-y-2.5">
+                    {slide.features.map((feature) => (
+                      <li
+                        key={feature}
+                        className="flex items-start gap-2.5 text-[0.8rem] leading-5 text-bone/70"
+                      >
+                        <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full bg-white/10 text-halo">
+                          <Check className="size-2.5" strokeWidth={3} />
+                        </span>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-5 border-t border-white/10 pt-3.5 text-[0.62rem] leading-5 text-bone/40">
+                    Indicative pricing, reviewed by an underwriter before cover
+                    begins. The schedule states the terms that apply.
+                  </p>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Chapter rail */}
+          <div className="relative z-10 border-t border-white/10 bg-[#050c1a]/40 px-4 py-3.5 backdrop-blur-md sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3">
+              <div
+                role="tablist"
+                aria-label="Choose a cover line"
+                className="flex flex-1 items-center gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {slides.map((item, itemIndex) => {
+                  const active = itemIndex === index;
+                  return (
+                    <button
+                      key={item.slug}
+                      id={`hero-tab-${item.slug}`}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      aria-controls="hero-slide-panel"
+                      onClick={() => go(itemIndex)}
+                      className={cn(
+                        "group/tab relative flex shrink-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-halo/60",
+                        active
+                          ? "bg-white/[0.09]"
+                          : "hover:bg-white/[0.05]",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "text-[0.6rem] font-semibold tabular-nums transition-colors",
+                          active ? "text-halo" : "text-bone/35",
+                        )}
+                      >
+                        {pad(itemIndex)}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-[0.78rem] transition-colors",
+                          active
+                            ? "font-medium text-bone"
+                            : "text-bone/50 group-hover/tab:text-bone/75",
+                        )}
+                      >
+                        {item.tab}
+                      </span>
+                      {active && (
+                        <motion.span
+                          layoutId="hero-tab-line"
+                          transition={{
+                            duration: reduceMotion ? 0 : 0.35,
+                            ease: [0.22, 1, 0.36, 1],
+                          }}
+                          className="absolute inset-x-2.5 bottom-0.5 h-px bg-halo/80"
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-3 border-l border-white/10 pl-3 sm:pl-4">
+                <span className="hidden font-display text-xs tabular-nums text-bone/50 sm:block">
+                  {pad(index)}{" "}
+                  <span className="text-bone/25">/ {pad(slides.length - 1)}</span>
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => go(index - 1)}
+                    aria-label="Previous cover line"
+                    className="grid size-8 place-items-center rounded-full border border-white/15 text-bone/65 transition-colors hover:border-white/40 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-halo/60"
+                  >
+                    <ArrowLeft className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => go(index + 1)}
+                    aria-label="Next cover line"
+                    className="grid size-8 place-items-center rounded-full border border-white/15 text-bone/65 transition-colors hover:border-white/40 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-halo/60"
+                  >
+                    <ArrowRight className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Autoplay line */}
+          <div aria-hidden="true" className="relative z-10 h-[2px] w-full bg-white/10">
+            <span
+              ref={progressRef}
+              className="block h-full origin-left bg-halo"
+              style={{ transform: "scaleX(0)" }}
+            />
+          </div>
         </div>
 
-        <Reveal delay={0.2}>
-          <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4 border-y border-line py-5 sm:gap-x-10">
-            {facts.map((fact) => (
-              <span
-                key={fact}
-                className="text-[0.72rem] uppercase tracking-[0.14em] text-muted-foreground"
-              >
-                {fact}
-              </span>
-            ))}
-            <div className="ml-auto hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
-              <BadgeCheck className="size-4 text-electric" />
-              No price promise before underwriting
-            </div>
-          </div>
-        </Reveal>
-      </div>
-
-      {/* Hero image */}
-      <div className="relative mx-auto mt-6 max-w-[1180px] px-5 sm:px-8">
-        <Reveal y={40} delay={0.1}>
-          <div className="relative overflow-hidden rounded-[1.6rem] border border-ink/10 bg-ink sm:rounded-[2.2rem]">
-            <div className="group relative">
-              <Media
-                image={IMAGES.hero}
-                eager
-                parallax={26}
-                overlay="cosmic"
-                className="aspect-[4/3.3] w-full sm:aspect-[16/9] lg:aspect-[16/7.2]"
-              />
-
-              <motion.div
-                initial={reduceMotion ? false : { opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.55, duration: 0.6 }}
-                className="absolute left-3 top-3 hidden items-center gap-2.5 rounded-full border border-white/15 bg-[#071227]/65 py-1.5 pl-1.5 pr-4 backdrop-blur-md sm:left-6 sm:top-6 sm:flex"
-              >
-                <div className="flex -space-x-2">
-                  {ADVISOR_FACES.map((face) => (
-                    <Media
-                      key={face.src}
-                      image={face}
-                      className="size-7 rounded-full border border-white/25"
-                      imgClassName="scale-105"
-                    />
-                  )).reverse()}
-                </div>
-                <span className="text-[0.62rem] font-medium uppercase tracking-[0.18em] text-bone/80">
-                  Advisors, not bots
-                </span>
-              </motion.div>
-            </div>
-
-            {/* Your vault summary */}
-            <motion.div
-              initial={reduceMotion ? false : { opacity: 0, x: 18 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.7, duration: 0.7 }}
-              className="absolute right-3 top-3 hidden items-center gap-3 rounded-2xl border border-white/15 bg-[#071227]/70 px-3.5 py-3 text-bone backdrop-blur-md sm:right-6 sm:top-6 sm:flex sm:px-4"
-            >
-              <span className="grid size-11 place-items-center rounded-full border border-white/15 text-electric-soft">
-                <ShieldCheck className="size-5" />
-              </span>
-              <div>
-                <p className="text-[0.6rem] uppercase tracking-[0.18em] text-bone/55">
-                  Your vault
-                </p>
-                <p className="text-sm font-medium">
-                  Policies, claims and documents
-                </p>
-              </div>
-            </motion.div>
-
-            {/* How a claim is handled */}
-            <motion.div
-              initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.85, duration: 0.7 }}
-              className="absolute bottom-3 left-3 right-3 flex items-center gap-3 rounded-2xl border border-line bg-card/95 p-3.5 backdrop-blur sm:bottom-6 sm:left-6 sm:right-auto sm:w-[19rem] sm:p-4"
-            >
-              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-electric text-white">
-                <ShieldCheck className="size-5" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-ink/60">
-                  Claim review
-                </p>
-                <p className="mt-0.5 text-sm font-semibold text-ink">
-                  Assessed by a person, decided with reasons
-                </p>
-              </div>
-            </motion.div>
-
-            <div className="absolute bottom-4 right-5 hidden items-center gap-2 text-[0.62rem] uppercase tracking-[0.24em] text-bone/60 lg:flex">
-              <Sparkles className="size-3.5" />
-              Manual underwriting, by design
-            </div>
-          </div>
-        </Reveal>
-      </div>
-
-      {/* Configured cover lines */}
-      <div className="mx-auto mt-12 max-w-[1180px] px-5 sm:px-8">
-        <div className="flex flex-col gap-4 border-b border-line pb-8 sm:flex-row sm:items-center sm:gap-8">
-          <p className="text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground/80">
-            Cover lines configured today
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            {coverLines.map((line, index) => (
-              <Link
-                key={line.slug}
-                to={`/cover/${line.slug}`}
-                className="group/chip group flex items-center gap-2 rounded-full border border-line bg-card/70 py-1 pl-1 pr-3.5 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-card hover:shadow-[0_10px_24px_-18px_rgba(8,18,39,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-              >
+        {/* Trust bar */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-1 sm:px-2">
+          <div className="flex items-center gap-3">
+            <div className="flex -space-x-2">
+              {ADVISOR_FACES.map((face) => (
                 <Media
-                  image={coverImage(line.slug)}
-                  className="size-8 rounded-full"
+                  key={face.src}
+                  image={face}
+                  className="size-6 rounded-full border border-background"
                   imgClassName="scale-105"
                 />
-                <span
-                  className={cn(
-                    "text-[0.92rem] text-ink/65 transition-colors group-hover/chip:text-primary",
-                    index % 2 === 1 ? "font-display italic" : "font-medium",
-                  )}
-                >
-                  {line.label}
-                </span>
-                <ArrowUpRight className="size-3 -translate-x-1 text-ink/0 transition-all duration-300 group-hover/chip:translate-x-0 group-hover/chip:text-primary" />
-              </Link>
-            ))}
+              )).reverse()}
+            </div>
+            <p className="text-[0.72rem] text-muted-foreground">
+              <span className="font-medium text-ink">Advisors, not bots.</span>{" "}
+              Every application is read by a person.
+            </p>
+          </div>
+          <div className="hidden items-center gap-4 text-[0.58rem] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:flex">
+            <span>Six cover lines</span>
+            <span className="h-3 w-px bg-line" />
+            <span>One vault</span>
+            <span className="h-3 w-px bg-line" />
+            <span>No price promise before underwriting</span>
           </div>
         </div>
       </div>
-
-      <motion.div
-        aria-hidden="true"
-        style={reduceMotion ? undefined : { rotate: orbitRotate }}
-        className="pointer-events-none absolute -right-24 top-24 hidden size-[26rem] rounded-full border border-electric/10 lg:block"
-      >
-        <span className="absolute -left-1 top-1/2 size-2 rounded-full bg-electric/70" />
-        <span className="absolute inset-10 rounded-full border border-ink/[0.06]" />
-      </motion.div>
     </section>
   );
 }
