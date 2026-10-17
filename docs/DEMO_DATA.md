@@ -140,6 +140,10 @@ bunx convex run demoSeed:apply '{"confirm":"insureflow-demo-v1","planHash":"<has
 # 4. Read-only verification
 bunx convex run demoSeed:verify
 
+# Targeted in-memory tests (preview, apply, idempotency, guards, cleanup,
+# deactivate, role-conflict protection) against the real functions
+bun run test
+
 # 5. Cleanup (destructive, manual only)
 bunx convex run demoSeed:cleanupPreview
 bunx convex run demoSeed:cleanup '{"confirm":"delete:insureflow-demo-v1","planHash":"<hash>"}'
@@ -184,6 +188,7 @@ Mode `sandbox-data-only`, zero blockers, hash `fnv1a-a981ae26`:
 | `bunx convex dev --once` (codegen) | passed |
 | `bunx tsc -b --noEmit` | passed |
 | `bun run build` | passed (Vite production build) |
+| Targeted tests (`bun run test`, 11 tests) | passed — preview, apply counts, idempotency, stale-hash/flag/role-conflict guards, non-demo preservation, cleanup (incl. auth-account refusal), deactivate |
 | ESLint on `demoSeed.ts` and `schema.ts` | passed |
 | `bun run lint` (repo-wide) | fails on **pre-existing** errors in untouched files (`ProfilePage.tsx`, `main.tsx`, UI components, `setup.ts`, `tickets.ts`); none in changed files |
 | First apply | 208 records created, 0 skipped |
@@ -232,7 +237,8 @@ pending 49,680; failed 5,000; claim settlement 96,000.
   exists to sign in with on this deployment. Verification is at the data and
   query-contract level (`demoSeed.verify` checks the same fields the dashboards
   read); the app compiles and the production build succeeds.
-- **Cleanup and deactivate are implemented but were not executed** on the dev
-  deployment; only cleanup preview (read-only) was run. The batch is intact.
+- **Cleanup and deactivate were exercised in the in-memory test suite but were
+  not executed against the dev deployment** (only the read-only cleanup preview
+  was run there). The batch is intact.
 - Supabase is untouched: no Postgres tables, storage objects, RLS policies or
   service-role keys were used.
