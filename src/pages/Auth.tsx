@@ -144,10 +144,10 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
             <span className="h-px w-7 bg-bone/30" />
             Member access
           </p>
-          <h2 className="mt-5 max-w-md text-balance text-[clamp(2.2rem,3.3vw,3.1rem)] font-semibold leading-[1.02] tracking-[-0.045em]">
+          <p className="mt-5 max-w-md text-balance text-[clamp(2.2rem,3.3vw,3.1rem)] font-semibold leading-[1.02] tracking-[-0.045em]">
             A quieter kind of{" "}
             <span className="text-electric-soft">insurance.</span>
-          </h2>
+          </p>
           <p className="mt-5 max-w-sm text-sm leading-6 text-bone/55">
             Your quotes, documents, and a concierge who answers the phone. One
             calm place for everything you&apos;re protecting.

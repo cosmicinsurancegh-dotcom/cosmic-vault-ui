@@ -75,9 +75,9 @@ export default function AllCover() {
                 </span>
               </div>
 
-              <h2 className="relative mt-6 text-[1.35rem] font-semibold tracking-[-0.03em] text-ink">
+              <h3 className="relative mt-6 text-[1.35rem] font-semibold tracking-[-0.03em] text-ink">
                 {cover.name}
-              </h2>
+              </h3>
               <p className="relative mt-2 max-w-[26rem] flex-1 text-[0.86rem] leading-6 text-muted-foreground">
                 {cover.summary}
               </p>

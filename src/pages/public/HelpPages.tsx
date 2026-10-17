@@ -199,9 +199,9 @@ export function HelpCentre() {
                     {count} answers
                   </span>
                 </div>
-                <h2 className="mt-5 text-[1.05rem] font-semibold tracking-[-0.02em] text-ink">
+                <h3 className="mt-5 text-[1.05rem] font-semibold tracking-[-0.02em] text-ink">
                   {category}
-                </h2>
+                </h3>
                 <p className="mt-2 flex-1 text-[0.84rem] leading-6 text-muted-foreground">
                   {CATEGORY_SUMMARY[category]}
                 </p>
@@ -426,9 +426,9 @@ export function Faqs() {
           ) : (
             grouped.map(([group, items]) => (
               <section key={group}>
-                <h2 className="text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-ink/60">
+                <h3 className="text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-ink/60">
                   {group}
-                </h2>
+                </h3>
                 <div className="mt-4">
                   <FaqList items={items as FaqEntry[]} />
                 </div>

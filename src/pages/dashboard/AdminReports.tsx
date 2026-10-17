@@ -188,7 +188,7 @@ export default function AdminReportsPage() {
       {result && (
         <div className="grid gap-4 sm:grid-cols-2">
           <Panel className="p-5">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Totals</h3>
+            <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Totals</h2>
             <dl className="mt-3 space-y-2">
               {Object.entries(result.totals).map(([key, value]) => (
                 <div key={key} className="flex items-start justify-between gap-3 text-xs">
@@ -199,7 +199,7 @@ export default function AdminReportsPage() {
             </dl>
           </Panel>
           <Panel className="p-5">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Accounting basis</h3>
+            <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Accounting basis</h2>
             <p className="mt-2 text-xs leading-5 text-muted-foreground">{result.basis}</p>
             <p className="mt-2 text-[0.65rem] leading-5 text-muted-foreground">
               Reporting currency: {result.currency}. Monetary totals are shown per currency and are

@@ -156,7 +156,7 @@ export default function AdminAuditPage() {
       </Panel>
 
       <Panel className="p-5">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Retention & protection</h3>
+        <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Retention & protection</h2>
         <p className="mt-2 max-w-3xl text-xs leading-5 text-muted-foreground">
           Ordinary administrators cannot edit or delete audit records; the platform exposes no mutation
           for doing so. Sensitive fields are shown only to holders of audit access. Export of audit data

@@ -93,10 +93,10 @@ export function QuoteDialog({
               <p className="mt-6 text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
                 Request received
               </p>
-              <h3 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-ink sm:text-4xl">
+              <DialogTitle className="mt-3 text-3xl font-semibold leading-[1.1] tracking-[-0.035em] text-ink sm:text-4xl">
                 Your request is
                 <span className="text-electric"> on the record.</span>
-              </h3>
+              </DialogTitle>
               <p className="mx-auto mt-4 max-w-sm text-sm leading-6 text-muted-foreground">
                 An advisor will review what you have sent and reply to your email
                 address. Keep this reference — it is how the request is traced.
