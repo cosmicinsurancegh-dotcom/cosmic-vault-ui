@@ -164,6 +164,29 @@ premium marking and stale draft cleanup (`maintenance.ts`).
 | `CONVEX_SITE_URL` | Auth config | Provided by the platform |
 | `CONVEX_DEPLOYMENT` | Convex CLI | Provided by the platform |
 | `VLY_INTEGRATION_KEY` | `convex/email.ts` | Platform integration gateway for email |
+| `VITE_SUPABASE_URL` | `src/lib/supabase.ts`, `convex/supabase.ts` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | `src/lib/supabase.ts` | Public key for browser calls (RLS-bound) |
+| `SUPABASE_SERVICE_ROLE_KEY` | `convex/supabase.ts` | Server-only key for storage/admin calls |
+| `SUPABASE_URL` | `convex/supabase.ts` | Optional on the server; falls back to `VITE_SUPABASE_URL` |
+| `SUPABASE_PROJECT_REF` | Supabase CLI only | Optional; not read by app code — the ref is derived from the project URL |
+
+### Supabase
+
+Supabase is a second data plane (Postgres, Storage, Realtime). Convex remains the
+system of record and the identity provider, so the Supabase client is created
+without a session store and is not used for sign-in.
+
+- `src/lib/supabase.ts` — browser client (`getSupabase()`), `supabaseStorageUrl()`
+  for public buckets, and `checkSupabaseHealth()` which pings the public
+  `/auth/v1/health` endpoint so key problems surface before any table exists.
+- `src/convex/supabase.ts` — `"use node"` actions. `supabase.status` reports which
+  server keys are visible, whether the project answers and which buckets exist;
+  `supabase.signedUrl` mints a short-lived URL for a private object. Both run
+  through `internal.adminGate.staffGate`, which requires `settings.manage`.
+- Dashboard → Settings → Supabase shows both key sets, with a button to test each.
+
+Both modules degrade quietly when the keys are absent: the browser client returns
+`null`, the panel shows what is missing, and no business flow is blocked.
 
 Email is the only outbound integration wired today. If the key is missing,
 notifications are still created and delivery is recorded as `skipped`; provider
@@ -214,6 +237,10 @@ administrator) created through the app's own mutations.
 | Audit trail | records product, application, policy, payment, claim, settlement, broker assignment events |
 | Support ticket create + staff queue | ticket `SUP-VAU7QHS52` visible to staff |
 | Email delivery state | attempts recorded as `failed` with provider reason (sandbox recipient), proving the adapter path |
+| `supabase.status` as staff before keys were added | `configured: false`, naming the missing variables — no crash, no blocked flow |
+| `supabase.status` / `supabase.signedUrl` as a customer and anonymously | rejected: "This action is restricted to staff." |
+| `supabase.signedUrl` as staff with no keys | rejected: "Supabase is not configured on this deployment." |
+| Vite transforms for `src/lib/supabase.ts` and the settings page | 200, no transform errors |
 | Marketing quote request (`quotes.requestQuote`) from the landing `QuoteDialog` | stored as `CV-JLB3KN2`: name/email trimmed, email lower-cased, `status: in_review`, no `userId` for a signed-out visitor |
 | Quote request with a 1-character name / an invalid email | rejected: "Please add your full name." / "Please add a valid email address." |
 | Quote request with an unsupported coverage value | rejected by argument validation |

@@ -20,8 +20,16 @@ import {
   STAFF_PERMISSIONS,
   can,
 } from "@/lib/permissions";
-import { useMutation, useQuery } from "convex/react";
-import { Loader2, MailWarning, ShieldCheck, Sparkles, UserPlus } from "lucide-react";
+import { checkSupabaseHealth, supabaseConfigured, supabaseUrl } from "@/lib/supabase";
+import { useAction, useMutation, useQuery } from "convex/react";
+import {
+  Database,
+  Loader2,
+  MailWarning,
+  ShieldCheck,
+  Sparkles,
+  UserPlus,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -507,6 +515,8 @@ export default function AdminSettingsPage() {
         </Panel>
       )}
 
+      <SupabasePanel />
+
       <Panel>
         <PanelHeader
           title="Email delivery issues"
@@ -548,5 +558,147 @@ export default function AdminSettingsPage() {
         )}
       </Panel>
     </div>
+  );
+}
+
+/**
+ * Supabase wiring at a glance: which keys each runtime can see and whether the
+ * project answers. Keys are added in the project Keys tab, never in code.
+ */
+function SupabasePanel() {
+  const checkServer = useAction(api.supabase.status);
+  const [browser, setBrowser] = useState<{ ok: boolean; detail: string } | null>(null);
+  const [server, setServer] = useState<{
+    ok: boolean;
+    detail: string;
+    buckets: string[];
+  } | null>(null);
+  const [pending, setPending] = useState<"browser" | "server" | null>(null);
+
+  const runBrowserCheck = async () => {
+    setPending("browser");
+    try {
+      const result = await checkSupabaseHealth();
+      setBrowser(
+        result.ok
+          ? { ok: true, detail: "Auth endpoint answered with the anon key." }
+          : { ok: false, detail: result.error ?? "Unreachable." },
+      );
+    } finally {
+      setPending(null);
+    }
+  };
+
+  const runServerCheck = async () => {
+    setPending("server");
+    try {
+      const result = await checkServer({});
+      setServer({
+        ok: result.configured && result.reachable,
+        detail: result.error
+          ? result.error
+          : `Service role key reached ${result.projectRef ?? "the project"}.`,
+        buckets: result.buckets,
+      });
+    } catch (error) {
+      setServer({
+        ok: false,
+        detail: error instanceof Error ? error.message : "Could not check Supabase.",
+        buckets: [],
+      });
+    } finally {
+      setPending(null);
+    }
+  };
+
+  return (
+    <Panel>
+      <PanelHeader
+        title="Supabase"
+        description="Postgres, Storage and Realtime as a second data plane alongside Convex. Convex Auth stays the app's identity provider."
+      />
+
+      <div className="grid gap-4 px-5 py-5 lg:grid-cols-2">
+        <div className="rounded-xl border border-line p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="flex items-center gap-2 text-xs font-semibold text-ink">
+              <Database className="size-3.5 text-primary" />
+              Browser keys
+            </p>
+            <StatusPill status={supabaseConfigured ? "active" : "pending"} />
+          </div>
+          <p className="mt-2 text-[0.68rem] leading-5 text-muted-foreground">
+            {supabaseConfigured
+              ? `Client ready for ${supabaseUrl.replace(/^https?:\/\//, "")}. Only the anon key is exposed to the browser.`
+              : "Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the Keys tab to enable browser-side Supabase calls."}
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 rounded-full bg-transparent px-3"
+              disabled={!supabaseConfigured || pending !== null}
+              onClick={runBrowserCheck}
+            >
+              {pending === "browser" && <Loader2 className="size-3.5 animate-spin" />}
+              Test browser keys
+            </Button>
+            {browser && (
+              <span
+                className={
+                  browser.ok
+                    ? "text-[0.68rem] text-muted-foreground"
+                    : "text-[0.68rem] text-destructive"
+                }
+              >
+                {browser.detail}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-line p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="flex items-center gap-2 text-xs font-semibold text-ink">
+              <ShieldCheck className="size-3.5 text-primary" />
+              Server keys
+            </p>
+            <StatusPill status={server?.ok ? "active" : "pending"} />
+          </div>
+          <p className="mt-2 text-[0.68rem] leading-5 text-muted-foreground">
+            {server?.ok
+              ? `Reachable. ${server.buckets.length} storage bucket${server.buckets.length === 1 ? "" : "s"}${
+                  server.buckets.length ? `: ${server.buckets.join(", ")}` : ""
+                }.`
+              : server?.detail ??
+                "Add SUPABASE_SERVICE_ROLE_KEY in the Keys tab for server-side storage and admin calls. It is used only inside Convex actions."}
+          </p>
+          <div className="mt-3">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 rounded-full bg-transparent px-3"
+              disabled={pending !== null}
+              onClick={runServerCheck}
+            >
+              {pending === "server" && <Loader2 className="size-3.5 animate-spin" />}
+              Check server connection
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {(!supabaseConfigured || server?.ok === false) && (
+        <div className="px-5 pb-5">
+          <Callout tone="warning" title="Keys required">
+            Add <code className="font-mono text-[0.68rem]">VITE_SUPABASE_URL</code>,{" "}
+            <code className="font-mono text-[0.68rem]">VITE_SUPABASE_ANON_KEY</code> and{" "}
+            <code className="font-mono text-[0.68rem]">SUPABASE_SERVICE_ROLE_KEY</code> in the
+            project Keys tab (Supabase dashboard → Project Settings → API). Everything
+            else — data access and storage calls — is wired already.
+          </Callout>
+        </div>
+      )}
+    </Panel>
   );
 }

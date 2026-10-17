@@ -37,6 +37,18 @@ The convex server has a separate set of environment variables that are accessibl
 
 Currently, these variables include auth-specific keys: JWKS, JWT_PRIVATE_KEY, and SITE_URL.
 
+Supabase is wired as a second data plane (Postgres, Storage, Realtime) alongside
+Convex, which stays the app's primary backend and identity provider. Add these in
+the project Keys tab (Supabase dashboard → Project Settings → API):
+
+- `VITE_SUPABASE_URL` — project URL, read by the browser client in `src/lib/supabase.ts`.
+- `VITE_SUPABASE_ANON_KEY` — anon/public key, browser only, protected by row-level security.
+- `SUPABASE_SERVICE_ROLE_KEY` — service role key, used only inside the Convex
+  Node actions in `src/convex/supabase.ts`. Never expose it to the browser.
+
+Sign in as staff (`settings.manage`) and open **Dashboard → Settings → Supabase**
+to see which keys each runtime can see and to test the connection.
+
 
 # Using Authentication (Important!)
 

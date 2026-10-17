@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as adminGate from "../adminGate.js";
 import type * as applications from "../applications.js";
 import type * as audit from "../audit.js";
 import type * as auth from "../auth.js";
@@ -40,6 +41,7 @@ import type * as reports from "../reports.js";
 import type * as settings from "../settings.js";
 import type * as setup from "../setup.js";
 import type * as staff from "../staff.js";
+import type * as supabase from "../supabase.js";
 import type * as tickets from "../tickets.js";
 import type * as users from "../users.js";
 
@@ -50,6 +52,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  adminGate: typeof adminGate;
   applications: typeof applications;
   audit: typeof audit;
   auth: typeof auth;
@@ -82,6 +85,7 @@ declare const fullApi: ApiFromModules<{
   settings: typeof settings;
   setup: typeof setup;
   staff: typeof staff;
+  supabase: typeof supabase;
   tickets: typeof tickets;
   users: typeof users;
 }>;
