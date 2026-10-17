@@ -17,6 +17,14 @@ All relevant files live in the 'src' directory.
 
 Use bun for the package manager.
 
+### Insurance platform
+
+This deployment runs the Cosmic Vault insurance management platform on top of the
+template: customer, broker and staff dashboards, manual underwriting, policy
+issuance, claims, payments, documents, notifications, reports and audit logging.
+Architecture, permission model, workflows, environment variables, verification
+results and known limitations are documented in [`docs/PLATFORM.md`](docs/PLATFORM.md).
+
 ## Setup
 
 This project is set up already and running on a cloud environment, as well as a convex development in the sandbox.

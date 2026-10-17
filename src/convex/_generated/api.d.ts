@@ -8,10 +8,39 @@
  * @module
  */
 
+import type * as applications from "../applications.js";
+import type * as audit from "../audit.js";
 import type * as auth from "../auth.js";
 import type * as auth_emailOtp from "../auth/emailOtp.js";
+import type * as brokers from "../brokers.js";
+import type * as claims from "../claims.js";
+import type * as crons from "../crons.js";
+import type * as customers from "../customers.js";
+import type * as documents from "../documents.js";
+import type * as email from "../email.js";
 import type * as http from "../http.js";
+import type * as lib_access from "../lib/access.js";
+import type * as lib_audit from "../lib/audit.js";
+import type * as lib_authz from "../lib/authz.js";
+import type * as lib_files from "../lib/files.js";
+import type * as lib_notify from "../lib/notify.js";
+import type * as lib_people from "../lib/people.js";
+import type * as lib_pricing from "../lib/pricing.js";
+import type * as lib_refs from "../lib/refs.js";
+import type * as lib_settings from "../lib/settings.js";
+import type * as lib_vly from "../lib/vly.js";
+import type * as maintenance from "../maintenance.js";
+import type * as notifications from "../notifications.js";
+import type * as payments from "../payments.js";
+import type * as policies from "../policies.js";
+import type * as products from "../products.js";
+import type * as quotations from "../quotations.js";
 import type * as quotes from "../quotes.js";
+import type * as reports from "../reports.js";
+import type * as settings from "../settings.js";
+import type * as setup from "../setup.js";
+import type * as staff from "../staff.js";
+import type * as tickets from "../tickets.js";
 import type * as users from "../users.js";
 
 import type {
@@ -21,10 +50,39 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  applications: typeof applications;
+  audit: typeof audit;
   auth: typeof auth;
   "auth/emailOtp": typeof auth_emailOtp;
+  brokers: typeof brokers;
+  claims: typeof claims;
+  crons: typeof crons;
+  customers: typeof customers;
+  documents: typeof documents;
+  email: typeof email;
   http: typeof http;
+  "lib/access": typeof lib_access;
+  "lib/audit": typeof lib_audit;
+  "lib/authz": typeof lib_authz;
+  "lib/files": typeof lib_files;
+  "lib/notify": typeof lib_notify;
+  "lib/people": typeof lib_people;
+  "lib/pricing": typeof lib_pricing;
+  "lib/refs": typeof lib_refs;
+  "lib/settings": typeof lib_settings;
+  "lib/vly": typeof lib_vly;
+  maintenance: typeof maintenance;
+  notifications: typeof notifications;
+  payments: typeof payments;
+  policies: typeof policies;
+  products: typeof products;
+  quotations: typeof quotations;
   quotes: typeof quotes;
+  reports: typeof reports;
+  settings: typeof settings;
+  setup: typeof setup;
+  staff: typeof staff;
+  tickets: typeof tickets;
   users: typeof users;
 }>;
 

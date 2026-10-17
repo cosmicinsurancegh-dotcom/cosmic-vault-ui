@@ -13,8 +13,79 @@ import "./index.css";
 // Lazy load route components for better code splitting
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
-const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+const DashboardLayout = lazy(() => import("./pages/dashboard/DashboardLayout.tsx"));
+const Home = lazy(() => import("./pages/dashboard/Home.tsx"));
+const CataloguePage = lazy(() => import("./pages/dashboard/CataloguePage.tsx"));
+const QuotesPage = lazy(() => import("./pages/dashboard/QuotesPage.tsx"));
+const ApplicationsPage = lazy(() => import("./pages/dashboard/ApplicationsPage.tsx"));
+const PoliciesPage = lazy(() => import("./pages/dashboard/PoliciesPage.tsx"));
+const ClaimsPage = lazy(() => import("./pages/dashboard/ClaimsPage.tsx"));
+const ProfilePage = lazy(() => import("./pages/dashboard/ProfilePage.tsx"));
+const SupportPage = lazy(() => import("./pages/dashboard/SupportPage.tsx"));
+const AdminProductsPage = lazy(() => import("./pages/dashboard/AdminProducts.tsx"));
+const AdminUnderwritingPage = lazy(() => import("./pages/dashboard/AdminUnderwriting.tsx"));
+const AdminServicingPage = lazy(() => import("./pages/dashboard/AdminServicing.tsx"));
+const AdminClaimsPage = lazy(() => import("./pages/dashboard/AdminClaims.tsx"));
+const AdminBrokersPage = lazy(() => import("./pages/dashboard/AdminBrokers.tsx"));
+const AdminReportsPage = lazy(() => import("./pages/dashboard/AdminReports.tsx"));
+const AdminAuditPage = lazy(() => import("./pages/dashboard/AdminAudit.tsx"));
+const AdminSettingsPage = lazy(() => import("./pages/dashboard/AdminSettings.tsx"));
+const AdminCustomersPage = lazy(() =>
+  import("./pages/dashboard/AdminCustomers.tsx").then((module) => ({
+    default: module.AdminCustomersPage,
+  })),
+);
+const AdminSupportPage = lazy(() =>
+  import("./pages/dashboard/AdminCustomers.tsx").then((module) => ({
+    default: module.AdminSupportPage,
+  })),
+);
+const AdminPaymentsPage = lazy(() =>
+  import("./pages/dashboard/AdminFinance.tsx").then((module) => ({
+    default: module.AdminPaymentsPage,
+  })),
+);
+const DocumentsPage = lazy(() =>
+  import("./pages/dashboard/MoneyPage.tsx").then((module) => ({
+    default: module.DocumentsPage,
+  })),
+);
+const PaymentsPage = lazy(() =>
+  import("./pages/dashboard/MoneyPage.tsx").then((module) => ({
+    default: module.PaymentsPage,
+  })),
+);
+const BrokerCustomersPage = lazy(() =>
+  import("./pages/dashboard/BrokerWorkspace.tsx").then((module) => ({
+    default: module.BrokerCustomersPage,
+  })),
+);
+const BrokerReportsPage = lazy(() =>
+  import("./pages/dashboard/BrokerWorkspace.tsx").then((module) => ({
+    default: module.BrokerReportsPage,
+  })),
+);
+const RequireRole = lazy(() =>
+  import("./pages/dashboard/DashboardLayout.tsx").then((module) => ({
+    default: module.RequireRole,
+  })),
+);
+const RequirePermission = lazy(() =>
+  import("./pages/dashboard/DashboardLayout.tsx").then((module) => ({
+    default: module.RequirePermission,
+  })),
+);
+
+function StaffOnly({ children }: { children: React.ReactNode }) {
+  return (
+    <RequireRole roles={["admin", "super_admin"]}>{children}</RequireRole>
+  );
+}
+
+function SelfServiceOnly({ children }: { children: React.ReactNode }) {
+  return <RequireRole roles={["customer", "broker"]}>{children}</RequireRole>;
+}
 
 // Simple loading fallback for route transitions
 function RouteLoading() {
@@ -25,8 +96,8 @@ function RouteLoading() {
   );
 }
 
-/** Silent error boundary — if VlyToolbar crashes it renders nothing instead of
- *  crashing the whole app (e.g. hook errors in the browser runtime). */
+/** Silent error boundary — if VlyToolbar crashes it renders nothing instead
+ *  of crashing the whole app (e.g. hook errors in the browser runtime). */
 class ToolbarErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { hasError: boolean }
@@ -83,7 +154,6 @@ class RootErrorBoundary extends React.Component<
 
 const convexUrl = (import.meta.env.VITE_CONVEX_URL as string | undefined)?.trim();
 const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;
-
 
 
 function RouteSyncer() {
@@ -149,13 +219,37 @@ createRoot(document.getElementById("root")!).render(
                 path="/dashboard"
                 element={
                   <RequireAuth
-                    title="Sign in to open your vault"
-                    description="Your quotes, coverage, and concierge live here."
+                    title="Sign in to your insurance workspace"
+                    description="Your policies, quotations, applications, claims, and documents live here."
                   >
-                    <Dashboard />
+                    <DashboardLayout />
                   </RequireAuth>
                 }
-              />
+              >
+                <Route index element={<Home />} />
+                <Route path="catalogue" element={<SelfServiceOnly><CataloguePage /></SelfServiceOnly>} />
+                <Route path="quotes" element={<SelfServiceOnly><QuotesPage /></SelfServiceOnly>} />
+                <Route path="applications" element={<SelfServiceOnly><ApplicationsPage /></SelfServiceOnly>} />
+                <Route path="policies" element={<SelfServiceOnly><PoliciesPage /></SelfServiceOnly>} />
+                <Route path="claims" element={<RequireRole roles={["customer"]}><ClaimsPage /></RequireRole>} />
+                <Route path="payments" element={<PaymentsPage />} />
+                <Route path="documents" element={<DocumentsPage />} />
+                <Route path="support" element={<SupportPage />} />
+                <Route path="profile" element={<SelfServiceOnly><ProfilePage /></SelfServiceOnly>} />
+                <Route path="broker/customers" element={<RequireRole roles={["broker"]}><BrokerCustomersPage /></RequireRole>} />
+                <Route path="broker/reports" element={<RequireRole roles={["broker"]}><BrokerReportsPage /></RequireRole>} />
+                <Route path="admin/customers" element={<StaffOnly><RequirePermission permission="customers.view"><AdminCustomersPage /></RequirePermission></StaffOnly>} />
+                <Route path="admin/products" element={<StaffOnly><RequirePermission permission="products.manage"><AdminProductsPage /></RequirePermission></StaffOnly>} />
+                <Route path="admin/applications" element={<StaffOnly><RequirePermission permission="applications.review"><AdminUnderwritingPage /></RequirePermission></StaffOnly>} />
+                <Route path="admin/policies" element={<StaffOnly><RequirePermission permission="policies.manage"><AdminServicingPage /></RequirePermission></StaffOnly>} />
+                <Route path="admin/claims" element={<StaffOnly><RequirePermission permission="claims.review"><AdminClaimsPage /></RequirePermission></StaffOnly>} />
+                <Route path="admin/payments" element={<StaffOnly><RequirePermission permission="payments.view"><AdminPaymentsPage /></RequirePermission></StaffOnly>} />
+                <Route path="admin/brokers" element={<StaffOnly><RequirePermission permission="brokers.manage"><AdminBrokersPage /></RequirePermission></StaffOnly>} />
+                <Route path="admin/reports" element={<StaffOnly><RequirePermission permission="reports.view"><AdminReportsPage /></RequirePermission></StaffOnly>} />
+                <Route path="admin/support" element={<StaffOnly><RequirePermission permission="customers.view"><AdminSupportPage /></RequirePermission></StaffOnly>} />
+                <Route path="admin/audit" element={<StaffOnly><RequirePermission permission="audit.view"><AdminAuditPage /></RequirePermission></StaffOnly>} />
+                <Route path="admin/settings" element={<StaffOnly><RequirePermission permission="settings.manage"><AdminSettingsPage /></RequirePermission></StaffOnly>} />
+              </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
