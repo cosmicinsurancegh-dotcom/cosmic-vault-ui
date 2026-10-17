@@ -109,10 +109,7 @@ export function QuoteDialog({
               </p>
               <h3 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-ink sm:text-4xl">
                 Your universe is in
-                <span className="font-display font-normal italic text-electric">
-                  {" "}
-                  safe hands.
-                </span>
+                <span className="text-electric"> safe hands.</span>
               </h3>
               <p className="mx-auto mt-4 max-w-sm text-sm leading-6 text-muted-foreground">
                 A named advisor will reach out within one business day with a
@@ -172,10 +169,7 @@ export function QuoteDialog({
                   Talk to a human
                 </p>
                 <DialogTitle className="text-2xl font-semibold tracking-[-0.03em] text-ink sm:text-[1.75rem]">
-                  Let&apos;s find your{" "}
-                  <span className="font-display font-normal italic">
-                    perfect cover.
-                  </span>
+                  Let&apos;s find your <span>perfect cover.</span>
                 </DialogTitle>
                 <DialogDescription className="text-sm leading-6">
                   Tell us a little about what you want to protect. An advisor

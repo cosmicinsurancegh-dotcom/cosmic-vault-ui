@@ -34,9 +34,7 @@ export function Solutions({
             </SectionLabel>
             <h2 className="mt-4 text-balance text-[clamp(2.15rem,4.7vw,3.8rem)] font-semibold leading-[1.01] tracking-[-0.045em] text-ink">
               Cover that fits your{" "}
-              <span className="font-display font-normal italic text-electric">
-                universe.
-              </span>
+              <span className="text-electric">universe.</span>
             </h2>
           </Reveal>
           <Reveal delay={0.1} className="lg:col-span-5 lg:pb-2">

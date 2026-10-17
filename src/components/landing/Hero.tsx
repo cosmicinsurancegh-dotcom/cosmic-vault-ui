@@ -45,7 +45,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
 
       <div className="relative mx-auto max-w-[1180px] px-5 pb-4 pt-10 sm:px-8 sm:pt-16">
         <Reveal y={12}>
-          <div className="flex items-center gap-4 text-[0.64rem] font-semibold uppercase tracking-[0.30em] text-ink/50">
+          <div className="flex items-center gap-4 text-[0.66rem] font-semibold uppercase tracking-[0.28em] text-ink/55">
             <span className="flex items-center gap-2">
               <span className="relative flex size-1.5">
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-electric opacity-60" />
@@ -66,9 +66,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
         >
           Your life, your world,
           <br className="hidden sm:block" />{" "}
-          <span className="font-display font-normal italic tracking-[-0.02em] text-electric">
-            held beautifully.
-          </span>
+          <span className="text-electric">held beautifully.</span>
         </motion.h1>
 
         <div className="mt-9 grid gap-6 lg:grid-cols-12 lg:items-end">
@@ -139,7 +137,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
               initial={reduceMotion ? false : { opacity: 0, x: 18 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.7, duration: 0.7 }}
-              className="absolute right-3 top-3 flex items-center gap-3 rounded-2xl border border-white/15 bg-[#071227]/70 px-3.5 py-3 text-bone backdrop-blur-md sm:right-6 sm:top-6 sm:px-4"
+              className="absolute right-3 top-3 hidden items-center gap-3 rounded-2xl border border-white/15 bg-[#071227]/70 px-3.5 py-3 text-bone backdrop-blur-md sm:right-6 sm:top-6 sm:flex sm:px-4"
             >
               <div className="relative grid size-11 place-items-center">
                 <svg viewBox="0 0 44 44" className="absolute inset-0 -rotate-90">
@@ -165,8 +163,8 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                 </svg>
                 <span className="text-sm font-semibold">98</span>
               </div>
-              <div className="hidden sm:block">
-                <p className="text-[0.58rem] uppercase tracking-[0.2em] text-bone/55">
+              <div>
+                <p className="text-[0.6rem] uppercase tracking-[0.18em] text-bone/55">
                   Vault score
                 </p>
                 <p className="text-sm font-medium">Exceptionally covered</p>
@@ -184,7 +182,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                 <ShieldCheck className="size-5" />
               </span>
               <div className="min-w-0">
-                <p className="text-[0.58rem] font-semibold uppercase tracking-[0.2em] text-ink/45">
+                <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-ink/50">
                   Claim CV-8192 · settled
                 </p>
                 <p className="mt-0.5 text-sm font-semibold text-ink">
@@ -197,7 +195,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
               </div>
             </motion.div>
 
-            <div className="absolute bottom-4 right-5 hidden items-center gap-2 text-[0.62rem] uppercase tracking-[0.24em] text-bone/60 sm:flex">
+            <div className="absolute bottom-4 right-5 hidden items-center gap-2 text-[0.62rem] uppercase tracking-[0.24em] text-bone/60 lg:flex">
               <Sparkles className="size-3.5" />
               Member advisory — Meridian Wharf
             </div>

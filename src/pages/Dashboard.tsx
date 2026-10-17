@@ -367,16 +367,12 @@ function Overview({
               {stats.list.length === 0 ? (
                 <>
                   Your vault is ready for its{" "}
-                  <span className="font-display font-normal italic text-electric-soft">
-                    first chapter.
-                  </span>
+                  <span className="text-electric-soft">first chapter.</span>
                 </>
               ) : (
                 <>
                   Your protection,{" "}
-                  <span className="font-display font-normal italic text-electric-soft">
-                    at a glance.
-                  </span>
+                  <span className="text-electric-soft">at a glance.</span>
                 </>
               )}
             </h2>

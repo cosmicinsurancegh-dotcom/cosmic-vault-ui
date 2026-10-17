@@ -137,9 +137,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
           </p>
           <h2 className="mt-5 max-w-md text-balance text-[clamp(2.2rem,3.3vw,3.1rem)] font-semibold leading-[1.02] tracking-[-0.045em]">
             A quieter kind of{" "}
-            <span className="font-display font-normal italic text-electric-soft">
-              insurance.
-            </span>
+            <span className="text-electric-soft">insurance.</span>
           </h2>
           <p className="mt-5 max-w-sm text-sm leading-6 text-bone/55">
             Your quotes, documents, and a concierge who answers the phone. One
@@ -203,10 +201,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     Welcome back
                   </p>
                   <h1 className="mt-3 text-[2.35rem] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
-                    Enter the{" "}
-                    <span className="font-display font-normal italic text-electric">
-                      vault.
-                    </span>
+                    Enter the <span className="text-electric">vault.</span>
                   </h1>
                   <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
                     Use your email and we&apos;ll send a six-digit code. No
@@ -301,10 +296,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     Use a different email
                   </button>
                   <h1 className="mt-5 text-[2.2rem] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
-                    Check your{" "}
-                    <span className="font-display font-normal italic text-electric">
-                      inbox.
-                    </span>
+                    Check your <span className="text-electric">inbox.</span>
                   </h1>
                   <p className="mt-3 text-sm leading-6 text-muted-foreground">
                     We sent a six-digit code to{" "}

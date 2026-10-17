@@ -30,6 +30,15 @@ export function Navbar({ onRequestQuote }: { onRequestQuote: () => void }) {
   }, []);
 
   useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen]);
+
+  useEffect(() => {
     const sections = LINKS.map((link) =>
       document.getElementById(link.href.slice(1)),
     ).filter((element): element is HTMLElement => Boolean(element));
@@ -59,6 +68,11 @@ export function Navbar({ onRequestQuote }: { onRequestQuote: () => void }) {
 
   return (
     <header className="sticky top-0 z-40 px-3 pt-3 sm:px-5 sm:pt-5">
+      {/* Keeps scrolled page content from bleeding through the gap above the pill */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-full bg-gradient-to-b from-background via-background/90 to-transparent"
+      />
       <div
         className={cn(
           "relative mx-auto flex max-w-[1180px] items-center justify-between gap-4 rounded-full border border-ink/10 px-3 py-2 backdrop-blur-xl transition-colors duration-500 sm:px-4",
@@ -77,11 +91,13 @@ export function Navbar({ onRequestQuote }: { onRequestQuote: () => void }) {
               <a
                 key={link.href}
                 href={link.href}
+                onClick={() => setActive(link.href)}
+                aria-current={isActive ? "location" : undefined}
                 className={cn(
-                  "rounded-full px-4 py-2 text-[0.83rem] font-medium transition-colors duration-300",
+                  "rounded-full px-4 py-2 text-[0.83rem] font-medium transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   isActive
-                    ? "bg-ink text-bone"
-                    : "text-ink/65 hover:bg-ink/[0.055] hover:text-ink",
+                    ? "bg-primary text-primary-foreground"
+                    : "text-ink/65 hover:bg-primary/8 hover:text-primary",
                 )}
               >
                 {link.label}
@@ -94,7 +110,15 @@ export function Navbar({ onRequestQuote }: { onRequestQuote: () => void }) {
           <button
             type="button"
             onClick={handleCta}
-            className="group hidden items-center gap-2 rounded-full bg-electric px-5 py-2.5 text-[0.83rem] font-medium text-white transition-colors duration-300 hover:bg-[#235fe8] sm:inline-flex"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-xs font-medium text-primary-foreground transition-colors duration-300 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:hidden"
+          >
+            {isAuthenticated ? "Vault" : "Quote"}
+            <ArrowUpRight className="size-3" />
+          </button>
+          <button
+            type="button"
+            onClick={handleCta}
+            className="group hidden items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-[0.83rem] font-medium text-primary-foreground transition-colors duration-300 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex"
           >
             {ctaLabel}
             <ArrowUpRight className="size-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
@@ -104,7 +128,7 @@ export function Navbar({ onRequestQuote }: { onRequestQuote: () => void }) {
             onClick={() => setMenuOpen((open) => !open)}
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
-            className="grid size-10 place-items-center rounded-full border border-ink/12 text-ink transition-colors hover:bg-ink/[0.045] lg:hidden"
+            className="grid size-10 place-items-center rounded-full border border-ink/12 text-ink transition-colors hover:bg-ink/[0.045] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:hidden"
           >
             {menuOpen ? <X className="size-4" /> : <Menu className="size-4" />}
           </button>
@@ -124,12 +148,16 @@ export function Navbar({ onRequestQuote }: { onRequestQuote: () => void }) {
                   <a
                     key={link.href}
                     href={link.href}
-                    onClick={() => setMenuOpen(false)}
+                    onClick={() => {
+                      setActive(link.href);
+                      setMenuOpen(false);
+                    }}
+                    aria-current={active === link.href ? "location" : undefined}
                     className={cn(
                       "rounded-xl px-4 py-3 text-sm font-medium transition-colors",
                       active === link.href
-                        ? "bg-ink text-bone"
-                        : "text-ink/75 hover:bg-ink/[0.05] hover:text-ink",
+                        ? "bg-primary text-primary-foreground"
+                        : "text-ink/75 hover:bg-primary/8 hover:text-primary",
                     )}
                   >
                     {link.label}
@@ -142,7 +170,7 @@ export function Navbar({ onRequestQuote }: { onRequestQuote: () => void }) {
                   setMenuOpen(false);
                   handleCta();
                 }}
-                className="mt-2 flex w-full items-center justify-between rounded-xl bg-electric px-4 py-3.5 text-sm font-medium text-white"
+                className="mt-2 flex w-full items-center justify-between rounded-xl bg-primary px-4 py-3.5 text-sm font-medium text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {ctaLabel}
                 <ArrowUpRight className="size-4" />

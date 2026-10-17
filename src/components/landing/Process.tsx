@@ -49,9 +49,7 @@ export function Process({ onQuote }: { onQuote: () => void }) {
               </SectionLabel>
               <h2 className="mt-5 text-balance text-[clamp(2.1rem,4.7vw,3.7rem)] font-semibold leading-[1.02] tracking-[-0.045em]">
                 Easy, transparent,{" "}
-                <span className="font-display font-normal italic text-electric-soft">
-                  human.
-                </span>
+                <span className="text-electric-soft">human.</span>
               </h2>
               <p className="mx-auto mt-4 max-w-md text-[0.93rem] leading-7 text-bone/55">
                 Three steps, no forms in triplicate, no waiting on hold. The

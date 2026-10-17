@@ -30,9 +30,7 @@ export function FinalCta({ onQuote }: { onQuote: () => void }) {
                 </SectionLabel>
                 <h2 className="mt-5 max-w-xl text-balance text-[clamp(2.2rem,4.6vw,3.7rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
                   Let&apos;s secure your{" "}
-                  <span className="font-display font-normal italic text-electric">
-                    universe.
-                  </span>
+                  <span className="text-electric">universe.</span>
                 </h2>
                 <p className="mt-4 max-w-md text-[0.93rem] leading-7 text-ink/60">
                   A quiet conversation, a clear quote, and cover that makes the

@@ -34,11 +34,8 @@ export function Why() {
             02 — Why Cosmic Vault
           </p>
           <h2 className="mt-4 text-balance text-[clamp(2.1rem,4.6vw,3.7rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
-            Why thousands{" "}
-            <span className="font-display font-normal italic text-electric">
-              trust
-            </span>{" "}
-            the vault.
+            Why thousands <span className="text-electric">trust</span> the
+            vault.
           </h2>
           <p className="mx-auto mt-4 max-w-md text-[0.92rem] leading-6 text-muted-foreground">
             From first homes to final horizons, our members stay for one reason:

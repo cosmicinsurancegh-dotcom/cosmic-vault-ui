@@ -36,9 +36,7 @@ export function Plans({
             </SectionLabel>
             <h2 className="mt-4 max-w-xl text-balance text-[clamp(2.1rem,4.5vw,3.6rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
               Cover that grows{" "}
-              <span className="font-display font-normal italic text-electric">
-                with you.
-              </span>
+              <span className="text-electric">with you.</span>
             </h2>
           </Reveal>
 

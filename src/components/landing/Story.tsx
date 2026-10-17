@@ -49,9 +49,7 @@ export function Story() {
             <Reveal delay={0.1}>
               <h2 className="text-balance text-[clamp(1.95rem,3.9vw,3.3rem)] font-semibold leading-[1.06] tracking-[-0.042em] text-ink">
                 We believe cover should feel less like a contract and more like{" "}
-                <span className="font-display font-normal italic tracking-[-0.015em] text-electric">
-                  peace of mind.
-                </span>
+                <span className="text-electric">peace of mind.</span>
               </h2>
             </Reveal>
 

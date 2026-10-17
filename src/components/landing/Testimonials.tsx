@@ -53,9 +53,7 @@ export function Testimonials() {
             </SectionLabel>
             <h2 className="mt-4 text-balance text-[clamp(2.1rem,4.5vw,3.6rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
               Steady when it{" "}
-              <span className="font-display font-normal italic text-electric">
-                matters.
-              </span>
+              <span className="text-electric">matters.</span>
             </h2>
           </Reveal>
           <Reveal delay={0.08} className="lg:col-span-5 lg:pb-2">
