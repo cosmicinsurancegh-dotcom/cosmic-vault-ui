@@ -4,31 +4,65 @@ import { Link } from "react-router";
 export function BrandMark({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 40 40"
+      viewBox="0 0 64 64"
       aria-hidden="true"
       className={cn("size-9 shrink-0", className)}
       fill="none"
     >
-      <circle
-        cx="20"
-        cy="20"
-        r="10.5"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        opacity="0.9"
+      <defs>
+        <linearGradient
+          id="cosmic-mark-blue"
+          x1="10"
+          y1="8"
+          x2="54"
+          y2="58"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#4CB6FF" />
+          <stop offset="0.45" stopColor="#1D74F5" />
+          <stop offset="1" stopColor="#0A3BCB" />
+        </linearGradient>
+        <linearGradient
+          id="cosmic-mark-orbit"
+          x1="4"
+          y1="42"
+          x2="60"
+          y2="22"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#FF7A00" />
+          <stop offset="0.55" stopColor="#FFA11A" />
+          <stop offset="1" stopColor="#FFC400" />
+        </linearGradient>
+      </defs>
+
+      {/* Orbit passing behind the planet */}
+      <g transform="rotate(-14 32 32)">
+        <path
+          d="M2 32A30 8.5 0 0 1 62 32"
+          stroke="url(#cosmic-mark-orbit)"
+          strokeWidth="4.6"
+          strokeLinecap="round"
+        />
+      </g>
+
+      {/* Blue C */}
+      <path
+        d="M47.6 46.05A21 21 0 1 1 51.2 23.5"
+        stroke="url(#cosmic-mark-blue)"
+        strokeWidth="13"
+        strokeLinecap="round"
       />
-      <ellipse
-        cx="20"
-        cy="20"
-        rx="17"
-        ry="6"
-        stroke="var(--electric)"
-        strokeWidth="1.6"
-        transform="rotate(-28 20 20)"
-      />
-      <circle cx="20" cy="20" r="3.9" fill="var(--electric)" />
-      <circle cx="20" cy="20" r="1.35" fill="currentColor" />
-      <circle cx="34" cy="12.2" r="1.7" fill="currentColor" />
+
+      {/* Orbit passing in front of the planet */}
+      <g transform="rotate(-14 32 32)">
+        <path
+          d="M62 32A30 8.5 0 0 1 2 32"
+          stroke="url(#cosmic-mark-orbit)"
+          strokeWidth="4.6"
+          strokeLinecap="round"
+        />
+      </g>
     </svg>
   );
 }
@@ -46,21 +80,25 @@ export function Brand({
 }) {
   const content = (
     <>
-      <BrandMark className={cn(compact ? "size-8" : "size-9")} />
+      <BrandMark className={cn(compact ? "size-9" : "size-11")} />
       <span className="flex flex-col leading-none">
         <span
           className={cn(
-            "font-semibold tracking-[-0.03em] text-current",
-            compact ? "text-[1.02rem]" : "text-[1.15rem]",
+            "font-extrabold tracking-[-0.015em] text-current",
+            compact ? "text-[1.05rem]" : "text-[1.3rem]",
           )}
         >
-          Cosmic Vault
+          COSMIC
+        </span>          <span
+            className={cn(
+              "mt-[0.3em] font-semibold uppercase text-current opacity-75",
+              compact
+                ? "text-[0.42rem] tracking-[0.28em]"
+                : "text-[0.5rem] tracking-[0.32em]",
+            )}
+          >
+          Insurance Ghana
         </span>
-        {!compact && (
-          <span className="mt-1 text-[0.55rem] font-medium uppercase tracking-[0.34em] opacity-55">
-            Insurance
-          </span>
-        )}
       </span>
     </>
   );
@@ -75,7 +113,7 @@ export function Brand({
   }
 
   return (
-    <Link to={href} className={classes} aria-label="Cosmic Vault home">
+    <Link to={href} className={classes} aria-label="Cosmic Insurance Ghana home">
       {content}
     </Link>
   );

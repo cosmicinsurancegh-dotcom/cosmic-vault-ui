@@ -1,8 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
-  <rect width="48" height="48" rx="12" fill="#081227"/>
-  <circle cx="24" cy="24" r="12.5" stroke="#F4F1EA" stroke-width="1.6" opacity="0.85"/>
-  <ellipse cx="24" cy="24" rx="18" ry="6.4" stroke="#4C7DFF" stroke-width="1.8" transform="rotate(-28 24 24)"/>
-  <circle cx="24" cy="24" r="4.6" fill="#4C7DFF"/>
-  <circle cx="24" cy="24" r="1.7" fill="#F4F1EA"/>
-  <circle cx="38.2" cy="15.4" r="2" fill="#F4F1EA"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="cosmic-mark-blue" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4CB6FF"/>
+      <stop offset="0.45" stop-color="#1D74F5"/>
+      <stop offset="1" stop-color="#0A3BCB"/>
+    </linearGradient>
+    <linearGradient id="cosmic-mark-orbit" x1="4" y1="42" x2="60" y2="22" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF7A00"/>
+      <stop offset="0.55" stop-color="#FFA11A"/>
+      <stop offset="1" stop-color="#FFC400"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="rotate(-14 32 32)">
+    <path d="M2 32A30 8.5 0 0 1 62 32" stroke="url(#cosmic-mark-orbit)" stroke-width="4.6" stroke-linecap="round"/>
+  </g>
+
+  <path d="M47.6 46.05A21 21 0 1 1 51.2 23.5" stroke="url(#cosmic-mark-blue)" stroke-width="13" stroke-linecap="round"/>
+
+  <g transform="rotate(-14 32 32)">
+    <path d="M62 32A30 8.5 0 0 1 2 32" stroke="url(#cosmic-mark-orbit)" stroke-width="4.6" stroke-linecap="round"/>
+  </g>
 </svg>
