@@ -134,6 +134,8 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
   const [keyboardFocus, setKeyboardFocus] = useState(false);
   const [pageHidden, setPageHidden] = useState(false);
   const progressRef = useRef<HTMLSpanElement | null>(null);
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const elapsedRef = useRef(0);
   const swipeRef = useRef<{ x: number; y: number } | null>(null);
   const suppressHoverRef = useRef(false);
@@ -201,6 +203,25 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
     if (progressRef.current) progressRef.current.style.transform = "scaleX(0)";
   }, [index]);
 
+  /* On narrow screens the chapter rail scrolls. Keep the current tab in view
+     when the show advances on its own or via the arrows. */
+  useEffect(() => {
+    const rail = railRef.current;
+    const tab = tabRefs.current[index];
+    if (!rail || !tab || rail.scrollWidth <= rail.clientWidth) return;
+    const railBox = rail.getBoundingClientRect();
+    const tabBox = tab.getBoundingClientRect();
+    if (tabBox.left >= railBox.left && tabBox.right <= railBox.right) return;
+    const offset =
+      tabBox.left +
+      tabBox.width / 2 -
+      (railBox.left + railBox.width / 2);
+    rail.scrollBy({
+      left: offset,
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
+  }, [index, reduceMotion]);
+
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "ArrowRight") {
       event.preventDefault();
@@ -245,7 +266,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
         className="pointer-events-none absolute left-[-14%] top-[46%] size-[24rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.55),transparent_70%)] blur-2xl"
       />
 
-      <div className="relative mx-auto max-w-[1180px] px-5 pt-6 sm:px-8 sm:pt-10">
+      <div className="relative pt-6 sm:pt-8">
         <div
           role="region"
           aria-roledescription="carousel"
@@ -273,7 +294,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
               setKeyboardFocus(false);
             }
           }}
-          className="media-frame group/hero relative isolate flex touch-pan-y flex-col overflow-hidden rounded-[1.6rem] bg-[#071227] text-bone outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:rounded-[2.2rem]"
+          className="group/hero relative isolate flex w-full touch-pan-y flex-col overflow-hidden bg-[#071227] text-bone outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           {/* Slide photography, stacked and cross-faded */}
           <div aria-hidden="true" className="absolute inset-0 -z-10">
@@ -308,7 +329,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
           </div>
 
           {/* Top bar */}
-          <div className="relative z-10 flex items-start justify-between gap-3 px-5 pt-5 sm:px-7 sm:pt-7 lg:px-10 lg:pt-8">
+          <div className="relative z-10 mx-auto flex w-full max-w-[1180px] flex-wrap items-start justify-between gap-3 px-5 pt-5 sm:flex-nowrap sm:px-8 sm:pt-7 lg:pt-8">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 py-1.5 pl-2 pr-3.5 backdrop-blur-md">
                 <span className="relative flex size-1.5">
@@ -316,7 +337,10 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                   <span className="relative inline-flex size-1.5 rounded-full bg-electric-soft" />
                 </span>
                 <span className="text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-bone/80">
-                  Insurance for the long horizon
+                  <span className="sm:hidden">Long-horizon insurance</span>
+                  <span className="hidden sm:inline">
+                    Insurance for the long horizon
+                  </span>
                 </span>
               </span>
               <span className="hidden items-center gap-2 text-[0.62rem] font-medium uppercase tracking-[0.22em] text-bone/65 md:flex">
@@ -325,7 +349,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-2">
               <span className="hidden text-[0.66rem] uppercase tracking-[0.2em] text-bone/65 sm:block">
                 Directly arranged cover
               </span>
@@ -347,7 +371,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
           </div>
 
           {/* Slide copy */}
-          <div className="relative z-10 mt-auto grid gap-8 px-5 pb-8 pt-20 sm:px-7 sm:pt-28 lg:grid-cols-12 lg:items-end lg:gap-10 lg:px-10 lg:pb-10 lg:pt-32">
+          <div className="relative z-10 mx-auto mt-auto grid w-full max-w-[1180px] gap-8 px-5 pb-8 pt-20 sm:px-8 sm:pt-28 lg:grid-cols-12 lg:items-end lg:gap-10 lg:pb-10 lg:pt-32">
             <div className="lg:col-span-7">
               <div
                 role="tabpanel"
@@ -444,9 +468,10 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
           </div>
 
           {/* Chapter rail */}
-          <div className="relative z-10 border-t border-white/10 bg-[#071227]/40 px-4 py-3.5 backdrop-blur-md sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
+          <div className="relative z-10 border-t border-white/10 bg-[#071227]/40 py-3.5 backdrop-blur-md">
+            <div className="mx-auto flex w-full max-w-[1180px] items-center gap-3 px-5 sm:px-8">
               <div
+                ref={railRef}
                 role="tablist"
                 aria-label="Choose a cover line"
                 className="flex flex-1 items-center gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -456,6 +481,9 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                   return (
                     <button
                       key={item.slug}
+                      ref={(node) => {
+                        tabRefs.current[itemIndex] = node;
+                      }}
                       id={`hero-tab-${item.slug}`}
                       type="button"
                       role="tab"
@@ -538,7 +566,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
         </div>
 
         {/* Trust bar */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-line px-1 pb-6 sm:px-2">
+        <div className="mx-auto mt-4 flex w-full max-w-[1180px] flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-line px-5 pb-6 sm:px-8">
           <div className="flex items-center gap-3">
             <div className="flex -space-x-2">
               {ADVISOR_FACES.map((face) => (
