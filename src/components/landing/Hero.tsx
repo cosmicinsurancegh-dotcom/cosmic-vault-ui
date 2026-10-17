@@ -1,5 +1,6 @@
 import { CtaButton } from "@/components/site/Cta";
 import { Reveal } from "@/components/site/Reveal";
+import { CountUp } from "./CountUp";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import {
   ArrowDown,
@@ -10,11 +11,17 @@ import {
 } from "lucide-react";
 import { useRef } from "react";
 
-const stats = [
-  { value: "£4.2B", label: "cover placed" },
-  { value: "24,000+", label: "members protected" },
-  { value: "48h", label: "average claim" },
-  { value: "4.9/5", label: "member rating" },
+const stats: {
+  value: number;
+  prefix?: string;
+  suffix?: string;
+  decimals?: number;
+  label: string;
+}[] = [
+  { value: 4.2, prefix: "£", suffix: "B", decimals: 1, label: "cover placed" },
+  { value: 24000, suffix: "+", label: "members protected" },
+  { value: 48, suffix: "h", label: "average claim" },
+  { value: 4.9, suffix: "/5", decimals: 1, label: "member rating" },
 ];
 
 export function Hero({ onQuote }: { onQuote: () => void }) {
@@ -96,11 +103,16 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
 
         <Reveal delay={0.2}>
           <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4 border-y border-line py-5 sm:gap-x-12">
-            {stats.map((stat) => (
+            {stats.map((stat, index) => (
               <div key={stat.label} className="flex items-baseline gap-2">
-                <span className="text-lg font-semibold tracking-[-0.02em] text-ink">
-                  {stat.value}
-                </span>
+                <CountUp
+                  value={stat.value}
+                  prefix={stat.prefix}
+                  suffix={stat.suffix}
+                  decimals={stat.decimals}
+                  delay={index * 0.08}
+                  className="text-lg font-semibold tabular-nums tracking-[-0.02em] text-ink"
+                />
                 <span className="text-[0.72rem] uppercase tracking-[0.14em] text-muted-foreground">
                   {stat.label}
                 </span>
