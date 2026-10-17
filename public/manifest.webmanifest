@@ -4,7 +4,7 @@
   "description": "Modern health, home, auto and life insurance with human advisors and 48-hour claims.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F7F5EF",
+  "background_color": "#FFFFFF",
   "theme_color": "#071227",
   "icons": [
     {

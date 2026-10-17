@@ -130,7 +130,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background text-ink">
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[268px] flex-col border-r border-line bg-[#FBFAF6] px-5 py-6 lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[268px] flex-col border-r border-line bg-background px-5 py-6 lg:flex">
         <Brand href="/" className="px-1.5 text-ink" />
 
         <nav aria-label="Vault" className="mt-10 space-y-1">
