@@ -1,5 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
+import { MissingConvexConfig } from "@/components/site/MissingConvexConfig";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
@@ -80,7 +81,8 @@ class RootErrorBoundary extends React.Component<
   }
 }
 
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+const convexUrl = (import.meta.env.VITE_CONVEX_URL as string | undefined)?.trim();
+const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;
 
 
 
@@ -114,7 +116,8 @@ createRoot(document.getElementById("root")!).render(
       <ToolbarErrorBoundary>
         <VlyToolbar />
       </ToolbarErrorBoundary>
-      <ConvexAuthProvider client={convex}>
+      {convex ? (
+        <ConvexAuthProvider client={convex}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -159,7 +162,10 @@ createRoot(document.getElementById("root")!).render(
         </BrowserRouter>
         </ThemeProvider>
         <Toaster />
-      </ConvexAuthProvider>
+        </ConvexAuthProvider>
+      ) : (
+        <MissingConvexConfig />
+      )}
     </RootErrorBoundary>
   </StrictMode>,
 );
