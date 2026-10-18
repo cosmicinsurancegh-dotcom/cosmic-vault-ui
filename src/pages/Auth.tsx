@@ -11,6 +11,7 @@ import {
 import { Label } from "@/components/ui/label";
 
 import { useAuth } from "@/hooks/use-auth";
+import { signInFailureMessage, withSignInTimeout } from "@/lib/signInTimeout";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -152,17 +153,19 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
     setIsLoading(true);
     setError(null);
     try {
-      await signIn("email-otp", { email: address });
+      await withSignInTimeout(signIn("email-otp", { email: address }));
       setOtp("");
       setStep({ intent: "email-code", email: address });
-      setIsLoading(false);
     } catch (error) {
       console.error("Email sign-in error:", error);
       setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to send verification code. Please try again.",
+        signInFailureMessage(
+          error,
+          readableAuthError(error) ||
+            "Failed to send verification code. Please try again.",
+        ),
       );
+    } finally {
       setIsLoading(false);
     }
   };
@@ -191,22 +194,26 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
     }
 
     try {
-      const result = await signIn("password", {
-        email: address,
-        password,
-        flow: isSignup ? "signUp" : "signIn",
-      });
+      const result = await withSignInTimeout(
+        signIn("password", {
+          email: address,
+          password,
+          flow: isSignup ? "signUp" : "signIn",
+        }),
+      );
       if (isSignup && !result.signingIn) {
         // A new password account is inert until its email address is confirmed.
         setOtp("");
         setStep({ intent: "password-signup", email: address, password });
-        setIsLoading(false);
         return;
       }
       navigate(redirect);
     } catch (error) {
       console.error("Password sign-in error:", error);
-      setError(passwordErrorMessage(error, isSignup));
+      setError(
+        signInFailureMessage(error, passwordErrorMessage(error, isSignup)),
+      );
+    } finally {
       setIsLoading(false);
     }
   };
@@ -220,17 +227,22 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
     setIsLoading(true);
     setError(null);
     try {
-      await signIn("password", { email: address, flow: "reset" });
+      await withSignInTimeout(
+        signIn("password", { email: address, flow: "reset" }),
+      );
       setOtp("");
       setNewPassword("");
       setConfirmPassword("");
       setStep({ intent: "password-reset", email: address });
-      setIsLoading(false);
     } catch (error) {
       console.error("Password reset error:", error);
       setError(
-        "No password is set for that email yet. Sign in with an email code instead, then add a password from your profile.",
+        signInFailureMessage(
+          error,
+          "No password is set for that email yet. Sign in with an email code instead, then add a password from your profile.",
+        ),
       );
+    } finally {
       setIsLoading(false);
     }
   };
@@ -241,21 +253,30 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
     setError(null);
     try {
       if (step.intent === "email-code") {
-        await signIn("email-otp", { email: step.email });
+        await withSignInTimeout(signIn("email-otp", { email: step.email }));
       } else if (step.intent === "password-signup") {
-        await signIn("password", {
-          email: step.email,
-          password: step.password ?? "",
-          flow: "signUp",
-        });
+        await withSignInTimeout(
+          signIn("password", {
+            email: step.email,
+            password: step.password ?? "",
+            flow: "signUp",
+          }),
+        );
       } else {
-        await signIn("password", { email: step.email, flow: "reset" });
+        await withSignInTimeout(
+          signIn("password", { email: step.email, flow: "reset" }),
+        );
       }
       setOtp("");
-      setIsLoading(false);
     } catch (error) {
       console.error("Resend code error:", error);
-      setError("We couldn't send a new code. Please try again.");
+      setError(
+        signInFailureMessage(
+          error,
+          "We couldn't send a new code. Please try again.",
+        ),
+      );
+    } finally {
       setIsLoading(false);
     }
   };
@@ -269,14 +290,18 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
     setError(null);
     try {
       if (step.intent === "email-code") {
-        await signIn("email-otp", { email: step.email, code: otp });
+        await withSignInTimeout(
+          signIn("email-otp", { email: step.email, code: otp }),
+        );
       } else if (step.intent === "password-signup") {
-        await signIn("password", {
-          email: step.email,
-          password: step.password ?? "",
-          code: otp,
-          flow: "signUp",
-        });
+        await withSignInTimeout(
+          signIn("password", {
+            email: step.email,
+            password: step.password ?? "",
+            code: otp,
+            flow: "signUp",
+          }),
+        );
       } else {
         if (newPassword.length < 8) {
           setError("Use at least 8 characters for your new password.");
@@ -288,12 +313,14 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
           setIsLoading(false);
           return;
         }
-        await signIn("password", {
-          email: step.email,
-          code: otp,
-          newPassword,
-          flow: "reset-verification",
-        });
+        await withSignInTimeout(
+          signIn("password", {
+            email: step.email,
+            code: otp,
+            newPassword,
+            flow: "reset-verification",
+          }),
+        );
       }
       navigate(redirect);
     } catch (error) {
@@ -304,12 +331,16 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
         error,
       );
       setError(
-        step.intent === "email-code"
-          ? "The verification code you entered is incorrect."
-          : "That code wasn't accepted. Check it and try again.",
+        signInFailureMessage(
+          error,
+          step.intent === "email-code"
+            ? "The verification code you entered is incorrect."
+            : "That code wasn't accepted. Check it and try again.",
+        ),
       );
-      setIsLoading(false);
       setOtp("");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -317,15 +348,19 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
     setIsLoading(true);
     setError(null);
     try {
-      await signIn("anonymous");
+      await withSignInTimeout(signIn("anonymous"));
       navigate(redirect);
     } catch (error) {
       console.error("Guest login error:", error);
       setError(
-        `Failed to sign in as guest: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        signInFailureMessage(
+          error,
+          `Failed to sign in as guest: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+        ),
       );
+    } finally {
       setIsLoading(false);
     }
   };
@@ -396,7 +431,6 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
             </p>
           </div>
         </div>
-
       </aside>
 
       {/* Form panel */}
@@ -484,7 +518,11 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
 
                   <div className="mt-6 grid grid-cols-2 gap-1 rounded-[4px] border border-line bg-card p-1">
                     {[
-                      { value: "code" as const, label: "Email code", icon: Mail },
+                      {
+                        value: "code" as const,
+                        label: "Email code",
+                        icon: Mail,
+                      },
                       {
                         value: "password" as const,
                         label: "Password",
@@ -524,7 +562,9 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
 
                   <form
                     onSubmit={
-                      method === "code" ? handleCodeSubmit : handlePasswordSubmit
+                      method === "code"
+                        ? handleCodeSubmit
+                        : handlePasswordSubmit
                     }
                     className="mt-5 space-y-4"
                   >
@@ -630,7 +670,10 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                     )}
 
                     {error && (
-                      <p className="rounded-lg bg-destructive/8 px-3 py-2 text-xs leading-5 text-destructive">
+                      <p
+                        role="alert"
+                        className="rounded-lg bg-destructive/8 px-3 py-2 text-xs leading-5 text-destructive"
+                      >
                         {error}
                       </p>
                     )}
@@ -685,10 +728,10 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
 
                   <p className="mt-5 flex items-start gap-2 text-[0.7rem] leading-5 text-muted-foreground">
                     <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-electric" />
-                    Guest sessions are temporary: they let you explore the vault,
-                    but nothing done as a guest is permanently saved. Sign in with
-                    your email whenever you want your quotes and applications to
-                    stay on a record.
+                    Guest sessions are temporary: they let you explore the
+                    vault, but nothing done as a guest is permanently saved.
+                    Sign in with your email whenever you want your quotes and
+                    applications to stay on a record.
                   </p>
                 </motion.div>
               ) : (
@@ -715,8 +758,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                       </>
                     ) : (
                       <>
-                        Check your{" "}
-                        <span className="text-electric">inbox.</span>
+                        Check your <span className="text-electric">inbox.</span>
                       </>
                     )}
                   </h1>
@@ -793,7 +835,9 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                             otp.length === 6 &&
                             !isLoading
                           ) {
-                            const form = (e.target as HTMLElement).closest("form");
+                            const form = (e.target as HTMLElement).closest(
+                              "form",
+                            );
                             if (form) form.requestSubmit();
                           }
                         }}
@@ -811,7 +855,10 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                     </div>
 
                     {error && (
-                      <p className="mt-3 rounded-lg bg-destructive/8 px-3 py-2 text-xs leading-5 text-destructive">
+                      <p
+                        role="alert"
+                        className="mt-3 rounded-lg bg-destructive/8 px-3 py-2 text-xs leading-5 text-destructive"
+                      >
                         {error}
                       </p>
                     )}
@@ -857,7 +904,8 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
 
         <div className="flex flex-col items-center gap-2 text-center">
           <p className="text-[0.68rem] text-muted-foreground">
-            Sign in with a one-time email code or a password you set. Guest sessions stay temporary.
+            Sign in with a one-time email code or a password you set. Guest
+            sessions stay temporary.
           </p>
           <p className="text-[0.62rem] text-muted-foreground/70">
             By continuing you agree to our{" "}

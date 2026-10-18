@@ -10,13 +10,13 @@ All new work happens inside `/dashboard`, with backend logic in `src/convex`.
 
 ## 1. Architecture
 
-| Layer | Technology | Location |
-| --- | --- | --- |
-| Frontend | React 18, React Router, Tailwind + shadcn/ui, Framer Motion | `src/pages`, `src/components` |
-| Backend | Convex queries/mutations/actions, scheduled crons | `src/convex` |
-| Auth | Convex Auth (email/password + Freebuff federated JWT) | `src/convex/auth.ts`, `src/convex/auth.config.ts` |
-| Documents | Convex file storage for uploads; generated text documents stored in-database | `src/convex/documents.ts`, `src/convex/lib/files.ts` |
-| Email | Platform integration gateway (`@vly-ai/integrations`) with recorded delivery state | `src/convex/email.ts` |
+| Layer     | Technology                                                                         | Location                                             |
+| --------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Frontend  | React 18, React Router, Tailwind + shadcn/ui, Framer Motion                        | `src/pages`, `src/components`                        |
+| Backend   | Convex queries/mutations/actions, scheduled crons                                  | `src/convex`                                         |
+| Auth      | Convex Auth (email/password + Freebuff federated JWT)                              | `src/convex/auth.ts`, `src/convex/auth.config.ts`    |
+| Documents | Convex file storage for uploads; generated text documents stored in-database       | `src/convex/documents.ts`, `src/convex/lib/files.ts` |
+| Email     | Platform integration gateway (`@vly-ai/integrations`) with recorded delivery state | `src/convex/email.ts`                                |
 
 Money is stored as **integer minor units** plus an explicit ISO currency code.
 Timestamps are stored in UTC milliseconds and rendered with the user's locale.
@@ -31,14 +31,14 @@ Timestamps are stored in UTC milliseconds and rendered with the user's locale.
 
 ### Dashboard routes
 
-| Route | Access |
-| --- | --- |
-| `/dashboard` | Any signed-in user (role-specific overview) |
-| `/dashboard/catalogue`, `quotes`, `applications`, `policies`, `profile` | Customer + broker |
-| `/dashboard/claims` | Customer only |
-| `/dashboard/payments`, `documents`, `support` | Any signed-in user (scoped rows) |
-| `/dashboard/broker/customers`, `broker/reports` | Broker only |
-| `/dashboard/admin/*` | Staff, additionally gated per permission |
+| Route                                                                   | Access                                      |
+| ----------------------------------------------------------------------- | ------------------------------------------- |
+| `/dashboard`                                                            | Any signed-in user (role-specific overview) |
+| `/dashboard/catalogue`, `quotes`, `applications`, `policies`, `profile` | Customer + broker                           |
+| `/dashboard/claims`                                                     | Customer only                               |
+| `/dashboard/payments`, `documents`, `support`                           | Any signed-in user (scoped rows)            |
+| `/dashboard/broker/customers`, `broker/reports`                         | Broker only                                 |
+| `/dashboard/admin/*`                                                    | Staff, additionally gated per permission    |
 
 `RequireAuth` preserves the requested path in `/auth?returnTo=…`; staff routes are
 wrapped in `StaffOnly` + `RequirePermission`, broker routes in `RequireRole`.
@@ -158,17 +158,37 @@ premium marking and stale draft cleanup (`maintenance.ts`).
 
 ## 6. Environment and integrations
 
-| Variable | Used by | Notes |
-| --- | --- | --- |
-| `VITE_CONVEX_URL` | Frontend | Provided by the platform |
-| `CONVEX_SITE_URL` | Auth config | Provided by the platform |
-| `CONVEX_DEPLOYMENT` | Convex CLI | Provided by the platform |
-| `VLY_INTEGRATION_KEY` | `convex/email.ts` | Platform integration gateway for email |
-| `VITE_SUPABASE_URL` | `src/lib/supabase.ts`, `convex/supabase.ts` | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | `src/lib/supabase.ts` | Public key for browser calls (RLS-bound) |
-| `SUPABASE_SERVICE_ROLE_KEY` | `convex/supabase.ts` | Server-only key for storage/admin calls |
-| `SUPABASE_URL` | `convex/supabase.ts` | Optional on the server; falls back to `VITE_SUPABASE_URL` |
-| `SUPABASE_PROJECT_REF` | Supabase CLI only | Optional; not read by app code - the ref is derived from the project URL |
+| Variable                                        | Used by                                      | Notes                                                                                                                                                                              |
+| ----------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_CONVEX_URL`                               | `src/main.tsx`                               | Provided by the platform. Validated by `src/lib/convexUrl.ts`; a wrong or missing value falls back to this project's deployment instead of leaving a client that can never connect |
+| `CONVEX_SITE_URL`                               | Auth config                                  | Provided by the platform (sets the deployment's own token issuer)                                                                                                                  |
+| `CONVEX_DEPLOYMENT`                             | Convex CLI                                   | Provided by the platform                                                                                                                                                           |
+| `VLY_INTEGRATION_KEY`                           | `convex/email.ts`, `convex/auth/emailOtp.ts` | Platform integration gateway for email. Required for email codes: `emailOtp.ts` refuses with a named error instead of pretending a code was sent                                   |
+| `VLY_INTEGRATION_BASE_URL`                      | `convex/auth/emailOtp.ts`                    | Optional gateway override; defaults to the platform gateway                                                                                                                        |
+| `VLY_CONVEX_AUTH_ISSUER`                        | `convex/auth.config.ts`                      | Optional; issuer for freebuff-signed federated tokens, defaults to `https://freebuff.com`                                                                                          |
+| `VITE_VLY_APP_ID`, `VITE_VLY_MONITORING_URL`    | `src/instrumentation.tsx`                    | Platform-provided error reporting; when either is missing reporting is skipped                                                                                                     |
+| `VITE_SUPABASE_URL`                             | `src/lib/supabase.ts`, `convex/supabase.ts`  | Supabase project URL                                                                                                                                                               |
+| `VITE_SUPABASE_ANON_KEY`                        | `src/lib/supabase.ts`                        | Public key for browser calls (RLS-bound)                                                                                                                                           |
+| `SUPABASE_SERVICE_ROLE_KEY`                     | `convex/supabase.ts`                         | Server-only key for storage/admin calls                                                                                                                                            |
+| `SUPABASE_URL`                                  | `convex/supabase.ts`                         | Optional on the server; falls back to `VITE_SUPABASE_URL`                                                                                                                          |
+| `SUPABASE_PROJECT_REF`                          | Supabase CLI only                            | Optional; not read by app code - the ref is derived from the project URL                                                                                                           |
+| `DEMO_SEED_ENABLED` (+ `DEMO_SEED_ENVIRONMENT`) | `convex/demoSeed.ts`                         | Test-only switch; seeding throws unless it is exactly `1`, and only test suites set it                                                                                             |
+
+Every variable has a defined absence behaviour. Browser-side values are
+validated or treated as optional (`getSupabase()` returns `null`, monitoring is
+skipped), and server-side values either degrade visibly (`email.deliver` records
+`skipped`, Supabase reports missing keys) or fail with a message that names the
+variable. The only value that used to fail silently was `VITE_CONVEX_URL` - the
+Convex client accepts any absolute URL, so a bad value never errored and every
+call simply queued forever. `src/lib/convexUrl.ts` now rejects anything that is
+not a `*.convex.cloud` / `*.convex.site` / localhost URL and falls back to this
+project's deployment, and sign-in requests have a 15s deadline
+(`src/lib/signInTimeout.ts`) so an unreachable deployment shows an error instead
+of a button stuck on "Sending code".
+
+Never import `src/lib/vly-integrations.ts` (a template leftover) from browser
+code: it reads `process.env.VLY_INTEGRATION_KEY`, which is a server-only secret
+and is not replaced by Vite. Server code uses `src/convex/lib/vly.ts` instead.
 
 ### Supabase
 
@@ -206,49 +226,49 @@ webhook handler that calls the same idempotent confirm path.
 Run against a live Convex deployment with three test identities (customer, broker,
 administrator) created through the app's own mutations.
 
-| Check | Result |
-| --- | --- |
-| Typecheck (`bunx tsc -b --noEmit`) | passes |
-| Convex codegen + deploy (`bunx convex dev --once`) | passes |
-| Quote → application → approve → confirm payment → issue policy | policy `POL-QQ4SE8JBD` issued, 3 documents generated, notifications queued |
-| Customer sees policy, documents, notifications | scoped correctly |
-| Claim submit → note → partial approval → settlement → close | `CLM-S35HW2UV7` ended `paid`, then `closed`; settlement transaction `SET-SPTFRP6AP` |
-| Duplicate claim decision | rejected: "A claim decision has already been recorded." |
-| Duplicate refund | rejected: "A refund has already been recorded for this transaction." |
-| Customer calls staff-only `claims.decide` / `claims.queue` | rejected: "This action is restricted to staff." |
-| Broker reads unassigned customer policy | rejected: "You do not have access to this policy." |
-| Broker lists staff customer directory | rejected: "This action is restricted to staff." |
-| Broker after assignment | sees assigned customer and their policy only |
-| Admin without `refunds.approve` issues refund | rejected: "You do not have permission to perform this action." |
-| Customer quotes a draft product | rejected: "This product is not available for sale." |
-| Customer quotes a published product outside supported country | rejected |
-| Published product pricing | base 4500 × 1.6 = 7200 (minor units) |
-| Archived product quoted | rejected |
-| Fresh quote → application → documents → submit → information request → customer reply → decline | `QTE-0W7NUKXXF` → `APP-0WXM8WCM8` declined; issuance then rejected: "Only approved applications can be issued." |
-| Duplicate application submit | rejected: "This application has already been submitted." |
-| Policy endorsement request → staff approval | policy history shows the endorsement; endorsement document issued |
-| Duplicate servicing request of the same type | rejected while one is pending |
-| Broker revoke → access denied → re-assign | access restored only after a new active assignment |
-| Broker reads a customer's claim directly | rejected (claims remain customer/staff only) |
-| Support: customer creates, staff replies, staff resolves | ticket history and status updated |
-| Settings save (`settings.update`) | persisted (`claimSlaDays` 10 → 11 → 10) |
-| Reports (customers, policies, claims, premiums) | totals match underlying records; per-currency separation (GBP 442 premium, GBP 900 approved) |
-| Admin overview metrics | live counts (1 customer, 1 active policy, 1 decided claim, 1 paid claim) |
-| Audit trail | records product, application, policy, payment, claim, settlement, broker assignment events |
-| Support ticket create + staff queue | ticket `SUP-VAU7QHS52` visible to staff |
-| Email delivery state | attempts recorded as `failed` with provider reason (sandbox recipient), proving the adapter path |
-| `supabase.status` as staff before keys were added | `configured: false`, naming the missing variables - no crash, no blocked flow |
-| `supabase.status` / `supabase.signedUrl` as a customer and anonymously | rejected: "This action is restricted to staff." |
-| `supabase.signedUrl` as staff with no keys | rejected: "Supabase is not configured on this deployment." |
-| Vite transforms for `src/lib/supabase.ts` and the settings page | 200, no transform errors |
-| Marketing quote request (`quotes.requestQuote`) from the landing `QuoteDialog` | stored as `CV-JLB3KN2`: name/email trimmed, email lower-cased, `status: in_review`, no `userId` for a signed-out visitor |
-| Quote request with a 1-character name / an invalid email | rejected: "Please add your full name." / "Please add a valid email address." |
-| Quote request with an unsupported coverage value | rejected by argument validation |
-| Signed-in quote request | stored with `userId`, immediately listed by `quotes.myQuotes` |
-| Landing lead whose email matches a member who signs in later | appears in that member's `quotes.myQuotes` even though the lead has no `userId` |
-| `quotes.myQuotes` for a signed-out visitor | `[]` (no leak of other members' leads) |
-| ESLint on the landing, auth and quote modules | passes |
-| Vite transforms for every landing section, the quote dialog, the auth page and the vault pages | 200, no transform errors |
+| Check                                                                                           | Result                                                                                                                   |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Typecheck (`bunx tsc -b --noEmit`)                                                              | passes                                                                                                                   |
+| Convex codegen + deploy (`bunx convex dev --once`)                                              | passes                                                                                                                   |
+| Quote → application → approve → confirm payment → issue policy                                  | policy `POL-QQ4SE8JBD` issued, 3 documents generated, notifications queued                                               |
+| Customer sees policy, documents, notifications                                                  | scoped correctly                                                                                                         |
+| Claim submit → note → partial approval → settlement → close                                     | `CLM-S35HW2UV7` ended `paid`, then `closed`; settlement transaction `SET-SPTFRP6AP`                                      |
+| Duplicate claim decision                                                                        | rejected: "A claim decision has already been recorded."                                                                  |
+| Duplicate refund                                                                                | rejected: "A refund has already been recorded for this transaction."                                                     |
+| Customer calls staff-only `claims.decide` / `claims.queue`                                      | rejected: "This action is restricted to staff."                                                                          |
+| Broker reads unassigned customer policy                                                         | rejected: "You do not have access to this policy."                                                                       |
+| Broker lists staff customer directory                                                           | rejected: "This action is restricted to staff."                                                                          |
+| Broker after assignment                                                                         | sees assigned customer and their policy only                                                                             |
+| Admin without `refunds.approve` issues refund                                                   | rejected: "You do not have permission to perform this action."                                                           |
+| Customer quotes a draft product                                                                 | rejected: "This product is not available for sale."                                                                      |
+| Customer quotes a published product outside supported country                                   | rejected                                                                                                                 |
+| Published product pricing                                                                       | base 4500 × 1.6 = 7200 (minor units)                                                                                     |
+| Archived product quoted                                                                         | rejected                                                                                                                 |
+| Fresh quote → application → documents → submit → information request → customer reply → decline | `QTE-0W7NUKXXF` → `APP-0WXM8WCM8` declined; issuance then rejected: "Only approved applications can be issued."          |
+| Duplicate application submit                                                                    | rejected: "This application has already been submitted."                                                                 |
+| Policy endorsement request → staff approval                                                     | policy history shows the endorsement; endorsement document issued                                                        |
+| Duplicate servicing request of the same type                                                    | rejected while one is pending                                                                                            |
+| Broker revoke → access denied → re-assign                                                       | access restored only after a new active assignment                                                                       |
+| Broker reads a customer's claim directly                                                        | rejected (claims remain customer/staff only)                                                                             |
+| Support: customer creates, staff replies, staff resolves                                        | ticket history and status updated                                                                                        |
+| Settings save (`settings.update`)                                                               | persisted (`claimSlaDays` 10 → 11 → 10)                                                                                  |
+| Reports (customers, policies, claims, premiums)                                                 | totals match underlying records; per-currency separation (GBP 442 premium, GBP 900 approved)                             |
+| Admin overview metrics                                                                          | live counts (1 customer, 1 active policy, 1 decided claim, 1 paid claim)                                                 |
+| Audit trail                                                                                     | records product, application, policy, payment, claim, settlement, broker assignment events                               |
+| Support ticket create + staff queue                                                             | ticket `SUP-VAU7QHS52` visible to staff                                                                                  |
+| Email delivery state                                                                            | attempts recorded as `failed` with provider reason (sandbox recipient), proving the adapter path                         |
+| `supabase.status` as staff before keys were added                                               | `configured: false`, naming the missing variables - no crash, no blocked flow                                            |
+| `supabase.status` / `supabase.signedUrl` as a customer and anonymously                          | rejected: "This action is restricted to staff."                                                                          |
+| `supabase.signedUrl` as staff with no keys                                                      | rejected: "Supabase is not configured on this deployment."                                                               |
+| Vite transforms for `src/lib/supabase.ts` and the settings page                                 | 200, no transform errors                                                                                                 |
+| Marketing quote request (`quotes.requestQuote`) from the landing `QuoteDialog`                  | stored as `CV-JLB3KN2`: name/email trimmed, email lower-cased, `status: in_review`, no `userId` for a signed-out visitor |
+| Quote request with a 1-character name / an invalid email                                        | rejected: "Please add your full name." / "Please add a valid email address."                                             |
+| Quote request with an unsupported coverage value                                                | rejected by argument validation                                                                                          |
+| Signed-in quote request                                                                         | stored with `userId`, immediately listed by `quotes.myQuotes`                                                            |
+| Landing lead whose email matches a member who signs in later                                    | appears in that member's `quotes.myQuotes` even though the lead has no `userId`                                          |
+| `quotes.myQuotes` for a signed-out visitor                                                      | `[]` (no leak of other members' leads)                                                                                   |
+| ESLint on the landing, auth and quote modules                                                   | passes                                                                                                                   |
+| Vite transforms for every landing section, the quote dialog, the auth page and the vault pages  | 200, no transform errors                                                                                                 |
 
 The marketing landing page (`/`), `/auth`, `/login`, `/signup` and the vault
 routes all render; the landing page's quote dialog posts to

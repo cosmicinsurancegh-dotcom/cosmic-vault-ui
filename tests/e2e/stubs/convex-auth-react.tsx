@@ -18,6 +18,7 @@ import { useMemo } from "react";
 import type { ReactNode } from "react";
 import {
   CUSTOMER_SESSION,
+  STALL_EMAIL,
   TEST_PASSWORD,
   VALID_CODE,
   setSession,
@@ -88,7 +89,13 @@ export function useAuthActions() {
         }
 
         const code = param(params, "code");
+        const email = param(params, "email") ?? "";
         await delay(SEND_DELAY_MS);
+
+        // A request that never settles, like the real client against a
+        // deployment that cannot be reached. The app's own deadline must
+        // turn this into an error rather than an endless "Sending code".
+        if (email === STALL_EMAIL) return await new Promise<never>(() => {});
 
         if (code === null) return { signingIn: false }; // code "sent"
         if (code !== VALID_CODE) throw new Error("Invalid code");

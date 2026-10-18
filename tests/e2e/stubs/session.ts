@@ -43,6 +43,13 @@ export const ADMIN_SESSION: E2ESession = {
 
 export const VALID_CODE = "123456";
 
+/**
+ * Address whose sign-in request never answers, mirroring a deployment that is
+ * unreachable while the Convex client queues the call. Used to prove the app
+ * fails fast instead of spinning on "Sending code" forever.
+ */
+export const STALL_EMAIL = "stall@example.com";
+
 /** The only password the stub accepts for `signIn("password", ...)`. */
 export const TEST_PASSWORD = "correct horse battery";
 
