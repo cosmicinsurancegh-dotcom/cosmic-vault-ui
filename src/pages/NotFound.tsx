@@ -340,7 +340,7 @@ export default function NotFound() {
               transition={{ duration: 0.7, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
               className="relative lg:col-span-4"
             >
-              <div className="relative overflow-hidden rounded-[1.4rem] border border-white/12 bg-[#071227]/75 p-5 backdrop-blur-xl">
+              <div className="relative overflow-hidden rounded-[4px] border border-white/12 bg-[#071227]/75 p-5 backdrop-blur-xl">
                 <span
                   aria-hidden="true"
                   className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-electric-soft/60 to-transparent"
@@ -444,7 +444,7 @@ export default function NotFound() {
           </div>
 
           {matches.length > 0 ? (
-            <ul className="mt-8 grid gap-px overflow-hidden rounded-[1.2rem] border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="mt-8 grid gap-px overflow-hidden rounded-[4px] border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-3">
               {matches.map((destination, index) => (
                 <li key={destination.href}>
                   <Link
@@ -470,7 +470,7 @@ export default function NotFound() {
               ))}
             </ul>
           ) : (
-            <div className="mt-8 flex flex-col items-start justify-between gap-5 rounded-[1.2rem] border border-white/10 bg-white/[0.03] px-5 py-8 sm:flex-row sm:items-center">
+            <div className="mt-8 flex flex-col items-start justify-between gap-5 rounded-[4px] border border-white/10 bg-white/[0.03] px-5 py-8 sm:flex-row sm:items-center">
               <div>
                 <p className="text-[0.92rem] font-medium text-bone/85">
                   Nothing on that bearing.

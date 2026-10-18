@@ -77,7 +77,7 @@ function ChartPanel({
 }) {
   return (
     <section
-      className={`flex flex-col rounded-[1.35rem] border border-line bg-card ${className ?? ""}`}
+      className={`flex flex-col rounded-[4px] border border-line bg-card ${className ?? ""}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-5 pb-2 sm:px-6 sm:pt-6">
         <div className="min-w-0">
@@ -272,7 +272,7 @@ export function PortfolioChart({
               stroke="var(--color-claims)"
               strokeOpacity={0.42}
               strokeWidth={1}
-              radius={[6, 6, 2, 2]}
+              radius={[4, 4, 4, 4]}
               maxBarSize={24}
               animationDuration={900}
               animationEasing="ease-out"
@@ -453,7 +453,7 @@ export function LossRatioChart({
                   dataKey="claims"
                   fill="var(--color-claims)"
                   fillOpacity={0.55}
-                  radius={[3, 3, 2, 2]}
+                  radius={[4, 4, 4, 4]}
                   maxBarSize={18}
                   animationDuration={850}
                   animationEasing="ease-out"

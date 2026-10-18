@@ -139,7 +139,7 @@ function CreateTicketDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background sm:max-w-[600px]">
+      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="tracking-[-0.02em]">New support request</DialogTitle>
           <DialogDescription>
@@ -278,7 +278,7 @@ export function TicketDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background sm:max-w-[680px]">
+      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background sm:max-w-[680px]">
         {detail === undefined ? (
           <LoadingState label="Loading ticket" />
         ) : (

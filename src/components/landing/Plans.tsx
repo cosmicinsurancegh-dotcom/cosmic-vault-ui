@@ -66,7 +66,7 @@ export function Plans({ onQuote }: { onQuote: () => void }) {
         <div className="mt-12 grid gap-4 sm:gap-5 lg:grid-cols-3">
           {steps.map(({ Icon, title, text }, index) => (
             <Reveal key={title} delay={index * 0.07}>
-              <article className="group flex h-full flex-col rounded-[1.6rem] border border-line bg-card p-6 transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-1 hover:border-primary/25 hover:shadow-[0_26px_54px_-44px_rgba(8,18,39,0.5)] sm:p-7">
+              <article className="group flex h-full flex-col rounded-[4px] border border-line bg-card p-6 transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-1 hover:border-primary/25 hover:shadow-[0_26px_54px_-44px_rgba(8,18,39,0.5)] sm:p-7">
                 <div className="flex items-start justify-between">
                   <span className="grid size-11 place-items-center rounded-[4px] bg-ice text-primary transition-colors duration-500 group-hover:bg-primary group-hover:text-primary-foreground">
                     <Icon className="size-4 transition-transform duration-500 group-hover:rotate-[8deg]" strokeWidth={1.8} />

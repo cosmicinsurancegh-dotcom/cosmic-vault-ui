@@ -90,7 +90,7 @@ export default function LegalPage({ slug }: { slug: string }) {
           </div>
 
           <aside className="lg:col-span-4">
-            <div className="sticky top-28 rounded-[1.3rem] border border-line bg-card p-5">
+            <div className="sticky top-28 rounded-[4px] border border-line bg-card p-5">
               <p className="text-[0.6rem] font-semibold uppercase tracking-[0.24em] text-ink/60">
                 Other documents
               </p>

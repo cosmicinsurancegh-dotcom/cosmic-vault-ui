@@ -133,7 +133,7 @@ export function Why() {
             {/* Fills the height of the commitment list beside it, so the two
                 columns end on the same line now the floating badge is gone. */}
             <div className="sticky top-28 flex h-full flex-col">
-              <div className="relative min-h-[22rem] flex-1 overflow-hidden rounded-[1.8rem] border border-ink/10">
+              <div className="relative min-h-[22rem] flex-1 overflow-hidden rounded-[4px] border border-ink/10">
                 <AnimatePresence initial={false}>
                   <motion.div
                     key={shown.image.src}

@@ -373,7 +373,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                     delay: reduceMotion ? 0 : 0.06,
                     ease: [0.22, 1, 0.36, 1],
                   }}
-                  className="rounded-[1.35rem] border border-white/12 bg-[#071227]/85 p-5 backdrop-blur-md"
+                  className="rounded-[4px] border border-white/12 bg-[#071227]/85 p-5 backdrop-blur-md"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <p className="text-[0.56rem] font-semibold uppercase tracking-[0.24em] text-bone/55">

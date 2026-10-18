@@ -130,7 +130,7 @@ export default function AdminBrokersPage() {
 
       {/* Create broker */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background sm:max-w-[620px]">
+        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background sm:max-w-[620px]">
           <DialogHeader>
             <DialogTitle>Add a broker</DialogTitle>
             <DialogDescription>
@@ -266,7 +266,7 @@ function AssignmentsDialog({
   if (assignments === undefined) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background sm:max-w-[640px]">
+        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background sm:max-w-[640px]">
           <LoadingState label="Loading assignments" />
         </DialogContent>
       </Dialog>
@@ -278,7 +278,7 @@ function AssignmentsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background sm:max-w-[680px]">
+      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background sm:max-w-[680px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {orgName} <StatusPill status={broker?.status ?? "active"} />

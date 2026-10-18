@@ -191,7 +191,7 @@ export function HelpCentre() {
             return (
               <div
                 key={category}
-                className="flex flex-col rounded-[1.3rem] border border-line bg-card p-6"
+                className="flex flex-col rounded-[4px] border border-line bg-card p-6"
               >
                 <div className="flex items-start justify-between gap-4">
                   <span className="grid size-10 place-items-center rounded-[4px] bg-ice text-primary">
@@ -255,7 +255,7 @@ export function HelpCentre() {
             <Link
               key={item.to}
               to={item.to}
-              className="group rounded-[1.3rem] border border-line bg-card p-6 transition-colors hover:border-primary/30"
+              className="group rounded-[4px] border border-line bg-card p-6 transition-colors hover:border-primary/30"
             >
               <CircleHelp className="size-4 text-primary" />
               <p className="mt-5 text-[0.98rem] font-semibold text-ink">

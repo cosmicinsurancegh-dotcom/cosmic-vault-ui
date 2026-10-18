@@ -345,7 +345,7 @@ export function CommandCentre({
 
       {/* Line cards */}
       {board.lines.length === 0 ? (
-        <section className="starfield relative overflow-hidden rounded-[1.5rem] bg-[#071227] p-6 text-bone sm:p-8">
+        <section className="starfield relative overflow-hidden rounded-[4px] bg-[#071227] p-6 text-bone sm:p-8">
           <span className="pointer-events-none absolute -right-20 -top-24 size-64 rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.35),transparent_65%)]" />
           <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-lg">
@@ -385,7 +385,7 @@ export function CommandCentre({
                   delay: index * 0.055,
                   ease: [0.22, 1, 0.36, 1],
                 }}
-                className="group relative overflow-hidden rounded-[1.25rem] border border-line/80 bg-card p-4 transition-colors hover:border-primary/25 sm:p-5"
+                className="group relative overflow-hidden rounded-[4px] border border-line/80 bg-card p-4 transition-colors hover:border-primary/25 sm:p-5"
                 style={{
                   backgroundImage: `radial-gradient(130% 120% at 100% 0%, color-mix(in oklab, ${color} 17%, transparent), transparent 62%)`,
                 }}
@@ -535,7 +535,7 @@ function ActivePlans({
   canSeeMoney: boolean;
 }) {
   return (
-    <section className="overflow-hidden rounded-[1.35rem] border border-line bg-card">
+    <section className="overflow-hidden rounded-[4px] border border-line bg-card">
       <div className="flex items-start justify-between gap-3 px-5 pt-5">
         <div>
           <h2 className="text-[0.95rem] font-semibold tracking-[-0.02em] text-ink">
@@ -638,7 +638,7 @@ function Alerts({ alerts }: { alerts: Board["alerts"] }) {
   const open = alerts.reduce((total, alert) => total + alert.count, 0);
 
   return (
-    <section className="rounded-[1.35rem] border border-line bg-card">
+    <section className="rounded-[4px] border border-line bg-card">
       <div className="flex items-start justify-between gap-3 px-5 pt-5">
         <div>
           <h2 className="text-[0.95rem] font-semibold tracking-[-0.02em] text-ink">
@@ -723,7 +723,7 @@ function RecentClaims({
   canSeeMoney: boolean;
 }) {
   return (
-    <section className="overflow-hidden rounded-[1.35rem] border border-line bg-card">
+    <section className="overflow-hidden rounded-[4px] border border-line bg-card">
       <div className="flex items-start justify-between gap-3 px-5 pt-5">
         <div>
           <h2 className="text-[0.95rem] font-semibold tracking-[-0.02em] text-ink">

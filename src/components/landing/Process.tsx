@@ -33,7 +33,7 @@ export function Process({ onQuote }: { onQuote: () => void }) {
         <Reveal y={36}>
           {/* Sized so the panel - heading, three steps and the CTA row -
               fits a single laptop viewport instead of running past the fold. */}
-          <div className="starfield relative overflow-hidden rounded-[2rem] bg-[#071227] px-6 py-12 text-bone sm:rounded-[2.5rem] sm:px-12">
+          <div className="starfield relative overflow-hidden rounded-[4px] bg-[#071227] px-6 py-12 text-bone sm:px-12">
             <Media
               image={IMAGES.cosmos}
               parallax={34}
@@ -90,7 +90,7 @@ export function Process({ onQuote }: { onQuote: () => void }) {
                     <Media
                       image={step.image}
                       overlay="soft"
-                      className="mt-5 aspect-[16/9] w-full rounded-[1rem] border border-white/10 opacity-85 transition-opacity duration-500 group-hover:opacity-100"
+                      className="mt-5 aspect-[16/9] w-full rounded-[4px] border border-white/10 opacity-85 transition-opacity duration-500 group-hover:opacity-100"
                       imgClassName="grayscale-[18%]"
                     />
                     <h3 className="mt-5 text-lg font-medium tracking-[-0.02em] text-bone">

@@ -197,7 +197,7 @@ function SubmitClaimDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background p-0 sm:max-w-[640px]">
+      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background p-0 sm:max-w-[640px]">
         <div className="border-b border-line px-5 py-5 sm:px-7">
           <DialogHeader>
             <DialogTitle className="tracking-[-0.02em]">Submit a claim</DialogTitle>
@@ -388,7 +388,7 @@ function ClaimDialog({
   if (detail === undefined) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background sm:max-w-[760px]">
+        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background sm:max-w-[760px]">
           <LoadingState label="Loading claim" />
         </DialogContent>
       </Dialog>
@@ -401,7 +401,7 @@ function ClaimDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background p-0 sm:max-w-[780px]">
+      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background p-0 sm:max-w-[780px]">
         <div className="border-b border-line px-5 py-5 sm:px-7">
           <DialogHeader>
             <DialogTitle className="flex flex-wrap items-center gap-2 text-lg tracking-[-0.02em]">

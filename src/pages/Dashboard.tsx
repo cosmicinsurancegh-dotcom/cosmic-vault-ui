@@ -357,7 +357,7 @@ function Overview({
   return (
     <div className="space-y-5">
       {/* Readiness */}
-      <div className="starfield relative overflow-hidden rounded-[1.6rem] bg-[#071227] p-6 text-bone sm:p-8">
+      <div className="starfield relative overflow-hidden rounded-[4px] bg-[#071227] p-6 text-bone sm:p-8">
         <span className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.35),transparent_65%)]" />
         <div className="relative grid gap-7 sm:grid-cols-[1fr_auto] sm:items-center">
           <div>
@@ -464,7 +464,7 @@ function Overview({
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: index * 0.06 }}
-            className="rounded-[1.2rem] border border-line bg-card p-5"
+            className="rounded-[4px] border border-line bg-card p-5"
           >
             <div className="flex items-center justify-between">
               <p className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
@@ -495,7 +495,7 @@ function Overview({
           onAction={() => onQuote("health", "Signature")}
         />
 
-        <section className="rounded-[1.4rem] border border-line bg-card p-5 sm:p-6">
+        <section className="rounded-[4px] border border-line bg-card p-5 sm:p-6">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold tracking-[-0.02em] text-ink">
               Recent requests
@@ -562,7 +562,7 @@ function Overview({
       </div>
 
       {/* Next steps */}
-      <section className="rounded-[1.4rem] border border-line bg-card p-5 sm:p-6">
+      <section className="rounded-[4px] border border-line bg-card p-5 sm:p-6">
         <h3 className="text-base font-semibold tracking-[-0.02em] text-ink">
           Next in your universe
         </h3>
@@ -619,7 +619,7 @@ function QuotesView({
   onQuote: (coverage?: CoverageKey) => void;
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-line bg-card">
+    <div className="rounded-[4px] border border-line bg-card">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-5 sm:px-7">
         <div>
           <h2 className="text-lg font-semibold tracking-[-0.025em] text-ink">
@@ -755,7 +755,7 @@ function CoverageView({
             <div
               key={option.key}
               className={cn(
-                "group relative overflow-hidden rounded-[1.3rem] border bg-card p-5 transition-all duration-400 sm:p-6",
+                "group relative overflow-hidden rounded-[4px] border bg-card p-5 transition-all duration-400 sm:p-6",
                 isCovered
                   ? "border-primary/25"
                   : "border-line hover:-translate-y-0.5 hover:border-ink/20",
@@ -826,7 +826,7 @@ function ConciergeView({
 }) {
   return (
     <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-      <div className="starfield relative overflow-hidden rounded-[1.5rem] bg-[#071227] p-6 text-bone sm:p-7">
+      <div className="starfield relative overflow-hidden rounded-[4px] bg-[#071227] p-6 text-bone sm:p-7">
         <span className="pointer-events-none absolute -right-10 bottom-10 size-40 rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.28),transparent_70%)]" />
         <p className="text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-bone/45">
           Support
@@ -870,7 +870,7 @@ function ConciergeView({
         </div>
       </div>
 
-      <div className="rounded-[1.5rem] border border-line bg-card p-6 sm:p-7">
+      <div className="rounded-[4px] border border-line bg-card p-6 sm:p-7">
         <h2 className="text-lg font-semibold tracking-[-0.025em] text-ink">
           What can we take off your mind?
         </h2>

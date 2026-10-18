@@ -64,7 +64,7 @@ export default function AllCover() {
             <Reveal key={cover.slug} delay={(index % 2) * 0.06}>
               <SpotlightCard
                 to={`/cover/${cover.slug}`}
-                className="flex h-full flex-col rounded-[1.5rem] border border-line bg-card transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-1 hover:border-primary/30 hover:shadow-[0_28px_60px_-44px_rgba(8,18,39,0.55)]"
+                className="flex h-full flex-col rounded-[4px] border border-line bg-card transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-1 hover:border-primary/30 hover:shadow-[0_28px_60px_-44px_rgba(8,18,39,0.55)]"
               >
                 <div className="relative overflow-hidden">
                   <Media
@@ -160,7 +160,7 @@ export default function AllCover() {
               "Gather the documents the product lists, so an information request does not stall your application.",
             ]}
           />
-          <div className="rounded-[1.3rem] border border-line bg-card p-6">
+          <div className="rounded-[4px] border border-line bg-card p-6">
             <p className="text-[0.82rem] font-semibold text-ink">
               Not sure which cover you need?
             </p>

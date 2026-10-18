@@ -212,7 +212,7 @@ function CustomerDialog({
   if (detail === undefined) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background sm:max-w-[820px]">
+        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background sm:max-w-[820px]">
           <LoadingState label="Loading customer" />
         </DialogContent>
       </Dialog>
@@ -231,7 +231,7 @@ function CustomerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background p-0 sm:max-w-[840px]">
+      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background p-0 sm:max-w-[840px]">
         <div className="border-b border-line px-5 py-5 sm:px-7">
           <DialogHeader>
             <DialogTitle className="flex flex-wrap items-center gap-2 text-lg tracking-[-0.02em]">

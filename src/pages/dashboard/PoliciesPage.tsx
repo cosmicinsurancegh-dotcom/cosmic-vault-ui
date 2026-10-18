@@ -87,7 +87,7 @@ export default function PoliciesPage() {
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {policies.map((policy) => (
-            <article key={policy._id} className="rounded-[1.3rem] border border-line bg-card p-5">
+            <article key={policy._id} className="rounded-[4px] border border-line bg-card p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[0.6rem] uppercase tracking-[0.16em] text-muted-foreground">
@@ -172,7 +172,7 @@ function PolicyDialog({
   if (detail === undefined) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background sm:max-w-[760px]">
+        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background sm:max-w-[760px]">
           <LoadingState label="Loading policy" />
         </DialogContent>
       </Dialog>
@@ -184,7 +184,7 @@ function PolicyDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background p-0 sm:max-w-[780px]">
+      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background p-0 sm:max-w-[780px]">
         <div className="border-b border-line px-5 py-5 sm:px-7">
           <DialogHeader>
             <DialogTitle className="flex flex-wrap items-center gap-2 text-lg tracking-[-0.02em]">

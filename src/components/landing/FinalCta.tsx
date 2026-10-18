@@ -11,7 +11,7 @@ export function FinalCta({ onQuote }: { onQuote: () => void }) {
     <section id="contact" className="mt-24 scroll-mt-24 sm:mt-32">
       <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
         <Reveal y={30}>
-          <div className="starfield relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#071227] px-6 py-12 text-bone sm:rounded-[2.5rem] sm:px-12 sm:py-16 lg:px-16">
+          <div className="starfield relative overflow-hidden rounded-[4px] border border-white/10 bg-[#071227] px-6 py-12 text-bone sm:px-12 sm:py-16 lg:px-16">
             <Media
               image={IMAGES.auth}
               parallax={30}

@@ -30,7 +30,7 @@ export function ChartEmptyState({
   return (
     <div
       className={cn(
-        "relative flex min-h-[248px] flex-col items-center justify-center overflow-hidden rounded-[1rem] border border-dashed border-line bg-[color-mix(in_oklab,var(--ice)_38%,transparent)] px-6 py-10 text-center",
+        "relative flex min-h-[248px] flex-col items-center justify-center overflow-hidden rounded-[4px] border border-dashed border-line bg-[color-mix(in_oklab,var(--ice)_38%,transparent)] px-6 py-10 text-center",
         className,
       )}
     >

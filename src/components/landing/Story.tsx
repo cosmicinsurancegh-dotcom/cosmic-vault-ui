@@ -17,7 +17,7 @@ export function Story() {
         <div className="mt-8 grid gap-12 lg:grid-cols-12 lg:items-center lg:gap-16">
           <Reveal y={34} className="lg:col-span-5">
             <div className="group relative">
-              <div className="media-frame relative overflow-hidden rounded-[1.8rem] border border-ink/10">
+              <div className="media-frame relative overflow-hidden rounded-[4px] border border-ink/10">
                 <Media
                   image={IMAGES.story}
                   parallax={16}
@@ -29,7 +29,7 @@ export function Story() {
                 </p>
               </div>
 
-              <div className="absolute -bottom-10 -left-3 hidden w-28 overflow-hidden rounded-[1.3rem] border-[5px] border-background transition-transform duration-500 ease-out group-hover:-translate-y-1.5 sm:block lg:-left-6 lg:w-32">
+              <div className="absolute -bottom-10 -left-3 hidden w-28 overflow-hidden rounded-[4px] border-[5px] border-background transition-transform duration-500 ease-out group-hover:-translate-y-1.5 sm:block lg:-left-6 lg:w-32">
                 <Media image={IMAGES.storyDetail} className="aspect-square w-full" />
               </div>
             </div>

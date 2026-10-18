@@ -117,7 +117,7 @@ export default function CataloguePage() {
           {catalogue.products.map((product) => (
             <article
               key={product._id}
-              className="group flex flex-col overflow-hidden rounded-[1.3rem] border border-line bg-card p-5 transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_24px_48px_-40px_rgba(8,18,39,0.5)]"
+              className="group flex flex-col overflow-hidden rounded-[4px] border border-line bg-card p-5 transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_24px_48px_-40px_rgba(8,18,39,0.5)]"
             >
               <div className="relative -mx-5 -mt-5 mb-4 overflow-hidden">
                 <Media
@@ -165,7 +165,7 @@ export default function CataloguePage() {
 
       {/* Product details */}
       <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background p-0 sm:max-w-[700px]">
+        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background p-0 sm:max-w-[700px]">
           {selected && (
             <>
               <div className="border-b border-line px-6 py-5">
@@ -375,7 +375,7 @@ function QuoteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background p-0 sm:max-w-[680px]">
+      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background p-0 sm:max-w-[680px]">
         <div className="border-b border-line px-5 py-5 sm:px-7">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold tracking-[-0.03em]">

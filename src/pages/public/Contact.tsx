@@ -148,7 +148,7 @@ export default function Contact() {
           ].map((item) => (
             <div
               key={item.title}
-              className="rounded-[1.2rem] border border-line bg-card p-5"
+              className="rounded-[4px] border border-line bg-card p-5"
             >
               <p className="text-[0.9rem] font-semibold text-ink">{item.title}</p>
               <p className="mt-2 text-[0.8rem] leading-6 text-muted-foreground">

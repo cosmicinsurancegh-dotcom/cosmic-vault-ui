@@ -4,7 +4,7 @@ const BAR_HEIGHTS = [44, 66, 52, 86, 58, 74];
 
 function ChartCardSkeleton({ delay = 0 }: { delay?: number }) {
   return (
-    <div className="rounded-[1.4rem] border border-line bg-card p-5 sm:p-6">
+    <div className="rounded-[4px] border border-line bg-card p-5 sm:p-6">
       <Skeleton className="h-4 w-32" style={{ animationDelay: `${delay}ms` }} />
       <Skeleton
         className="mt-2.5 h-3 w-44"
@@ -45,7 +45,7 @@ function PulseSkeleton() {
 
 function CommandChartSkeleton({ tall = false }: { tall?: boolean }) {
   return (
-    <div className="rounded-[1.35rem] border border-line bg-card p-5 sm:p-6">
+    <div className="rounded-[4px] border border-line bg-card p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-2">
           <Skeleton className="h-4 w-36" />
@@ -79,7 +79,7 @@ function CommandChartSkeleton({ tall = false }: { tall?: boolean }) {
 
 function RailCardSkeleton({ rows = 3 }: { rows?: number }) {
   return (
-    <div className="rounded-[1.35rem] border border-line bg-card p-5">
+    <div className="rounded-[4px] border border-line bg-card p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-2">
           <Skeleton className="h-4 w-32" />
@@ -128,7 +128,7 @@ export function CommandCentreSkeleton() {
         {[0, 1, 2, 3].map((index) => (
           <div
             key={index}
-            className="rounded-[1.25rem] border border-line bg-card p-5"
+            className="rounded-[4px] border border-line bg-card p-5"
             style={{ animationDelay: `${index * 80}ms` }}
           >
             <div className="flex items-start justify-between gap-3">
@@ -169,13 +169,13 @@ export function CommandCentreSkeleton() {
 export function DashboardSkeleton() {
   return (
     <div className="space-y-5">
-      <Skeleton className="h-[236px] w-full rounded-[1.6rem]" />
+      <Skeleton className="h-[236px] w-full rounded-[4px]" />
 
       <div className="grid gap-4 sm:grid-cols-3">
         {[0, 1, 2].map((index) => (
           <div
             key={index}
-            className="rounded-[1.2rem] border border-line bg-card p-5"
+            className="rounded-[4px] border border-line bg-card p-5"
           >
             <div className="flex items-center justify-between">
               <Skeleton className="h-3 w-24" />
@@ -197,7 +197,7 @@ export function DashboardSkeleton() {
 
       <div className="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
         <ChartCardSkeleton delay={60} />
-        <div className="rounded-[1.4rem] border border-line bg-card p-5 sm:p-6">
+        <div className="rounded-[4px] border border-line bg-card p-5 sm:p-6">
           <Skeleton className="h-4 w-32" />
           <div className="mt-5 space-y-3.5">
             {[0, 1, 2, 3].map((index) => (

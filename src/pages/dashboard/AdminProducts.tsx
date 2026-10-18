@@ -327,7 +327,7 @@ export default function AdminProductsPage() {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background p-0 sm:max-w-[820px]">
+        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background p-0 sm:max-w-[820px]">
           <div className="border-b border-line px-5 py-5 sm:px-7">
             <DialogHeader>
               <DialogTitle className="tracking-[-0.02em]">
@@ -490,7 +490,7 @@ export default function AdminProductsPage() {
       </Dialog>
 
       <Dialog open={Boolean(archiveTarget)} onOpenChange={(open) => !open && setArchiveTarget(null)}>
-        <DialogContent className="rounded-[1.5rem] border-line bg-background sm:max-w-[480px]">
+        <DialogContent className="rounded-[4px] border-line bg-background sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle>Archive {archiveTarget?.name}?</DialogTitle>
             <DialogDescription>

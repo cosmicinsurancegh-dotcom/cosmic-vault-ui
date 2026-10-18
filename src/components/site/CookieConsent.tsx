@@ -29,7 +29,7 @@ const secondaryButton =
   "inline-flex h-10 items-center justify-center rounded-[4px] border border-[#d4d9e1] px-4 text-[0.82rem] font-medium text-[#33405c] transition-colors hover:border-[#a9b4c7] hover:bg-[#f4f8ff] hover:text-[#0a1224] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2b61eb]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white";
 
 const categoryRow =
-  "flex items-start justify-between gap-3 rounded-[0.9rem] border px-3.5 py-3";
+  "flex items-start justify-between gap-3 rounded-[4px] border px-3.5 py-3";
 
 export function CookieConsent() {
   const reduceMotion = useReducedMotion();
@@ -115,7 +115,7 @@ export function CookieConsent() {
               ? { duration: 0 }
               : { type: "spring", stiffness: 260, damping: 28, mass: 0.8 }
           }
-          className="fixed inset-x-3 bottom-3 z-[70] max-h-[calc(100svh-1.5rem)] w-auto max-w-[27.5rem] overflow-y-auto overscroll-contain rounded-[1.35rem] border border-[#d4d9e1] bg-white p-5 text-[#0a1224] shadow-[0_34px_90px_-38px_rgba(8,18,39,0.45)] outline-none focus-visible:ring-2 focus-visible:ring-[#2b61eb]/40 sm:inset-x-auto sm:bottom-5 sm:left-5 sm:w-[27.5rem] sm:p-6"
+          className="fixed inset-x-3 bottom-3 z-[70] max-h-[calc(100svh-1.5rem)] w-auto max-w-[27.5rem] overflow-y-auto overscroll-contain rounded-[4px] border border-[#d4d9e1] bg-white p-5 text-[#0a1224] shadow-[0_34px_90px_-38px_rgba(8,18,39,0.45)] outline-none focus-visible:ring-2 focus-visible:ring-[#2b61eb]/40 sm:inset-x-auto sm:bottom-5 sm:left-5 sm:w-[27.5rem] sm:p-6"
         >
           <span
             aria-hidden="true"
@@ -178,7 +178,7 @@ export function CookieConsent() {
                         {CONSENT_CATEGORIES.essential.description}
                       </p>
                     </div>
-                    <span className="mt-0.5 shrink-0 rounded-full border border-[#d4d9e1] px-2 py-0.5 text-[0.58rem] uppercase tracking-[0.14em] text-[#5e6572]">
+                    <span className="mt-0.5 shrink-0 rounded-[4px] border border-[#d4d9e1] px-2 py-0.5 text-[0.58rem] uppercase tracking-[0.14em] text-[#5e6572]">
                       Always on
                     </span>
                   </div>
@@ -209,7 +209,7 @@ export function CookieConsent() {
                         {CONSENT_CATEGORIES.analytics.description}
                       </p>
                     </div>
-                    <span className="mt-0.5 shrink-0 rounded-full border border-[#e6eaf1] px-2 py-0.5 text-[0.58rem] uppercase tracking-[0.14em] text-[#7a8598]">
+                    <span className="mt-0.5 shrink-0 rounded-[4px] border border-[#e6eaf1] px-2 py-0.5 text-[0.58rem] uppercase tracking-[0.14em] text-[#7a8598]">
                       None in use
                     </span>
                   </div>

@@ -133,7 +133,7 @@ export default function QuotePage() {
         <div className="grid gap-10 lg:grid-cols-12">
           <div className="lg:col-span-7">
             {reference ? (
-              <div className="rounded-[1.4rem] border border-line bg-card p-6 sm:p-8">
+              <div className="rounded-[4px] border border-line bg-card p-6 sm:p-8">
                 <span className="grid size-12 place-items-center rounded-[4px] bg-primary text-primary-foreground">
                   <Check className="size-5" strokeWidth={2.6} />
                 </span>
@@ -181,7 +181,7 @@ export default function QuotePage() {
             ) : (
               <form
                 onSubmit={submit}
-                className="rounded-[1.4rem] border border-line bg-card p-6 sm:p-8"
+                className="rounded-[4px] border border-line bg-card p-6 sm:p-8"
               >
                 <div>
                   <Label className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -304,7 +304,7 @@ export default function QuotePage() {
               applying, ask them here rather than guessing at the terms.
             </Callout>
 
-            <div className="rounded-[1.3rem] border border-line bg-card p-6">
+            <div className="rounded-[4px] border border-line bg-card p-6">
               <p className="text-[0.62rem] font-semibold uppercase tracking-[0.24em] text-ink/60">
                 Faster if you have it
               </p>
@@ -320,7 +320,7 @@ export default function QuotePage() {
               </div>
             </div>
 
-            <div className="rounded-[1.3rem] border border-line bg-card p-6">
+            <div className="rounded-[4px] border border-line bg-card p-6">
               <p className="text-[0.82rem] font-semibold text-ink">
                 Prefer to browse first?
               </p>

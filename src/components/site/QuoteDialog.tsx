@@ -75,7 +75,7 @@ export function QuoteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] gap-0 overflow-y-auto rounded-[1.6rem] border-line bg-background p-0 sm:max-w-[600px]">
+      <DialogContent className="max-h-[92dvh] gap-0 overflow-y-auto rounded-[4px] border-line bg-background p-0 sm:max-w-[600px]">
         <AnimatePresence mode="wait" initial={false}>
           {reference ? (
             <motion.div

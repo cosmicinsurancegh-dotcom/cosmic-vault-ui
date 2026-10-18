@@ -215,7 +215,7 @@ export function ClaimsOverview() {
         intro="If a claim decision seems wrong, or a request is unclear, you do not have to work it out alone."
       >
         <div className="grid gap-8 lg:grid-cols-2">
-          <div className="rounded-[1.3rem] border border-line bg-card p-6">
+          <div className="rounded-[4px] border border-line bg-card p-6">
             <span className="grid size-10 place-items-center rounded-[4px] bg-ice text-primary">
               <UserRound className="size-4" />
             </span>
@@ -237,7 +237,7 @@ export function ClaimsOverview() {
               </Link>
             </div>
           </div>
-          <div className="rounded-[1.3rem] border border-line bg-card p-6">
+          <div className="rounded-[4px] border border-line bg-card p-6">
             <span className="grid size-10 place-items-center rounded-[4px] bg-ice text-primary">
               <ShieldCheck className="size-4" />
             </span>
@@ -396,7 +396,7 @@ export function MakeClaim() {
         title="The honest version."
       >
         <div className="grid gap-8 lg:grid-cols-3">
-          <div className="rounded-[1.3rem] border border-line bg-card p-6">
+          <div className="rounded-[4px] border border-line bg-card p-6">
             <p className="text-[0.98rem] font-semibold text-ink">
               A person decides
             </p>
@@ -405,7 +405,7 @@ export function MakeClaim() {
               There is no automatic approval and no automatic decline.
             </p>
           </div>
-          <div className="rounded-[1.3rem] border border-line bg-card p-6">
+          <div className="rounded-[4px] border border-line bg-card p-6">
             <p className="text-[0.98rem] font-semibold text-ink">
               No invented timelines
             </p>
@@ -414,7 +414,7 @@ export function MakeClaim() {
               depends on the evidence and on third parties we do not control.
             </p>
           </div>
-          <div className="rounded-[1.3rem] border border-line bg-card p-6">
+          <div className="rounded-[4px] border border-line bg-card p-6">
             <p className="text-[0.98rem] font-semibold text-ink">
               Reasons, always
             </p>

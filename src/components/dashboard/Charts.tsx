@@ -41,7 +41,7 @@ function ChartPanel({
 }) {
   return (
     <Reveal delay={delay} className="h-full">
-      <section className="flex h-full flex-col rounded-[1.4rem] border border-line bg-card p-5 sm:p-6">
+      <section className="flex h-full flex-col rounded-[4px] border border-line bg-card p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 className="text-base font-semibold tracking-[-0.02em] text-ink">
@@ -118,7 +118,7 @@ export function ActivityChart({
             <Bar
               dataKey="requests"
               fill="var(--color-requests)"
-              radius={[6, 6, 0, 0]}
+              radius={[4, 4, 0, 0]}
               maxBarSize={40}
               animationBegin={120}
               animationDuration={900}
@@ -297,7 +297,7 @@ export function PremiumByLineChart({
             <Bar
               dataKey="premium"
               fill="var(--color-premium)"
-              radius={[0, 6, 6, 0]}
+              radius={[0, 4, 4, 0]}
               maxBarSize={26}
               animationBegin={180}
               animationDuration={900}

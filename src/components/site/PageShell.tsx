@@ -173,7 +173,7 @@ export function PageHero({
 
           {aside && (
             <Reveal y={20} delay={0.12}>
-              <aside className="rounded-[1.4rem] border border-line bg-card/80 p-5 backdrop-blur">
+              <aside className="rounded-[4px] border border-line bg-card/80 p-5 backdrop-blur">
                 <p className="text-[0.6rem] font-semibold uppercase tracking-[0.22em] text-ink/55">
                   {aside.title}
                 </p>
@@ -204,7 +204,7 @@ export function PageHero({
 
         {media && (
           <Reveal y={24} delay={0.18}>
-            <figure className="group media-frame relative mt-10 overflow-hidden rounded-[1.4rem] border border-ink/10 sm:mt-12">
+            <figure className="group media-frame relative mt-10 overflow-hidden rounded-[4px] border border-ink/10 sm:mt-12">
               <Media
                 image={media.image}
                 eager
@@ -327,7 +327,7 @@ export function FeatureGrid({
       {items.map(({ title, body, icon: Icon }) => (
         <div
           key={title}
-          className="group rounded-[1.3rem] border border-line bg-card p-6 transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_24px_50px_-44px_rgba(8,18,39,0.5)]"
+          className="group rounded-[4px] border border-line bg-card p-6 transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_24px_50px_-44px_rgba(8,18,39,0.5)]"
         >
           {Icon && (
             <span className="grid size-10 place-items-center rounded-[4px] bg-ice text-primary transition-colors duration-500 group-hover:bg-primary group-hover:text-primary-foreground">
@@ -398,7 +398,7 @@ export function Callout({
   return (
     <div
       className={cn(
-        "flex gap-3 rounded-[1.1rem] border px-4 py-3.5",
+        "flex gap-3 rounded-[4px] border px-4 py-3.5",
         warning
           ? "border-halo/45 bg-halo/10"
           : "border-line bg-card",
@@ -458,7 +458,7 @@ export function CtaPanel({
 }) {
   return (
     <div className="mx-auto max-w-[1180px] px-5 pb-4 sm:px-8">
-      <div className="starfield relative overflow-hidden rounded-[1.8rem] bg-[#071227] px-6 py-12 text-bone sm:rounded-[2.2rem] sm:px-10 sm:py-14">
+      <div className="starfield relative overflow-hidden rounded-[4px] bg-[#071227] px-6 py-12 text-bone sm:px-10 sm:py-14">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -right-24 -top-24 size-[24rem] rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.26),transparent_65%)]"
@@ -511,7 +511,7 @@ export function RelatedLinks({
       <p className="text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-ink/60">
         {title}
       </p>
-      <div className="mt-6 grid gap-px overflow-hidden rounded-[1.2rem] border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid gap-px overflow-hidden rounded-[4px] border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
         {links.map((link) => (
           <Link
             key={link.href}

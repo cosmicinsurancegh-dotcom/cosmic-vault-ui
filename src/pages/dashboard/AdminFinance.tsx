@@ -196,7 +196,7 @@ function FinanceDialog({
   if (detail === undefined) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background sm:max-w-[620px]">
+        <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background sm:max-w-[620px]">
           <LoadingState label="Loading transaction" />
         </DialogContent>
       </Dialog>
@@ -207,7 +207,7 @@ function FinanceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[1.5rem] border-line bg-background sm:max-w-[660px]">
+      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background sm:max-w-[660px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 tracking-[-0.02em]">
             {transaction.reference} <StatusPill status={transaction.status} />

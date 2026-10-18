@@ -62,7 +62,7 @@ export function Solutions() {
               <Reveal key={option.key} delay={index * 0.07}>
                 <SpotlightCard
                   to={COVER_HREF[option.key]}
-                  className="flex h-full w-full flex-col rounded-[1.5rem] border border-line bg-card text-left transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-1 hover:border-primary/30 hover:shadow-[0_28px_60px_-44px_rgba(8,18,39,0.55)]"
+                  className="flex h-full w-full flex-col rounded-[4px] border border-line bg-card text-left transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-1 hover:border-primary/30 hover:shadow-[0_28px_60px_-44px_rgba(8,18,39,0.55)]"
                 >
                   <div className="relative overflow-hidden">
                     <Media
@@ -102,7 +102,7 @@ export function Solutions() {
         </div>
 
         <Reveal delay={0.15}>
-          <div className="mt-8 flex flex-col items-start justify-between gap-4 rounded-[1.4rem] border border-line bg-card/60 px-6 py-5 sm:flex-row sm:items-center">
+          <div className="mt-8 flex flex-col items-start justify-between gap-4 rounded-[4px] border border-line bg-card/60 px-6 py-5 sm:flex-row sm:items-center">
             <p className="text-sm text-ink/70">
               <span className="font-medium text-ink">
                 Not sure which cover you need?

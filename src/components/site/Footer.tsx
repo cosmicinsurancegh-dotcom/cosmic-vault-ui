@@ -134,7 +134,7 @@ export function Footer() {
             <Link
               key={cover.slug}
               to={`/cover/${cover.slug}`}
-              className="group relative aspect-[4/3] overflow-hidden rounded-[0.85rem] border border-white/10 transition-transform duration-500 hover:-translate-y-1"
+              className="group relative aspect-[4/3] overflow-hidden rounded-[4px] border border-white/10 transition-transform duration-500 hover:-translate-y-1"
             >
               <Media image={coverImage(cover.slug)} overlay="strong" className="size-full" />
               <span className="absolute inset-x-2 bottom-1.5 block truncate text-[0.58rem] font-medium leading-4 tracking-[0.02em] text-bone">

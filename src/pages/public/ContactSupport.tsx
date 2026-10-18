@@ -154,7 +154,7 @@ export default function ContactSupport() {
           ].map((item) => (
             <div
               key={item.title}
-              className="rounded-[1.3rem] border border-line bg-card p-6"
+              className="rounded-[4px] border border-line bg-card p-6"
             >
               <span className="grid size-10 place-items-center rounded-[4px] bg-ice text-primary">
                 <UserRound className="size-4" />

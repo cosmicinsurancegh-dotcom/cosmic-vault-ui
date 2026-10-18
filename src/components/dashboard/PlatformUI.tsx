@@ -51,7 +51,7 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-[1.3rem] border border-line bg-card", className)}>
+    <section className={cn("rounded-[4px] border border-line bg-card", className)}>
       {children}
     </section>
   );
@@ -109,7 +109,7 @@ export function MetricTile({
     </>
   );
   const className =
-    "block rounded-[1.15rem] border border-line bg-card p-5 transition-colors hover:border-primary/30";
+    "block rounded-[4px] border border-line bg-card p-5 transition-colors hover:border-primary/30";
   if (to) {
     return (
       <Link to={to} className={className}>

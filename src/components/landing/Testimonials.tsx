@@ -78,7 +78,7 @@ export function Testimonials() {
         </div>
 
         <Reveal y={30}>
-          <div className="relative mt-10 overflow-hidden rounded-[2rem] border border-line bg-card">
+          <div className="relative mt-10 overflow-hidden rounded-[4px] border border-line bg-card">
             <div className="grid lg:grid-cols-[0.78fr_1.22fr]">
               <div className="group relative min-h-[15rem] overflow-hidden sm:min-h-[19rem] lg:min-h-full">
                 <AnimatePresence initial={false}>
