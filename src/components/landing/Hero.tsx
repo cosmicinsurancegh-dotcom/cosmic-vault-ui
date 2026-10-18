@@ -407,7 +407,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
           </div>
 
           {/* Chapter rail */}
-          <div className="relative z-10 border-t border-white/10 bg-[#0b1930]/40 py-3.5 backdrop-blur-md">
+          <div className="relative z-10 py-3.5">
             <div className="mx-auto flex w-full max-w-[1180px] items-center gap-3 px-5 sm:px-8">
               <div
                 ref={railRef}
@@ -460,7 +460,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
               </div>
 
               {/* Slide controls */}
-              <div className="flex shrink-0 items-center gap-3 border-l border-white/10 pl-3 sm:pl-4">
+              <div className="flex shrink-0 items-center gap-3">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
