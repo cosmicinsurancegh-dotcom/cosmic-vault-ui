@@ -265,13 +265,13 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
               setKeyboardFocus(false);
             }
           }}
-          className="group/hero relative isolate flex w-full flex-1 touch-pan-y flex-col overflow-hidden bg-[#071227] text-bone outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="group/hero relative isolate flex w-full flex-1 touch-pan-y flex-col overflow-hidden bg-[#0b1930] text-bone outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           {/* The vault surface: one acid-tile field behind every cover line,
               lit from either side and dimmed at the foot so the copy holds. */}
           <div aria-hidden="true" className="absolute inset-0 -z-10 overflow-hidden">
             <AcidSquares
-              color="#071227"
+              color="#0e2342"
               accentColor="#4c7dff"
               secondaryColor="#e4d9c4"
               tileSize={1.15}
@@ -284,16 +284,16 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
               tilt={0.68}
               grain={0.1}
               fade={0.2}
-              opacity={0.95}
-              brightness={0.55}
+              opacity={1}
+              brightness={0.86}
               gloss={0}
               intro
               mouseInteraction={false}
             />
 
-            <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(4,16,31,0.92)_0%,rgba(4,16,31,0.5)_34%,rgba(4,16,31,0.14)_64%,rgba(4,16,31,0.55)_100%)]" />
-            <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,rgba(4,16,31,0.88)_0%,rgba(4,16,31,0.4)_44%,transparent_74%)] lg:block" />
-            <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#04101f]/85 to-transparent sm:h-32" />
+            <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(4,16,31,0.72)_0%,rgba(4,16,31,0.34)_34%,rgba(4,16,31,0.08)_64%,rgba(4,16,31,0.38)_100%)]" />
+            <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,rgba(4,16,31,0.62)_0%,rgba(4,16,31,0.24)_44%,transparent_74%)] lg:block" />
+            <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#04101f]/50 to-transparent sm:h-32" />
           </div>
 
           {/* Slide copy - centred in the space between the floating navbar
@@ -407,7 +407,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
           </div>
 
           {/* Chapter rail */}
-          <div className="relative z-10 border-t border-white/10 bg-[#071227]/40 py-3.5 backdrop-blur-md">
+          <div className="relative z-10 border-t border-white/10 bg-[#0b1930]/40 py-3.5 backdrop-blur-md">
             <div className="mx-auto flex w-full max-w-[1180px] items-center gap-3 px-5 sm:px-8">
               <div
                 ref={railRef}
