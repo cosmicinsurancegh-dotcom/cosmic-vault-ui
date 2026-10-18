@@ -6,6 +6,8 @@ import { expect, test } from "./support/fixtures";
  * broken `Media` wrapper would still leave every navigation test green, so these
  * checks assert the photographs are actually decoded by the browser.
  */
+/* /auth is deliberately excluded: its left panel is an AcidSquares shader
+   surface rather than photography, so it renders no <img> at all. */
 const PHOTOGRAPHIC_ROUTES = [
   "/",
   "/cover",
@@ -16,7 +18,6 @@ const PHOTOGRAPHIC_ROUTES = [
   "/faqs",
   "/quote",
   "/about",
-  "/auth",
   "/this-route-does-not-exist",
 ];
 

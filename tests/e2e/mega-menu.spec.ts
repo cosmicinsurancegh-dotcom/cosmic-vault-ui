@@ -30,8 +30,13 @@ async function openMenu(trigger: Locator) {
 test.describe("mega-menu", () => {
   test("the landing page renders the public shell", async ({ page }) => {
     await page.goto("/");
+    /* The hero headline rotates through one cover per slide, so match any of
+       the configured titles rather than a single fixed line. */
     await expect(
-      page.getByRole("heading", { level: 1, name: /your life, your world/i }),
+      page.getByRole("heading", {
+        level: 1,
+        name: /the roof above you|for every mile|cover that travels|care that doesn't|a promise that|built by you/i,
+      }),
     ).toBeVisible();
     await expect(page.getByRole("banner")).toBeVisible();
     await expect(page.getByRole("contentinfo")).toBeVisible();
