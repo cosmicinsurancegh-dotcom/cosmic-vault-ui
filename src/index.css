@@ -51,12 +51,34 @@
   --color-halo: var(--halo);
   --color-line: var(--line);
 
-  --font-sans: "Urbanist", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Urbanist", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "PolySans", "Inter", -apple-system, "BlinkMacSystemFont",
+    "Segoe UI", "Fira Sans", "Helvetica Neue", "Arial", sans-serif;
+  --font-display: "PolySans", "Inter", -apple-system, "BlinkMacSystemFont",
+    "Segoe UI", "Fira Sans", "Helvetica Neue", "Arial", sans-serif;
 
   --animate-marquee: marquee 38s linear infinite;
   --animate-orbit: orbit 34s linear infinite;
   --animate-twinkle: twinkle 6s ease-in-out infinite;
+}
+
+/* PolySans is a licensed typeface. To self-host it, upload the woff2 files to
+   public/fonts and add url("/fonts/PolySans-<weight>.woff2") to the src list
+   below (or add a face per weight); browsers that own PolySans use local(). */
+@font-face {
+  font-family: "PolySans";
+  src: local("PolySans"), local("PolySans Neutral"), local("PolySans-Neutral");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "PolySans";
+  src: local("PolySans Italic"), local("PolySans-Italic"),
+    local("PolySans Neutral Italic");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
 }
 
 /* CHANGE VALUES FOR THEME */
