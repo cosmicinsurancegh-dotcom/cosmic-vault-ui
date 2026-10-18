@@ -1,4 +1,4 @@
-import { Car, HeartPulse, House, Sparkles } from "lucide-react";
+import { Car, HeartHandshake, HeartPulse, House } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type CoverageKey = "health" | "home" | "auto" | "life";
@@ -14,7 +14,7 @@ export const COVERAGE_ICONS: Record<CoverageKey, LucideIcon> = {
   health: HeartPulse,
   home: House,
   auto: Car,
-  life: Sparkles,
+  life: HeartHandshake,
 };
 
 export const COVERAGE_OPTIONS: {

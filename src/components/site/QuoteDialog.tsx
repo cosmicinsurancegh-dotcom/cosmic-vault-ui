@@ -19,7 +19,7 @@ import {
 import { api } from "@/convex/_generated/api";
 import { useMutation } from "convex/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUpRight, Check, Loader2, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowUpRight, Check, Hash, Loader2, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -106,7 +106,7 @@ export function QuoteDialog({
                 nothing is charged until a policy is issued.
               </p>
               <div className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full border border-dashed border-line bg-card px-5 py-2.5 text-sm font-semibold tracking-[0.14em] text-ink">
-                <Sparkles className="size-3.5 text-electric" />
+                <Hash className="size-3.5 text-electric" />
                 {reference}
               </div>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

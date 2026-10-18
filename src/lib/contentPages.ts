@@ -10,6 +10,7 @@ import {
   FolderOpen,
   Handshake,
   HeartHandshake,
+  Hourglass,
   Landmark,
   LifeBuoy,
   ListChecks,
@@ -17,7 +18,6 @@ import {
   RefreshCw,
   Scale,
   ScrollText,
-  Sparkles,
   UserRound,
   Wallet,
   type LucideIcon,
@@ -364,7 +364,7 @@ export const CONTENT_PAGES: Record<string, ContentPageConfig> = {
           },
           {
             title: "No invented urgency",
-            icon: Sparkles,
+            icon: Hourglass,
             body: "We do not manufacture countdowns or fake scarcity. If something needs your attention, it will be because it genuinely does.",
           },
         ],
@@ -1003,7 +1003,7 @@ export const CONTENT_PAGES: Record<string, ContentPageConfig> = {
           },
           {
             title: "No invented certainty",
-            icon: Sparkles,
+            icon: Scale,
             body: "No guaranteed approvals, no settlement stopwatches, no fabricated member numbers. If we cannot verify a claim, it does not appear on the site.",
           },
           {

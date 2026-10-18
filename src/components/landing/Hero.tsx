@@ -10,9 +10,9 @@ import {
   ArrowUpRight,
   Check,
   Pause,
+  PenLine,
   Play,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 import {
   useCallback,
@@ -344,7 +344,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                 </span>
               </span>
               <span className="hidden items-center gap-2 text-[0.62rem] font-medium uppercase tracking-[0.22em] text-bone/65 md:flex">
-                <Sparkles className="size-3.5 text-electric-soft" />
+                <PenLine className="size-3.5 text-electric-soft" />
                 Manual underwriting, by design
               </span>
             </div>

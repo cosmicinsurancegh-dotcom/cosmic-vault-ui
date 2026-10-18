@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, Sparkles, type LucideIcon } from "lucide-react";
+import { ArrowUpRight, ChartLine, type LucideIcon } from "lucide-react";
 
 /**
  * Chart-specific empty state. Deliberately framed as "waiting for your first
  * data point" rather than "nothing here", with the next action always visible.
  */
 export function ChartEmptyState({
-  icon: Icon = Sparkles,
+  icon: Icon = ChartLine,
   title,
   description,
   actionLabel,

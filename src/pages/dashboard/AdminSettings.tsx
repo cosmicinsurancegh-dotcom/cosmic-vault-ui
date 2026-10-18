@@ -26,8 +26,8 @@ import {
   Database,
   Loader2,
   MailWarning,
+  PackagePlus,
   ShieldCheck,
-  Sparkles,
   UserPlus,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -254,7 +254,7 @@ export default function AdminSettingsPage() {
                   }
                 }}
               >
-                <Sparkles className="size-4" /> Load starter catalogue
+                <PackagePlus className="size-4" /> Load starter catalogue
               </Button>
             </div>
           </Panel>

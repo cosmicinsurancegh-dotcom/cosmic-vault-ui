@@ -49,7 +49,7 @@ import {
   Menu,
   Plus,
   ShieldCheck,
-  Sparkles,
+  Wallet,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
@@ -456,7 +456,7 @@ function Overview({
             label: "Estimated monthly",
             value: stats.monthly > 0 ? formatGBP(stats.monthly) : "—",
             helper: "Based on selected plans",
-            Icon: Sparkles,
+            Icon: Wallet,
           },
         ].map(({ label, value, helper, Icon }, index) => (
           <motion.div

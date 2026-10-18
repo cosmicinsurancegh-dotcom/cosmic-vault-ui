@@ -3,7 +3,7 @@ import { Media } from "@/components/site/Media";
 import { Reveal } from "@/components/site/Reveal";
 import { IMAGES } from "@/lib/imagery";
 import { SectionLabel } from "./SectionLabel";
-import { Sparkles } from "lucide-react";
+import { Clock } from "lucide-react";
 
 const steps = [
   {
@@ -106,7 +106,7 @@ export function Process({ onQuote }: { onQuote: () => void }) {
               <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <CtaButton onClick={onQuote}>Start your quote</CtaButton>
                 <p className="flex items-center gap-2 text-xs text-bone/45">
-                  <Sparkles className="size-3.5 text-electric-soft" />
+                  <Clock className="size-3.5 text-electric-soft" />
                   Two minutes · no credit check · no obligation
                 </p>
               </div>

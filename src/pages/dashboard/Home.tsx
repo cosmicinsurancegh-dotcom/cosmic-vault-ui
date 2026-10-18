@@ -27,10 +27,10 @@ import {
   CircleDollarSign,
   ClipboardList,
   FileWarning,
+  Headset,
   LifeBuoy,
   PackageSearch,
   ShieldCheck,
-  Sparkles,
   Store,
   Users,
 } from "lucide-react";
@@ -276,7 +276,7 @@ export default function Home() {
             { label: "Get a quotation", to: "/dashboard/catalogue", Icon: PackageSearch },
             { label: "Pay premium", to: "/dashboard/payments", Icon: CircleDollarSign },
             { label: "Submit a claim", to: "/dashboard/claims", Icon: LifeBuoy },
-            { label: "Talk to support", to: "/dashboard/support", Icon: Sparkles },
+            { label: "Talk to support", to: "/dashboard/support", Icon: Headset },
           ].map(({ label, to, Icon }) => (
             <Link
               key={to}

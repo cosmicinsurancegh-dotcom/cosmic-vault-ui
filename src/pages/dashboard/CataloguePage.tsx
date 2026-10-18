@@ -26,7 +26,7 @@ import { coverImage } from "@/lib/imagery";
 import { normalizeRole } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowUpRight, Check, Loader2, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowUpRight, Calculator, Check, Loader2, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
@@ -547,7 +547,7 @@ function QuoteDialog({
                 Cancel
               </Button>
               <Button variant="outline" className="rounded-full" onClick={calculate} disabled={pending}>
-                {pending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+                {pending ? <Loader2 className="size-4 animate-spin" /> : <Calculator className="size-4" />}
                 Calculate premium
               </Button>
               <Button className="rounded-full" onClick={save} disabled={pending || !result}>

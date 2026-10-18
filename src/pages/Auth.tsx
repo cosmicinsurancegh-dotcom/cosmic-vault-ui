@@ -16,10 +16,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
+  FolderLock,
   Loader2,
   Mail,
   ShieldCheck,
-  Sparkles,
   UserX,
 } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
@@ -186,7 +186,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                   Policies, claims, documents
                 </p>
               </div>
-              <Sparkles className="ml-auto size-4 text-electric-soft" />
+              <FolderLock className="ml-auto size-4 text-electric-soft" />
             </div>
             <p className="mt-3 font-display text-lg italic leading-snug text-bone/80">
               Quotes, decisions and documents stay on the same record — so

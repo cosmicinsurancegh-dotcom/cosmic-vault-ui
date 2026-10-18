@@ -21,6 +21,7 @@ import { COVERAGE_ICONS, COVERAGE_OPTIONS, type CoverageKey } from "@/lib/vault"
 import { cn } from "@/lib/utils";
 import { useMutation } from "convex/react";
 import {
+  ArrowRight,
   ArrowUpRight,
   Check,
   ClipboardList,
@@ -28,7 +29,6 @@ import {
   Loader2,
   Mail,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
@@ -122,7 +122,7 @@ export default function QuotePage() {
             },
             {
               title: "What happens after",
-              icon: Sparkles,
+              icon: ArrowRight,
               body: "You can convert a quotation into a draft application, upload the required documents, and submit it for underwriting review when you are ready.",
             },
           ]}

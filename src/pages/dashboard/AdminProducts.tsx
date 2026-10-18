@@ -24,7 +24,7 @@ import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useMutation, useQuery } from "convex/react";
-import { Archive, Loader2, PackageSearch, Pencil, Plus, Rocket, Sparkles } from "lucide-react";
+import { Archive, Loader2, PackagePlus, PackageSearch, Pencil, Plus, Rocket } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -227,7 +227,7 @@ export default function AdminProductsPage() {
                 }
               }}
             >
-              <Sparkles className="size-4" /> Starter catalogue
+              <PackagePlus className="size-4" /> Starter catalogue
             </Button>
             <Button className="h-10 rounded-full px-5" onClick={startNew}>
               <Plus className="size-4" /> New product

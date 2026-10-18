@@ -2,7 +2,7 @@ import { CtaButton } from "@/components/site/Cta";
 import { Media } from "@/components/site/Media";
 import { Reveal } from "@/components/site/Reveal";
 import { IMAGES } from "@/lib/imagery";
-import { Sparkles } from "lucide-react";
+import { CircleCheck, MessageCircle } from "lucide-react";
 import { Link } from "react-router";
 import { SectionLabel } from "./SectionLabel";
 
@@ -66,12 +66,12 @@ export function FinalCta({ onQuote }: { onQuote: () => void }) {
                     className="group inline-flex items-center gap-2.5 text-sm font-medium text-bone/70 transition-colors hover:text-bone"
                   >
                     <span className="grid size-8 place-items-center rounded-full border border-white/20 transition-colors group-hover:border-white/45 group-hover:bg-white/10">
-                      <Sparkles className="size-3.5" />
+                      <MessageCircle className="size-3.5" />
                     </span>
                     <span className="link-slide">Prefer to ask first? Contact support</span>
                   </Link>
                   <p className="flex items-center gap-1.5 text-xs text-bone/55 lg:pr-1">
-                    <Sparkles className="size-3.5 text-electric-soft" />
+                    <CircleCheck className="size-3.5 text-electric-soft" />
                     No obligation, no pressure, no jargon
                   </p>
                 </div>
