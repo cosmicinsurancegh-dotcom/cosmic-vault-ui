@@ -299,7 +299,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
           {/* Slide copy — centred in the space between the floating navbar
               and the chapter rail (the top padding clears the navbar: ≈70px
               on mobile, ≈74px from sm up). */}
-          <div className="relative z-10 mx-auto my-auto grid w-full max-w-[1180px] gap-8 px-5 pb-7 pt-[5.25rem] sm:px-8 sm:pb-8 sm:pt-24 lg:grid-cols-12 lg:items-center lg:gap-10 lg:pb-10 lg:pt-24">
+          <div className="relative z-10 mx-auto my-auto grid w-full max-w-[1180px] gap-8 px-5 pb-7 pt-20 sm:px-8 sm:pb-8 sm:pt-24 lg:grid-cols-12 lg:items-center lg:gap-10 lg:pb-10 lg:pt-24">
             <div className="lg:col-span-7">
               {/* Height is reserved for the tallest cover line in each range
                   (measured to the widest wrap), so autoplay never nudges the
@@ -338,11 +338,19 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                 </AnimatePresence>
               </div>
 
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                <CtaButton onClick={onQuote}>Get a quote</CtaButton>
+              {/* On phones the two actions stack deliberately (a full-width
+                  primary, then the quieter link) instead of wrapping at random
+                  widths; from sm up they sit inline. */}
+              <div className="mt-6 flex flex-col items-stretch gap-3 sm:mt-7 sm:flex-row sm:flex-wrap sm:items-center">
+                <CtaButton
+                  onClick={onQuote}
+                  className="w-full justify-between sm:w-auto sm:justify-center"
+                >
+                  Get a quote
+                </CtaButton>
                 <Link
                   to={`/cover/${slide.slug}`}
-                  className="group/explore inline-flex items-center gap-2.5 rounded-full px-2 py-2 text-[0.86rem] font-medium text-bone/70 transition-colors hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="group/explore inline-flex items-center gap-2.5 self-start rounded-full px-2 py-2 text-[0.86rem] font-medium text-bone/70 transition-colors hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:self-auto"
                 >
                   <span className="link-slide">Explore this cover</span>
                   <span className="grid size-8 place-items-center rounded-full border border-white/20 transition-colors group-hover/explore:border-white/45">

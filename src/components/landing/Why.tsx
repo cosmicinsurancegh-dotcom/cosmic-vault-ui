@@ -130,8 +130,10 @@ export function Why() {
           </div>
 
           <Reveal y={30} delay={0.1} className="lg:col-span-5">
-            <div className="sticky top-28">
-              <div className="relative h-full min-h-[22rem] overflow-hidden rounded-[1.8rem] border border-ink/10">
+            {/* Fills the height of the commitment list beside it, so the two
+                columns end on the same line now the floating badge is gone. */}
+            <div className="sticky top-28 flex h-full flex-col">
+              <div className="relative min-h-[22rem] flex-1 overflow-hidden rounded-[1.8rem] border border-ink/10">
                 <AnimatePresence initial={false}>
                   <motion.div
                     key={shown.image.src}
@@ -161,9 +163,15 @@ export function Why() {
                       <p className="font-display text-[1.35rem] italic leading-snug text-bone">
                         {shown.caption}
                       </p>
-                      <p className="mt-2 text-[0.65rem] uppercase tracking-[0.2em] text-bone/60">
-                        How we work
-                      </p>
+                      <div className="mt-2 flex items-center gap-3">
+                        <p className="text-[0.65rem] uppercase tracking-[0.2em] text-bone/60">
+                          How we work
+                        </p>
+                        <span className="h-px flex-1 bg-white/25" />
+                        <p className="text-[0.65rem] uppercase tracking-[0.2em] text-bone/45">
+                          0{visual + 1} / 0{pillars.length}
+                        </p>
+                      </div>
                     </motion.div>
                   </AnimatePresence>
                 </div>

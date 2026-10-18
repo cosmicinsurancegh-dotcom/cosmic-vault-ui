@@ -31,7 +31,9 @@ export function Process({ onQuote }: { onQuote: () => void }) {
     <section id="process" className="mt-24 scroll-mt-24 sm:mt-32">
       <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
         <Reveal y={36}>
-          <div className="starfield relative overflow-hidden rounded-[2rem] bg-[#071227] px-6 py-14 text-bone sm:rounded-[2.5rem] sm:px-12 sm:py-20">
+          {/* Sized so the panel — heading, three steps and the CTA row —
+              fits a single laptop viewport instead of running past the fold. */}
+          <div className="starfield relative overflow-hidden rounded-[2rem] bg-[#071227] px-6 py-12 text-bone sm:rounded-[2.5rem] sm:px-12">
             <Media
               image={IMAGES.cosmos}
               parallax={34}
@@ -62,17 +64,17 @@ export function Process({ onQuote }: { onQuote: () => void }) {
               <SectionLabel className="justify-center text-bone/45">
                 The process
               </SectionLabel>
-              <h2 className="mt-5 text-balance text-[clamp(2.1rem,4.7vw,3.7rem)] font-semibold leading-[1.02] tracking-[-0.045em]">
+              <h2 className="mt-4 text-balance text-[clamp(2.1rem,4.7vw,3.7rem)] font-semibold leading-[1.02] tracking-[-0.045em]">
                 Easy, transparent,{" "}
                 <span className="text-electric-soft">human.</span>
               </h2>
-              <p className="mx-auto mt-4 max-w-md text-[0.93rem] leading-7 text-bone/55">
+              <p className="mx-auto mt-3 max-w-md text-[0.93rem] leading-7 text-bone/55">
                 Three steps, no forms in triplicate, no waiting on hold. The
                 whole thing takes about as long as a coffee.
               </p>
             </div>
 
-            <div className="relative mt-14 grid gap-8 sm:mt-16 md:grid-cols-3 md:gap-6">
+            <div className="relative mt-10 grid gap-8 md:grid-cols-3 md:gap-6">
               {steps.map((step, index) => (
                 <Reveal key={step.number} delay={index * 0.1}>
                   <div className="group relative border-t border-white/12 pt-6">
@@ -106,7 +108,7 @@ export function Process({ onQuote }: { onQuote: () => void }) {
                 fades in with the panel itself rather than waiting on its own
                 viewport trigger, which never fired at the bottom of a tall
                 panel and left the buttons invisible. */}
-            <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <CtaButton onClick={onQuote}>Start your quote</CtaButton>
               <p className="flex items-center gap-2 text-xs text-bone/45">
                 <Clock className="size-3.5 text-electric-soft" />
