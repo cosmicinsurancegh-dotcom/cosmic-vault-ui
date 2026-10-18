@@ -328,8 +328,9 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
             <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#04101f]/85 to-transparent sm:h-32" />
           </div>
 
-          {/* Top bar — padded down so the floating navbar never covers it */}
-          <div className="relative z-10 mx-auto flex w-full max-w-[1180px] flex-wrap items-start justify-between gap-3 px-5 pt-24 pb-2 sm:flex-nowrap sm:px-8 sm:pt-28 lg:pt-28">
+          {/* Top bar — cleared beneath the floating navbar (≈70px on mobile,
+              ≈74px from sm up) with a small, even gap below it. */}
+          <div className="relative z-10 mx-auto flex w-full max-w-[1180px] flex-wrap items-start justify-between gap-3 px-5 pb-1 pt-[5.25rem] sm:flex-nowrap sm:px-8 sm:pb-2 sm:pt-24">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 py-1.5 pl-2 pr-3.5 backdrop-blur-md">
                 <span className="relative flex size-1.5">
@@ -371,7 +372,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
           </div>
 
           {/* Slide copy */}
-          <div className="relative z-10 mx-auto mt-auto grid w-full max-w-[1180px] gap-8 px-5 pb-8 pt-20 sm:px-8 sm:pt-28 lg:grid-cols-12 lg:items-end lg:gap-10 lg:pb-10 lg:pt-32">
+          <div className="relative z-10 mx-auto mt-auto grid w-full max-w-[1180px] gap-8 px-5 pb-8 pt-14 sm:px-8 sm:pt-24 lg:grid-cols-12 lg:items-end lg:gap-10 lg:pb-10 lg:pt-28">
             <div className="lg:col-span-7">
               <div
                 role="tabpanel"
