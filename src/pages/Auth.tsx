@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   ArrowRight,
   FolderLock,
+  KeyRound,
   Loader2,
   Mail,
   ShieldCheck,
@@ -28,6 +29,60 @@ import { cn } from "@/lib/utils";
 interface AuthProps {
   redirectAfterAuth?: string;
   defaultMode?: "signin" | "signup";
+}
+
+type AuthMethod = "code" | "password";
+
+/**
+ * A code can be on its way for three different reasons: signing in without a
+ * password, confirming a brand-new password account, or resetting an existing
+ * password. The intent decides which params the next `signIn` call needs.
+ */
+interface VerificationState {
+  intent: "email-code" | "password-signup" | "password-reset";
+  email: string;
+  password?: string;
+}
+
+function readableAuthError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  const meaningful = raw
+    .split("\n")
+    .map((line) => line.trim())
+    .find(
+      (line) =>
+        line.length > 0 &&
+        !line.startsWith("at ") &&
+        !/^\[Request ID:/i.test(line) &&
+        !/^Server Error$/i.test(line),
+    );
+  return (meaningful ?? raw.split("\n")[0] ?? "")
+    .replace(/^Uncaught (Error|ConvexError):\s*/i, "")
+    .replace(/^\[CONVEX[^\]]*\]\s*/i, "")
+    .trim();
+}
+
+function passwordErrorMessage(error: unknown, isSignup: boolean): string {
+  const message = readableAuthError(error);
+  if (/8 characters/i.test(message)) {
+    return "Use at least 8 characters for your password.";
+  }
+  if (/already exists/i.test(message)) {
+    return "That email already has a password. Sign in with it, or reset it with the link below the password field.";
+  }
+  if (
+    /invalid credentials|invalid password|invalidaccountid|invalidsecret|invalid account/i.test(
+      message,
+    )
+  ) {
+    return isSignup
+      ? "We couldn't create that password. Sign in with your existing one, or reset it below."
+      : "That email and password don't match. If you haven't set a password yet, sign in with an email code, then add one from your profile.";
+  }
+  if (/toomanyfailedattempts|too many/i.test(message)) {
+    return "Too many attempts. Wait a moment, or sign in with an email code.";
+  }
+  return message || "We couldn't complete that. Please try again.";
 }
 
 function resolveRedirectAfterAuth(
@@ -54,7 +109,14 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
     return defaultMode ?? "signin";
   });
   const isSignup = mode === "signup";
-  const [step, setStep] = useState<"signIn" | { email: string }>("signIn");
+  const [method, setMethod] = useState<AuthMethod>(() =>
+    searchParams.get("method") === "password" ? "password" : "code",
+  );
+  const [step, setStep] = useState<VerificationState | null>(null);
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,14 +127,34 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
     }
   }, [authLoading, isAuthenticated, navigate, redirect]);
 
-  const handleEmailSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const resetToEntry = () => {
+    setStep(null);
+    setOtp("");
+    setError(null);
+    setPassword("");
+    setConfirmPassword("");
+    setNewPassword("");
+  };
+
+  const selectMethod = (next: AuthMethod) => {
+    setMethod(next);
+    resetToEntry();
+  };
+
+  const selectMode = (next: "signin" | "signup") => {
+    setMode(next);
+    resetToEntry();
+  };
+
+  const handleCodeSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const address = email.trim();
     setIsLoading(true);
     setError(null);
     try {
-      const formData = new FormData(event.currentTarget);
-      await signIn("email-otp", formData);
-      setStep({ email: formData.get("email") as string });
+      await signIn("email-otp", { email: address });
+      setOtp("");
+      setStep({ intent: "email-code", email: address });
       setIsLoading(false);
     } catch (error) {
       console.error("Email sign-in error:", error);
@@ -85,17 +167,142 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
     }
   };
 
-  const handleOtpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handlePasswordSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
+    // Password accounts are keyed by the lower-cased address, so normalize
+    // here too; otherwise a capitalised address would fail code verification.
+    const address = email.trim().toLowerCase();
+    setIsLoading(true);
+    setError(null);
+
+    if (isSignup) {
+      if (password.length < 8) {
+        setError("Use at least 8 characters for your password.");
+        setIsLoading(false);
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Those passwords don't match.");
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    try {
+      const result = await signIn("password", {
+        email: address,
+        password,
+        flow: isSignup ? "signUp" : "signIn",
+      });
+      if (isSignup && !result.signingIn) {
+        // A new password account is inert until its email address is confirmed.
+        setOtp("");
+        setStep({ intent: "password-signup", email: address, password });
+        setIsLoading(false);
+        return;
+      }
+      navigate(redirect);
+    } catch (error) {
+      console.error("Password sign-in error:", error);
+      setError(passwordErrorMessage(error, isSignup));
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    const address = email.trim().toLowerCase();
+    if (!address) {
+      setError("Enter your email address first, then choose Forgot password?");
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
-      const formData = new FormData(event.currentTarget);
-      await signIn("email-otp", formData);
+      await signIn("password", { email: address, flow: "reset" });
+      setOtp("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setStep({ intent: "password-reset", email: address });
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Password reset error:", error);
+      setError(
+        "No password is set for that email yet. Sign in with an email code instead, then add a password from your profile.",
+      );
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (!step) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (step.intent === "email-code") {
+        await signIn("email-otp", { email: step.email });
+      } else if (step.intent === "password-signup") {
+        await signIn("password", {
+          email: step.email,
+          password: step.password ?? "",
+          flow: "signUp",
+        });
+      } else {
+        await signIn("password", { email: step.email, flow: "reset" });
+      }
+      setOtp("");
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Resend code error:", error);
+      setError("We couldn't send a new code. Please try again.");
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifySubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    if (!step) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (step.intent === "email-code") {
+        await signIn("email-otp", { email: step.email, code: otp });
+      } else if (step.intent === "password-signup") {
+        await signIn("password", {
+          email: step.email,
+          password: step.password ?? "",
+          code: otp,
+          flow: "signUp",
+        });
+      } else {
+        if (newPassword.length < 8) {
+          setError("Use at least 8 characters for your new password.");
+          setIsLoading(false);
+          return;
+        }
+        if (newPassword !== confirmPassword) {
+          setError("Those passwords don't match.");
+          setIsLoading(false);
+          return;
+        }
+        await signIn("password", {
+          email: step.email,
+          code: otp,
+          newPassword,
+          flow: "reset-verification",
+        });
+      }
       navigate(redirect);
     } catch (error) {
-      console.error("OTP verification error:", error);
-      setError("The verification code you entered is incorrect.");
+      console.error("Verification error:", error);
+      setError(
+        step.intent === "email-code"
+          ? "The verification code you entered is incorrect."
+          : "That code wasn't accepted. Check it and try again.",
+      );
       setIsLoading(false);
       setOtp("");
     }
@@ -186,7 +393,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
         </div>
 
         <div className="relative mt-10 flex items-center justify-between border-t border-white/10 pt-5 text-[0.62rem] uppercase tracking-[0.16em] text-bone/45">
-          <span>Email code sign-in, no password</span>
+          <span>Email code or password sign-in</span>
           <span>Demonstration platform</span>
         </div>
       </aside>
@@ -213,7 +420,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
         <div className="flex flex-1 items-center justify-center py-10">
           <div className="w-full max-w-[410px]">
             <AnimatePresence mode="wait" initial={false}>
-              {step === "signIn" ? (
+              {step === null ? (
                 <motion.div
                   key="email"
                   initial={{ opacity: 0, y: 14 }}
@@ -231,7 +438,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                         <button
                           key={option.value}
                           type="button"
-                          onClick={() => setMode(option.value)}
+                          onClick={() => selectMode(option.value)}
                           aria-pressed={active}
                           className={cn(
                             "relative rounded-full px-4 py-2 text-xs font-medium transition-colors duration-300",
@@ -265,12 +472,61 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                     <span className="text-electric">vault.</span>
                   </h1>
                   <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
-                    {isSignup
-                      ? "One email, one six-digit code, and your cover starts coming together. No password to remember and no forms in triplicate."
-                      : "Use your email and we'll send a six-digit code. No password to remember, no account to remember either."}
+                    {method === "password"
+                      ? isSignup
+                        ? "Choose a password for your vault. We'll confirm it's you with a six-digit code before it goes live."
+                        : "Sign in with the password you set for your account. Forgotten it? Reset it below, or switch to an email code."
+                      : isSignup
+                        ? "One email, one six-digit code, and your cover starts coming together. No password to remember and no forms in triplicate."
+                        : "Use your email and we'll send a six-digit code. No password to remember, no account to remember either."}
                   </p>
 
-                  <form onSubmit={handleEmailSubmit} className="mt-8 space-y-4">
+                  <div className="mt-6 grid grid-cols-2 gap-1 rounded-full border border-line bg-card p-1">
+                    {[
+                      { value: "code" as const, label: "Email code", icon: Mail },
+                      {
+                        value: "password" as const,
+                        label: "Password",
+                        icon: KeyRound,
+                      },
+                    ].map((option) => {
+                      const active = method === option.value;
+                      const Icon = option.icon;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => selectMethod(option.value)}
+                          aria-pressed={active}
+                          className={cn(
+                            "relative inline-flex items-center justify-center gap-2 rounded-full px-3 py-2 text-xs font-medium transition-colors duration-300",
+                            active ? "text-ink" : "text-ink/50 hover:text-ink",
+                          )}
+                        >
+                          {active && (
+                            <motion.span
+                              layoutId="auth-method-pill"
+                              className="absolute inset-0 rounded-full bg-muted"
+                              transition={{
+                                type: "spring",
+                                stiffness: 380,
+                                damping: 32,
+                              }}
+                            />
+                          )}
+                          <Icon className="relative size-3.5" />
+                          <span className="relative">{option.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <form
+                    onSubmit={
+                      method === "code" ? handleCodeSubmit : handlePasswordSubmit
+                    }
+                    className="mt-5 space-y-4"
+                  >
                     <div className="space-y-2">
                       <Label htmlFor="auth-email">Email address</Label>
                       <div className="relative">
@@ -279,16 +535,101 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                           id="auth-email"
                           name="email"
                           type="email"
+                          value={email}
+                          onChange={(event) => setEmail(event.target.value)}
                           placeholder="you@example.com"
                           className="h-12 rounded-xl bg-card pl-10"
                           disabled={isLoading}
+                          autoComplete="email"
                           required
                         />
                       </div>
                     </div>
 
+                    {method === "password" && (
+                      <>
+                        <div className="space-y-2">
+                          <div className="flex items-baseline justify-between gap-3">
+                            <Label htmlFor="auth-password">Password</Label>
+                            {!isSignup && (
+                              <button
+                                type="button"
+                                onClick={handleForgotPassword}
+                                disabled={isLoading}
+                                className="text-[0.7rem] font-medium text-electric underline-offset-4 transition-colors hover:underline disabled:opacity-60"
+                              >
+                                Forgot password?
+                              </button>
+                            )}
+                          </div>
+                          <div className="relative">
+                            <KeyRound className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                              id="auth-password"
+                              name="password"
+                              type="password"
+                              value={password}
+                              onChange={(event) =>
+                                setPassword(event.target.value)
+                              }
+                              placeholder={
+                                isSignup
+                                  ? "At least 8 characters"
+                                  : "Your password"
+                              }
+                              className="h-12 rounded-xl bg-card pl-10"
+                              disabled={isLoading}
+                              autoComplete={
+                                isSignup ? "new-password" : "current-password"
+                              }
+                              minLength={8}
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        {isSignup ? (
+                          <div className="space-y-2">
+                            <Label htmlFor="auth-confirm-password">
+                              Confirm password
+                            </Label>
+                            <div className="relative">
+                              <KeyRound className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                              <Input
+                                id="auth-confirm-password"
+                                name="confirmPassword"
+                                type="password"
+                                value={confirmPassword}
+                                onChange={(event) =>
+                                  setConfirmPassword(event.target.value)
+                                }
+                                placeholder="Repeat your password"
+                                className="h-12 rounded-xl bg-card pl-10"
+                                disabled={isLoading}
+                                autoComplete="new-password"
+                                minLength={8}
+                                required
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-[0.7rem] leading-5 text-muted-foreground">
+                            Set up an account with an email code?{" "}
+                            <button
+                              type="button"
+                              onClick={() => selectMethod("code")}
+                              className="font-medium text-electric underline-offset-4 hover:underline"
+                            >
+                              Sign in with an email code
+                            </button>{" "}
+                            and add a password from your profile.
+                          </p>
+                        )}
+                      </>
+                    )}
+
                     {error && (
-                      <p className="rounded-lg bg-destructive/8 px-3 py-2 text-xs text-destructive">
+                      <p className="rounded-lg bg-destructive/8 px-3 py-2 text-xs leading-5 text-destructive">
                         {error}
                       </p>
                     )}
@@ -301,11 +642,21 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                       {isLoading ? (
                         <>
                           <Loader2 className="size-4 animate-spin" />
-                          Sending code
+                          {method === "code"
+                            ? "Sending code"
+                            : isSignup
+                              ? "Creating account"
+                              : "Signing in"}
                         </>
                       ) : (
                         <>
-                          {isSignup ? "Create my account" : "Continue with email"}
+                          {method === "code"
+                            ? isSignup
+                              ? "Create my account"
+                              : "Continue with email"
+                            : isSignup
+                              ? "Create my account"
+                              : "Sign in with password"}
                           <ArrowRight className="size-4" />
                         </>
                       )}
@@ -341,7 +692,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                 </motion.div>
               ) : (
                 <motion.div
-                  key="otp"
+                  key={step.intent}
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
@@ -349,30 +700,84 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                 >
                   <button
                     type="button"
-                    onClick={() => {
-                      setStep("signIn");
-                      setError(null);
-                      setOtp("");
-                    }}
+                    onClick={resetToEntry}
                     className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-ink"
                   >
                     <ArrowLeft className="size-3.5" />
                     Use a different email
                   </button>
                   <h1 className="mt-5 text-[2.2rem] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
-                    Check your <span className="text-electric">inbox.</span>
+                    {step.intent === "password-reset" ? (
+                      <>
+                        Set a new{" "}
+                        <span className="text-electric">password.</span>
+                      </>
+                    ) : (
+                      <>
+                        Check your{" "}
+                        <span className="text-electric">inbox.</span>
+                      </>
+                    )}
                   </h1>
                   <p className="mt-3 text-sm leading-6 text-muted-foreground">
                     We sent a six-digit code to{" "}
                     <span className="font-medium text-ink">{step.email}</span>.
-                    It should land within a minute.
-                    {isSignup &&
+                    {step.intent === "password-reset"
+                      ? " Enter it below with your new password."
+                      : step.intent === "password-signup"
+                        ? " Confirm it to switch on password sign-in for your account."
+                        : " It should land within a minute."}
+                    {step.intent === "email-code" &&
+                      isSignup &&
                       " Your vault opens as soon as you're verified."}
                   </p>
 
-                  <form onSubmit={handleOtpSubmit} className="mt-8">
-                    <input type="hidden" name="email" value={step.email} />
-                    <input type="hidden" name="code" value={otp} />
+                  <form onSubmit={handleVerifySubmit} className="mt-8">
+                    {step.intent === "password-reset" && (
+                      <div className="mb-6 space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="auth-new-password">
+                            New password
+                          </Label>
+                          <Input
+                            id="auth-new-password"
+                            type="password"
+                            value={newPassword}
+                            onChange={(event) =>
+                              setNewPassword(event.target.value)
+                            }
+                            placeholder="At least 8 characters"
+                            className="h-12 rounded-xl bg-card"
+                            disabled={isLoading}
+                            autoComplete="new-password"
+                            minLength={8}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="auth-confirm-new-password">
+                            Confirm new password
+                          </Label>
+                          <Input
+                            id="auth-confirm-new-password"
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(event) =>
+                              setConfirmPassword(event.target.value)
+                            }
+                            placeholder="Repeat your new password"
+                            className="h-12 rounded-xl bg-card"
+                            disabled={isLoading}
+                            autoComplete="new-password"
+                            minLength={8}
+                            required
+                          />
+                        </div>
+                        <p className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                          Verification code
+                        </p>
+                      </div>
+                    )}
 
                     <div className="flex justify-center sm:justify-start">
                       <InputOTP
@@ -405,7 +810,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                     </div>
 
                     {error && (
-                      <p className="mt-3 rounded-lg bg-destructive/8 px-3 py-2 text-xs text-destructive">
+                      <p className="mt-3 rounded-lg bg-destructive/8 px-3 py-2 text-xs leading-5 text-destructive">
                         {error}
                       </p>
                     )}
@@ -422,7 +827,9 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                         </>
                       ) : (
                         <>
-                          Verify &amp; enter the vault
+                          {step.intent === "password-reset"
+                            ? "Save password & sign in"
+                            : "Verify & enter the vault"}
                           <ArrowRight className="size-4" />
                         </>
                       )}
@@ -433,14 +840,11 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                     Didn&apos;t receive it? Check spam, or{" "}
                     <button
                       type="button"
-                      onClick={() => {
-                        setStep("signIn");
-                        setOtp("");
-                        setError(null);
-                      }}
-                      className="font-medium text-electric underline-offset-4 hover:underline"
+                      onClick={handleResendCode}
+                      disabled={isLoading}
+                      className="font-medium text-electric underline-offset-4 hover:underline disabled:opacity-60"
                     >
-                      try another email
+                      resend the code
                     </button>
                     .
                   </p>
@@ -452,7 +856,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
 
         <div className="flex flex-col items-center gap-2 text-center">
           <p className="text-[0.68rem] text-muted-foreground">
-            Sign-in is protected by a one-time code sent to your email.
+            Sign in with a one-time email code or a password you set. Guest sessions stay temporary.
           </p>
           <p className="text-[0.62rem] text-muted-foreground/70">
             By continuing you agree to our{" "}

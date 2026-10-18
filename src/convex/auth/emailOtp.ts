@@ -2,10 +2,14 @@ import { Email } from "@convex-dev/auth/providers/Email";
 import axios from "axios";
 import { RandomReader, generateRandomString } from "@oslojs/crypto/random";
 
-export const emailOtp = Email({
-  id: "email-otp",
+/**
+ * Every sign-in code this app sends is a six-digit one-time token delivered by
+ * the Freebuff integrations gateway. The same delivery path backs the
+ * passwordless email code, the password sign-up verification code and the
+ * password reset code, so they all look and behave the same to the recipient.
+ */
+const codeSettings = {
   maxAge: 60 * 15, // 15 minutes
-  // This function can be asynchronous
   async generateVerificationToken() {
     const random: RandomReader = {
       read(bytes: Uint8Array) {
@@ -15,7 +19,13 @@ export const emailOtp = Email({
     const alphabet = "0123456789";
     return generateRandomString(random, alphabet, 6);
   },
-  async sendVerificationRequest({ identifier: email, token }) {
+  async sendVerificationRequest({
+    identifier: email,
+    token,
+  }: {
+    identifier: string;
+    token: string;
+  }) {
     try {
       await axios.post(
         freebuffEmailOtpUrl(),
@@ -26,6 +36,26 @@ export const emailOtp = Email({
       throw freebuffEmailOtpError(error);
     }
   },
+};
+
+// Passwordless sign-in: email address in, six-digit code back.
+export const emailOtp = Email({
+  id: "email-otp",
+  ...codeSettings,
+});
+
+// Confirms an email address before a password can be used to sign in, and
+// links the new password to an existing email-code account with the same
+// address.
+export const passwordVerifyEmail = Email({
+  id: "password-verify",
+  ...codeSettings,
+});
+
+// Confirms ownership of the email before a password is replaced.
+export const passwordResetEmail = Email({
+  id: "password-reset",
+  ...codeSettings,
 });
 
 // Sign-in codes are sent by the Freebuff integrations gateway, which knows

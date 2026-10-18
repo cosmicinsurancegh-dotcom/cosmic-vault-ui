@@ -1,7 +1,8 @@
 # Demonstration dataset (`insureflow-demo-v1`)
 
 Protected, additive demo data for the existing insurance platform. It does not
-replace the app, add a second data model, or introduce another auth provider.
+replace the app, add a second data model, or introduce another auth provider (the
+seed itself uses no sign-in mechanism).
 
 ## 1. What the existing app already provides
 
@@ -9,7 +10,7 @@ Discovered before writing any seed code:
 
 | Concern | Existing implementation |
 | --- | --- |
-| Identity | Convex Auth with **email OTP** + anonymous guest only (`src/convex/auth.ts`, `auth/emailOtp.ts`). No password provider, no invitation flow. |
+| Identity | Convex Auth with **email OTP**, optional **email + password**, and anonymous guest (`src/convex/auth.ts`, `auth/emailOtp.ts`). No invitation flow. |
 | Roles | `users.role` (`super_admin`, `admin`, `customer`, `broker`, legacy `user`/`member`) + `users.permissions[]`; resolved server-side in `lib/authz.ts`. |
 | Customer/broker profiles | `customerProfiles`, `brokerProfiles`, `brokerAssignments` (assignment is per customer, revocable). |
 | Insurance model | `products` (versioned) → `quotations` → `applications` (+ `applicationEvents`) → `policies` → `claims` (+ `claimEvents`) → `transactions`; plus `documents`, `notifications`, `auditLogs`, `tickets`. |

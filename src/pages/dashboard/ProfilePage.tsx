@@ -8,14 +8,22 @@ import {
   StatusPill,
 } from "@/components/dashboard/PlatformUI";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import { formatDate } from "@/lib/format";
 import { normalizeRole } from "@/lib/permissions";
-import { useMutation, useQuery } from "convex/react";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { useAction, useMutation, useQuery } from "convex/react";
+import { KeyRound, Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -26,6 +34,8 @@ export default function ProfilePage() {
   const update = useMutation(api.customers.updateProfile);
   const updateBroker = useMutation(api.brokers.updateSelf);
   const createTicket = useMutation(api.tickets.create);
+  const passwordStatus = useQuery(api.accountSecurity.passwordStatus);
+  const savePassword = useAction(api.accountSecurity.setPassword);
 
   const role = normalizeRole(me?.user?.role);
   const profile = me?.profile;
@@ -47,6 +57,35 @@ export default function ProfilePage() {
   const [brokerForm, setBrokerForm] = useState({ contactName: "", phone: "" });
   const [request, setRequest] = useState("");
   const [pending, setPending] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ next: "", confirm: "" });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+
+  const handleSavePassword = async () => {
+    if (passwordForm.next.length < 8) {
+      toast.error("Use at least 8 characters for your password.");
+      return;
+    }
+    if (passwordForm.next !== passwordForm.confirm) {
+      toast.error("Those passwords don't match.");
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      await savePassword({ password: passwordForm.next });
+      toast.success("Password saved.", {
+        description: "You can now sign in with your email and password, or keep using an email code.",
+      });
+      setPasswordOpen(false);
+      setPasswordForm({ next: "", confirm: "" });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not save the password.",
+      );
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (!profile) return;
@@ -328,16 +367,37 @@ export default function ProfilePage() {
           <Panel>
             <PanelHeader title="Account security" />
             <div className="space-y-3 px-5 py-4">
-              <Detail label="Sign-in method">Email one-time code (passwordless)</Detail>
+              <Detail label="Sign-in methods">
+                {passwordStatus?.hasPassword
+                  ? "Email one-time code and password"
+                  : "Email one-time code (passwordless)"}
+              </Detail>
+              <Detail label="Password">
+                {passwordStatus === undefined
+                  ? "Checking…"
+                  : passwordStatus.hasPassword
+                    ? "Set - sign in with it, or with an email code"
+                    : "Not set - add one to sign in without waiting for a code"}
+              </Detail>
               <Detail label="Email verified">
                 {me.user?.emailVerificationTime
                   ? formatDate(me.user.emailVerificationTime)
                   : "Verified when you signed in with a code"}
               </Detail>
               <Detail label="Role">Customer</Detail>
+              <div className="pt-1">
+                <Button
+                  variant="outline"
+                  className="rounded-full bg-transparent"
+                  onClick={() => setPasswordOpen(true)}
+                >
+                  <KeyRound className="size-4" />
+                  {passwordStatus?.hasPassword ? "Change password" : "Set a password"}
+                </Button>
+              </div>
               <Callout tone="info">
-                Multifactor authentication beyond the email code is not configured by this
-                authentication provider. Do not share your one-time code with anyone.
+                A password is optional: your email code always works. Use at least 8
+                characters, and never share a one-time code with anyone.
               </Callout>
             </div>
           </Panel>
@@ -385,6 +445,79 @@ export default function ProfilePage() {
           </Panel>
         </div>
       </div>
+
+      <Dialog
+        open={passwordOpen}
+        onOpenChange={(open) => {
+          setPasswordOpen(open);
+          if (!open) setPasswordForm({ next: "", confirm: "" });
+        }}
+      >
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {passwordStatus?.hasPassword ? "Change your password" : "Set a password"}
+            </DialogTitle>
+            <DialogDescription>
+              Your email code keeps working either way. Use at least 8 characters.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="new-password">New password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={passwordForm.next}
+                onChange={(event) =>
+                  setPasswordForm({ ...passwordForm, next: event.target.value })
+                }
+                placeholder="At least 8 characters"
+                className="h-11 rounded-xl bg-card"
+                autoComplete="new-password"
+                minLength={8}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="confirm-password">Confirm password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={passwordForm.confirm}
+                onChange={(event) =>
+                  setPasswordForm({ ...passwordForm, confirm: event.target.value })
+                }
+                placeholder="Repeat your password"
+                className="h-11 rounded-xl bg-card"
+                autoComplete="new-password"
+                minLength={8}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              className="rounded-full"
+              onClick={() => setPasswordOpen(false)}
+              disabled={passwordSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-full"
+              onClick={handleSavePassword}
+              disabled={
+                passwordSaving ||
+                passwordForm.next.length < 8 ||
+                passwordForm.next !== passwordForm.confirm
+              }
+            >
+              {passwordSaving && <Loader2 className="size-4 animate-spin" />}
+              Save password
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

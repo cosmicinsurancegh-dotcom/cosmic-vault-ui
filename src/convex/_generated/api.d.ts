@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as accountSecurity from "../accountSecurity.js";
 import type * as adminGate from "../adminGate.js";
 import type * as applications from "../applications.js";
 import type * as audit from "../audit.js";
@@ -53,6 +54,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  accountSecurity: typeof accountSecurity;
   adminGate: typeof adminGate;
   applications: typeof applications;
   audit: typeof audit;
