@@ -6,8 +6,8 @@
  * tracks across sites, so analytics is recorded as declined and shown locked
  * off in the banner.
  *
- * Choices are kept for 180 days, after which the banner asks again. A choice
- * is stored as a timestamp so an old record can be recognised as stale rather
+ * Choices are kept for 180 days, after which the banner asks again. A decision
+ * is stamped with its date so an old record can be recognised as stale rather
  * than trusted forever.
  */
 
