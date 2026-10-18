@@ -242,16 +242,6 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
       id="top"
       className="relative flex min-h-[min(100svh,56rem)] flex-col overflow-hidden"
     >
-      {/* Ambient light */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-40 right-[-10%] size-[34rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.18),transparent_65%)] blur-2xl"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute left-[-14%] top-[46%] size-[24rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.55),transparent_70%)] blur-2xl"
-      />
-
       <div className="relative flex flex-1 flex-col">
         <div
           role="region"
@@ -289,14 +279,16 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
               roundness={0.28}
               rotation={35}
               waves={1}
-              pulse={1}
+              pulse={0}
               lighting="split"
               tilt={0.68}
               grain={0.1}
               fade={0.2}
               opacity={0.95}
+              brightness={0.55}
+              gloss={0}
               intro
-              mouseInteraction
+              mouseInteraction={false}
             />
 
             <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(4,16,31,0.92)_0%,rgba(4,16,31,0.5)_34%,rgba(4,16,31,0.14)_64%,rgba(4,16,31,0.55)_100%)]" />
@@ -304,9 +296,10 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
             <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#04101f]/85 to-transparent sm:h-32" />
           </div>
 
-          {/* Slide copy — the top padding clears the floating navbar
-              (≈70px on mobile, ≈74px from sm up). */}
-          <div className="relative z-10 mx-auto mt-auto grid w-full max-w-[1180px] gap-8 px-5 pb-7 pt-[5.25rem] sm:px-8 sm:pb-8 sm:pt-24 lg:grid-cols-12 lg:items-end lg:gap-10 lg:pb-10 lg:pt-24">
+          {/* Slide copy — centred in the space between the floating navbar
+              and the chapter rail (the top padding clears the navbar: ≈70px
+              on mobile, ≈74px from sm up). */}
+          <div className="relative z-10 mx-auto my-auto grid w-full max-w-[1180px] gap-8 px-5 pb-7 pt-[5.25rem] sm:px-8 sm:pb-8 sm:pt-24 lg:grid-cols-12 lg:items-center lg:gap-10 lg:pb-10 lg:pt-24">
             <div className="lg:col-span-7">
               {/* Height is reserved for the tallest cover line in each range
                   (measured to the widest wrap), so autoplay never nudges the

@@ -102,15 +102,17 @@ export function Process({ onQuote }: { onQuote: () => void }) {
               ))}
             </div>
 
-            <Reveal delay={0.2}>
-              <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <CtaButton onClick={onQuote}>Start your quote</CtaButton>
-                <p className="flex items-center gap-2 text-xs text-bone/45">
-                  <Clock className="size-3.5 text-electric-soft" />
-                  Two minutes · no credit check · no obligation
-                </p>
-              </div>
-            </Reveal>
+            {/* The CTA row sits at the foot of an already-revealed panel: it
+                fades in with the panel itself rather than waiting on its own
+                viewport trigger, which never fired at the bottom of a tall
+                panel and left the buttons invisible. */}
+            <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <CtaButton onClick={onQuote}>Start your quote</CtaButton>
+              <p className="flex items-center gap-2 text-xs text-bone/45">
+                <Clock className="size-3.5 text-electric-soft" />
+                Two minutes · no credit check · no obligation
+              </p>
+            </div>
           </div>
         </Reveal>
       </div>
