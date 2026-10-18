@@ -3,6 +3,7 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { MissingConvexConfig } from "@/components/site/MissingConvexConfig";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { PUBLIC_ROUTES } from "@/lib/publicRoutes";
+import { isConvexDeploymentUrl, resolveConvexUrl } from "@/lib/convexUrl";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
@@ -16,23 +17,39 @@ import "./index.css";
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
-const DashboardLayout = lazy(() => import("./pages/dashboard/DashboardLayout.tsx"));
+const DashboardLayout = lazy(
+  () => import("./pages/dashboard/DashboardLayout.tsx"),
+);
 const Home = lazy(() => import("./pages/dashboard/Home.tsx"));
 const CataloguePage = lazy(() => import("./pages/dashboard/CataloguePage.tsx"));
 const QuotesPage = lazy(() => import("./pages/dashboard/QuotesPage.tsx"));
-const ApplicationsPage = lazy(() => import("./pages/dashboard/ApplicationsPage.tsx"));
+const ApplicationsPage = lazy(
+  () => import("./pages/dashboard/ApplicationsPage.tsx"),
+);
 const PoliciesPage = lazy(() => import("./pages/dashboard/PoliciesPage.tsx"));
 const ClaimsPage = lazy(() => import("./pages/dashboard/ClaimsPage.tsx"));
 const ProfilePage = lazy(() => import("./pages/dashboard/ProfilePage.tsx"));
 const SupportPage = lazy(() => import("./pages/dashboard/SupportPage.tsx"));
-const AdminProductsPage = lazy(() => import("./pages/dashboard/AdminProducts.tsx"));
-const AdminUnderwritingPage = lazy(() => import("./pages/dashboard/AdminUnderwriting.tsx"));
-const AdminServicingPage = lazy(() => import("./pages/dashboard/AdminServicing.tsx"));
+const AdminProductsPage = lazy(
+  () => import("./pages/dashboard/AdminProducts.tsx"),
+);
+const AdminUnderwritingPage = lazy(
+  () => import("./pages/dashboard/AdminUnderwriting.tsx"),
+);
+const AdminServicingPage = lazy(
+  () => import("./pages/dashboard/AdminServicing.tsx"),
+);
 const AdminClaimsPage = lazy(() => import("./pages/dashboard/AdminClaims.tsx"));
-const AdminBrokersPage = lazy(() => import("./pages/dashboard/AdminBrokers.tsx"));
-const AdminReportsPage = lazy(() => import("./pages/dashboard/AdminReports.tsx"));
+const AdminBrokersPage = lazy(
+  () => import("./pages/dashboard/AdminBrokers.tsx"),
+);
+const AdminReportsPage = lazy(
+  () => import("./pages/dashboard/AdminReports.tsx"),
+);
 const AdminAuditPage = lazy(() => import("./pages/dashboard/AdminAudit.tsx"));
-const AdminSettingsPage = lazy(() => import("./pages/dashboard/AdminSettings.tsx"));
+const AdminSettingsPage = lazy(
+  () => import("./pages/dashboard/AdminSettings.tsx"),
+);
 const AdminCustomersPage = lazy(() =>
   import("./pages/dashboard/AdminCustomers.tsx").then((module) => ({
     default: module.AdminCustomersPage,
@@ -80,9 +97,7 @@ const RequirePermission = lazy(() =>
 );
 
 function StaffOnly({ children }: { children: React.ReactNode }) {
-  return (
-    <RequireRole roles={["admin", "super_admin"]}>{children}</RequireRole>
-  );
+  return <RequireRole roles={["admin", "super_admin"]}>{children}</RequireRole>;
 }
 
 function SelfServiceOnly({ children }: { children: React.ReactNode }) {
@@ -154,9 +169,24 @@ class RootErrorBoundary extends React.Component<
   }
 }
 
-const convexUrl = (import.meta.env.VITE_CONVEX_URL as string | undefined)?.trim();
+// A Convex client cannot tell a wrong URL from a slow one: it just waits for a
+// connection that never opens. So an unusable VITE_CONVEX_URL must never reach
+// the client - resolve it to this project's deployment instead (see
+// `@/lib/convexUrl`).
+const configuredConvexUrl = import.meta.env.VITE_CONVEX_URL as
+  | string
+  | undefined;
+const convexUrl = resolveConvexUrl(configuredConvexUrl);
+if (
+  import.meta.env.DEV &&
+  configuredConvexUrl?.trim() &&
+  !isConvexDeploymentUrl(configuredConvexUrl)
+) {
+  console.warn(
+    `[convex] VITE_CONVEX_URL is not a Convex deployment URL ("${configuredConvexUrl}"); using ${convexUrl}.`,
+  );
+}
 const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;
-
 
 function RouteSyncer() {
   const location = useLocation();
@@ -181,7 +211,6 @@ function RouteSyncer() {
   return null;
 }
 
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RootErrorBoundary>
@@ -190,84 +219,245 @@ createRoot(document.getElementById("root")!).render(
       </ToolbarErrorBoundary>
       {convex ? (
         <ConvexAuthProvider client={convex}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
-        <BrowserRouter>
-          <RouteSyncer />
-          <Suspense fallback={<RouteLoading />}>
-            <Routes>
-              {/* Public marketing site: one shared shell with mega-menu navigation */}
-              <Route element={<PublicLayout />}>
-                <Route index element={<Landing />} />
-                {PUBLIC_ROUTES.map((route) => (
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem={false}
+            disableTransitionOnChange
+          >
+            <BrowserRouter>
+              <RouteSyncer />
+              <Suspense fallback={<RouteLoading />}>
+                <Routes>
+                  {/* Public marketing site: one shared shell with mega-menu navigation */}
+                  <Route element={<PublicLayout />}>
+                    <Route index element={<Landing />} />
+                    {PUBLIC_ROUTES.map((route) => (
+                      <Route
+                        key={route.path}
+                        path={route.path}
+                        element={route.element}
+                      />
+                    ))}
+                    <Route path="*" element={<NotFound />} />
+                  </Route>
                   <Route
-                    key={route.path}
-                    path={route.path}
-                    element={route.element}
+                    path="/auth"
+                    element={<AuthPage redirectAfterAuth="/dashboard" />}
                   />
-                ))}
-                <Route path="*" element={<NotFound />} />
-              </Route>
-              <Route
-                path="/auth"
-                element={<AuthPage redirectAfterAuth="/dashboard" />}
-              />
-              <Route
-                path="/login"
-                element={
-                  <AuthPage redirectAfterAuth="/dashboard" defaultMode="signin" />
-                }
-              />
-              <Route
-                path="/signup"
-                element={
-                  <AuthPage redirectAfterAuth="/dashboard" defaultMode="signup" />
-                }
-              />
-              <Route
-                path="/dashboard"
-                element={
-                  <RequireAuth
-                    title="Sign in to your insurance workspace"
-                    description="Your policies, quotations, applications, claims, and documents live here."
+                  <Route
+                    path="/login"
+                    element={
+                      <AuthPage
+                        redirectAfterAuth="/dashboard"
+                        defaultMode="signin"
+                      />
+                    }
+                  />
+                  <Route
+                    path="/signup"
+                    element={
+                      <AuthPage
+                        redirectAfterAuth="/dashboard"
+                        defaultMode="signup"
+                      />
+                    }
+                  />
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <RequireAuth
+                        title="Sign in to your insurance workspace"
+                        description="Your policies, quotations, applications, claims, and documents live here."
+                      >
+                        <DashboardLayout />
+                      </RequireAuth>
+                    }
                   >
-                    <DashboardLayout />
-                  </RequireAuth>
-                }
-              >
-                <Route index element={<Home />} />
-                <Route path="catalogue" element={<SelfServiceOnly><CataloguePage /></SelfServiceOnly>} />
-                <Route path="quotes" element={<SelfServiceOnly><QuotesPage /></SelfServiceOnly>} />
-                <Route path="applications" element={<SelfServiceOnly><ApplicationsPage /></SelfServiceOnly>} />
-                <Route path="policies" element={<SelfServiceOnly><PoliciesPage /></SelfServiceOnly>} />
-                <Route path="claims" element={<RequireRole roles={["customer"]}><ClaimsPage /></RequireRole>} />
-                <Route path="payments" element={<PaymentsPage />} />
-                <Route path="documents" element={<DocumentsPage />} />
-                <Route path="support" element={<SupportPage />} />
-                <Route path="profile" element={<SelfServiceOnly><ProfilePage /></SelfServiceOnly>} />
-                <Route path="broker/customers" element={<RequireRole roles={["broker"]}><BrokerCustomersPage /></RequireRole>} />
-                <Route path="broker/reports" element={<RequireRole roles={["broker"]}><BrokerReportsPage /></RequireRole>} />
-                <Route path="admin/customers" element={<StaffOnly><RequirePermission permission="customers.view"><AdminCustomersPage /></RequirePermission></StaffOnly>} />
-                <Route path="admin/products" element={<StaffOnly><RequirePermission permission="products.manage"><AdminProductsPage /></RequirePermission></StaffOnly>} />
-                <Route path="admin/applications" element={<StaffOnly><RequirePermission permission="applications.review"><AdminUnderwritingPage /></RequirePermission></StaffOnly>} />
-                <Route path="admin/policies" element={<StaffOnly><RequirePermission permission="policies.manage"><AdminServicingPage /></RequirePermission></StaffOnly>} />
-                <Route path="admin/claims" element={<StaffOnly><RequirePermission permission="claims.review"><AdminClaimsPage /></RequirePermission></StaffOnly>} />
-                <Route path="admin/payments" element={<StaffOnly><RequirePermission permission="payments.view"><AdminPaymentsPage /></RequirePermission></StaffOnly>} />
-                <Route path="admin/brokers" element={<StaffOnly><RequirePermission permission="brokers.manage"><AdminBrokersPage /></RequirePermission></StaffOnly>} />
-                <Route path="admin/reports" element={<StaffOnly><RequirePermission permission="reports.view"><AdminReportsPage /></RequirePermission></StaffOnly>} />
-                <Route path="admin/support" element={<StaffOnly><RequirePermission permission="customers.view"><AdminSupportPage /></RequirePermission></StaffOnly>} />
-                <Route path="admin/audit" element={<StaffOnly><RequirePermission permission="audit.view"><AdminAuditPage /></RequirePermission></StaffOnly>} />
-                <Route path="admin/settings" element={<StaffOnly><RequirePermission permission="settings.manage"><AdminSettingsPage /></RequirePermission></StaffOnly>} />
-              </Route>
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-        </ThemeProvider>
-        <Toaster />
+                    <Route index element={<Home />} />
+                    <Route
+                      path="catalogue"
+                      element={
+                        <SelfServiceOnly>
+                          <CataloguePage />
+                        </SelfServiceOnly>
+                      }
+                    />
+                    <Route
+                      path="quotes"
+                      element={
+                        <SelfServiceOnly>
+                          <QuotesPage />
+                        </SelfServiceOnly>
+                      }
+                    />
+                    <Route
+                      path="applications"
+                      element={
+                        <SelfServiceOnly>
+                          <ApplicationsPage />
+                        </SelfServiceOnly>
+                      }
+                    />
+                    <Route
+                      path="policies"
+                      element={
+                        <SelfServiceOnly>
+                          <PoliciesPage />
+                        </SelfServiceOnly>
+                      }
+                    />
+                    <Route
+                      path="claims"
+                      element={
+                        <RequireRole roles={["customer"]}>
+                          <ClaimsPage />
+                        </RequireRole>
+                      }
+                    />
+                    <Route path="payments" element={<PaymentsPage />} />
+                    <Route path="documents" element={<DocumentsPage />} />
+                    <Route path="support" element={<SupportPage />} />
+                    <Route
+                      path="profile"
+                      element={
+                        <SelfServiceOnly>
+                          <ProfilePage />
+                        </SelfServiceOnly>
+                      }
+                    />
+                    <Route
+                      path="broker/customers"
+                      element={
+                        <RequireRole roles={["broker"]}>
+                          <BrokerCustomersPage />
+                        </RequireRole>
+                      }
+                    />
+                    <Route
+                      path="broker/reports"
+                      element={
+                        <RequireRole roles={["broker"]}>
+                          <BrokerReportsPage />
+                        </RequireRole>
+                      }
+                    />
+                    <Route
+                      path="admin/customers"
+                      element={
+                        <StaffOnly>
+                          <RequirePermission permission="customers.view">
+                            <AdminCustomersPage />
+                          </RequirePermission>
+                        </StaffOnly>
+                      }
+                    />
+                    <Route
+                      path="admin/products"
+                      element={
+                        <StaffOnly>
+                          <RequirePermission permission="products.manage">
+                            <AdminProductsPage />
+                          </RequirePermission>
+                        </StaffOnly>
+                      }
+                    />
+                    <Route
+                      path="admin/applications"
+                      element={
+                        <StaffOnly>
+                          <RequirePermission permission="applications.review">
+                            <AdminUnderwritingPage />
+                          </RequirePermission>
+                        </StaffOnly>
+                      }
+                    />
+                    <Route
+                      path="admin/policies"
+                      element={
+                        <StaffOnly>
+                          <RequirePermission permission="policies.manage">
+                            <AdminServicingPage />
+                          </RequirePermission>
+                        </StaffOnly>
+                      }
+                    />
+                    <Route
+                      path="admin/claims"
+                      element={
+                        <StaffOnly>
+                          <RequirePermission permission="claims.review">
+                            <AdminClaimsPage />
+                          </RequirePermission>
+                        </StaffOnly>
+                      }
+                    />
+                    <Route
+                      path="admin/payments"
+                      element={
+                        <StaffOnly>
+                          <RequirePermission permission="payments.view">
+                            <AdminPaymentsPage />
+                          </RequirePermission>
+                        </StaffOnly>
+                      }
+                    />
+                    <Route
+                      path="admin/brokers"
+                      element={
+                        <StaffOnly>
+                          <RequirePermission permission="brokers.manage">
+                            <AdminBrokersPage />
+                          </RequirePermission>
+                        </StaffOnly>
+                      }
+                    />
+                    <Route
+                      path="admin/reports"
+                      element={
+                        <StaffOnly>
+                          <RequirePermission permission="reports.view">
+                            <AdminReportsPage />
+                          </RequirePermission>
+                        </StaffOnly>
+                      }
+                    />
+                    <Route
+                      path="admin/support"
+                      element={
+                        <StaffOnly>
+                          <RequirePermission permission="customers.view">
+                            <AdminSupportPage />
+                          </RequirePermission>
+                        </StaffOnly>
+                      }
+                    />
+                    <Route
+                      path="admin/audit"
+                      element={
+                        <StaffOnly>
+                          <RequirePermission permission="audit.view">
+                            <AdminAuditPage />
+                          </RequirePermission>
+                        </StaffOnly>
+                      }
+                    />
+                    <Route
+                      path="admin/settings"
+                      element={
+                        <StaffOnly>
+                          <RequirePermission permission="settings.manage">
+                            <AdminSettingsPage />
+                          </RequirePermission>
+                        </StaffOnly>
+                      }
+                    />
+                  </Route>
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+          </ThemeProvider>
+          <Toaster />
         </ConvexAuthProvider>
       ) : (
         <MissingConvexConfig />
