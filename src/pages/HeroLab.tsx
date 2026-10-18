@@ -11,7 +11,7 @@ const VARIANTS = [
     id: "broadsheet",
     name: "The Broadsheet",
     note: "Editorial · paper",
-    swatch: "#b4462b",
+    swatch: "#2b61eb",
     Component: HeroBroadsheet,
   },
   {
@@ -151,7 +151,6 @@ export default function HeroLab() {
       <main>
         <active.Component key={active.id} onQuote={() => navigate("/quote")} />
       </main>
-
     </div>
   );
 }
