@@ -34,11 +34,61 @@ const COVER_LABELS: Record<string, string> = {
   business: "Business",
 };
 
+/* Policy details change with the image, so the stub is a real document for
+   the cover line on screen rather than a generic prop. */
+const POLICY_DETAILS: Record<
+  string,
+  { policy: string; detailLabel: string; detail: string; excess: string }
+> = {
+  home: {
+    policy: "4471",
+    detailLabel: "Property",
+    detail: "14 Alder Lane",
+    excess: "£250",
+  },
+  motor: {
+    policy: "2218",
+    detailLabel: "Vehicle",
+    detail: "Golf GTE · LX24 KFR",
+    excess: "£350",
+  },
+  travel: {
+    policy: "9084",
+    detailLabel: "Trip",
+    detail: "Worldwide · annual",
+    excess: "£100",
+  },
+  health: {
+    policy: "3157",
+    detailLabel: "Membership",
+    detail: "Level 3 · 2 adults",
+    excess: "£250",
+  },
+  life: {
+    policy: "6602",
+    detailLabel: "Benefit",
+    detail: "£450,000 · 25 yrs",
+    excess: "None",
+  },
+  business: {
+    policy: "1793",
+    detailLabel: "Trade",
+    detail: "8 staff · £1.2m",
+    excess: "£500",
+  },
+};
+
 /** The six cover lines, used as the auto-sliding insurance imagery. */
 const SLIDES = COVERS.map((cover) => ({
   slug: cover.slug,
   label: COVER_LABELS[cover.slug] ?? cover.navLabel,
   image: coverImage(cover.slug),
+  ...(POLICY_DETAILS[cover.slug] ?? {
+    policy: "0000",
+    detailLabel: "Detail",
+    detail: "—",
+    excess: "—",
+  }),
 }));
 
 function StubRow({ label, value }: { label: string; value: string }) {
@@ -182,9 +232,8 @@ export function HeroBroadsheet({ onQuote }: HeroVariantProps) {
             >
               <div className="max-w-[24rem]">
                 <p className="hidden text-[0.88rem] leading-7 text-muted-foreground sm:block">
-                  Buildings, motor, travel, health, life and business cover —
-                  written by underwriters who read the file, not a form. Six
-                  cover lines, one vault, and a person on the other end.
+                  Six cover lines, written by underwriters who read the file —
+                  not a form.
                 </p>
                 <p className="mt-2.5 flex items-center gap-2 text-[0.58rem] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:mt-3 sm:text-[0.6rem]">
                   <ShieldCheck className="size-3.5 shrink-0 text-primary" />
@@ -215,13 +264,6 @@ export function HeroBroadsheet({ onQuote }: HeroVariantProps) {
 
           {/* Auto-sliding cover imagery with the policy stub breaking out */}
           <div className="relative lg:col-span-5">
-            <motion.div
-              aria-hidden="true"
-              initial={reduce ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.9, delay: 0.35 }}
-              className="absolute -left-4 -top-4 hidden h-full w-full border border-line sm:block"
-            />
             <motion.figure
               ref={figureRef}
               role="group"
@@ -322,22 +364,22 @@ export function HeroBroadsheet({ onQuote }: HeroVariantProps) {
               initial={reduce ? false : { opacity: 0, y: 26, rotate: -9 }}
               animate={{ opacity: 1, y: 0, rotate: -3 }}
               transition={{ duration: 0.85, delay: 0.7, ease: EASE }}
-              className="absolute -bottom-7 -left-8 hidden w-[15rem] rounded-[4px] border border-line bg-card p-4 shadow-[0_26px_50px_-32px_rgba(8,18,39,0.45)] lg:block"
+              className="absolute -bottom-7 -left-8 hidden w-[15rem] rounded-[4px] bg-card p-4 shadow-[0_30px_60px_-28px_rgba(8,18,39,0.55)] lg:block"
             >
               <div className="flex items-center justify-between gap-2 text-[0.46rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 <span>Certificate of cover</span>
                 <ShieldCheck className="size-3.5 text-primary" />
               </div>
               <p className="mt-2 font-display text-[1.1rem] leading-none tracking-[-0.02em] text-ink">
-                Policy 4471
+                Policy {active.policy}
               </p>
-              <div className="mt-3 space-y-1.5 border-t border-dashed border-line pt-2.5 text-[0.56rem] leading-4">
+              <div className="mt-3 space-y-1.5 text-[0.56rem] leading-4">
                 <StubRow label="Insured" value="A. Whitfield" />
                 <StubRow label="Cover" value={active.label} />
-                <StubRow label="Renews" value="01 Mar" />
-                <StubRow label="Excess" value="£250" />
+                <StubRow label={active.detailLabel} value={active.detail} />
+                <StubRow label="Excess" value={active.excess} />
               </div>
-              <div className="absolute -right-3 -top-4 grid size-16 rotate-[9deg] place-items-center rounded-full border border-primary/40 bg-card text-center text-[0.4rem] font-semibold uppercase leading-[1.35] tracking-[0.12em] text-primary">
+              <div className="absolute -right-3 -top-4 grid size-16 rotate-[9deg] place-items-center rounded-full bg-card text-center text-[0.4rem] font-semibold uppercase leading-[1.35] tracking-[0.12em] text-primary shadow-[0_12px_26px_-16px_rgba(8,18,39,0.55)]">
                 Reviewed
                 <br />
                 12 Nov
