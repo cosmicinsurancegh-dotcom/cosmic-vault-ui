@@ -67,7 +67,7 @@ export function Story() {
 
             <Reveal delay={0.26}>
               <div className="mt-8 flex flex-wrap items-center gap-6">
-                <CtaLink to="/cover" variant="ink">
+                <CtaLink to="/cover" variant="primary">
                   Explore our cover
                 </CtaLink>
                 <div className="flex items-center gap-3">

@@ -17,7 +17,7 @@ import { Link } from "react-router";
 /* Buttons                                                             */
 /* ------------------------------------------------------------------ */
 
-type ActionVariant = "primary" | "outline" | "light" | "ink";
+type ActionVariant = "primary" | "outline" | "light";
 
 const actionStyles: Record<ActionVariant, string> = {
   primary:
@@ -25,14 +25,12 @@ const actionStyles: Record<ActionVariant, string> = {
   outline:
     "bg-transparent text-ink border border-ink/20 hover:border-ink/40 hover:bg-ink/[0.03]",
   light: "bg-card text-ink border border-line hover:bg-accent",
-  ink: "bg-foreground text-background border border-foreground/80 hover:bg-foreground/90",
 };
 
 const actionChip: Record<ActionVariant, string> = {
   primary: "bg-primary-foreground/20 text-primary-foreground",
   outline: "bg-foreground text-background",
   light: "bg-foreground text-background",
-  ink: "bg-background/15 text-background",
 };
 
 export function SiteButton({

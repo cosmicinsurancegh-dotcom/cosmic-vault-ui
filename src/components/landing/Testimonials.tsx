@@ -179,7 +179,7 @@ export function Testimonials() {
                       type="button"
                       onClick={() => go(1)}
                       aria-label="Next commitment"
-                      className="press grid size-9 place-items-center rounded-full bg-foreground text-background transition-colors hover:bg-primary hover:text-primary-foreground"
+                      className="press grid size-9 place-items-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
                     >
                       <ArrowRight className="size-4" />
                     </button>

@@ -207,7 +207,7 @@ export function DashSidebar({
                       type="button"
                       onClick={() => onNavigate("concierge")}
                       aria-label="Open concierge"
-                      className="grid h-11 w-full place-items-center rounded-xl bg-[#071227] text-electric-soft transition-colors hover:text-white"
+                      className="grid h-11 w-full place-items-center rounded-xl bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
                     >
                       <Headset className="size-4" />
                     </button>

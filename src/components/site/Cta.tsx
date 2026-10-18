@@ -3,12 +3,11 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "ink" | "light" | "outline";
+type Variant = "primary" | "light" | "outline";
 
 const shell: Record<Variant, string> = {
   primary:
     "bg-primary text-primary-foreground hover:bg-primary/90 border border-primary/60",
-  ink: "bg-foreground text-background hover:bg-foreground/90 border border-foreground/80",
   light: "bg-card text-ink hover:bg-accent border border-line",
   outline:
     "bg-transparent text-ink border border-ink/20 hover:border-ink/45 hover:bg-ink/[0.03]",
@@ -16,7 +15,6 @@ const shell: Record<Variant, string> = {
 
 const chip: Record<Variant, string> = {
   primary: "bg-primary-foreground text-primary",
-  ink: "bg-background/15 text-background",
   light: "bg-foreground text-background",
   outline: "bg-foreground text-background",
 };
