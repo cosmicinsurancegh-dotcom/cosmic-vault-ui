@@ -18,7 +18,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useAuth } from "@/hooks/use-auth";
 import { formatDateTime } from "@/lib/format";
+import { isStaff } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import { ArrowUpRight, Headset, Loader2, Send } from "lucide-react";
@@ -121,8 +123,12 @@ function CreateTicketDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const create = useMutation(api.tickets.create);
-  const policies = useQuery(api.policies.mine, {});
-  const claims = useQuery(api.claims.mine);
+  const { user } = useAuth();
+  // Staff are not customers or brokers, so the self-service queries reject them.
+  // Skip them until we know the viewer is a self-service account.
+  const selfService = Boolean(user) && !isStaff(user?.role);
+  const policies = useQuery(api.policies.mine, selfService ? {} : "skip");
+  const claims = useQuery(api.claims.mine, selfService ? {} : "skip");
   const [category, setCategory] = useState("policy");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -186,8 +192,8 @@ function CreateTicketDialog({
                 className="h-10 w-full rounded-xl border border-line bg-card px-3 text-sm text-ink"
               >
                 <option value="">Nothing specific</option>
-                <option value="policies">A policy</option>
-                <option value="claims">A claim</option>
+                {selfService && <option value="policies">A policy</option>}
+                {selfService && <option value="claims">A claim</option>}
               </select>
             </div>
             {relatedType && (
