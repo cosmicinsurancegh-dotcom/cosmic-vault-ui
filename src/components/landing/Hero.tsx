@@ -10,7 +10,6 @@ import {
   ArrowUpRight,
   Check,
   Pause,
-  PenLine,
   Play,
   ShieldCheck,
 } from "lucide-react";
@@ -330,45 +329,21 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
 
           {/* Top bar — cleared beneath the floating navbar (≈70px on mobile,
               ≈74px from sm up) with a small, even gap below it. */}
-          <div className="relative z-10 mx-auto flex w-full max-w-[1180px] flex-wrap items-start justify-between gap-3 px-5 pb-1 pt-[5.25rem] sm:flex-nowrap sm:px-8 sm:pb-2 sm:pt-24">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 py-1.5 pl-2 pr-3.5 backdrop-blur-md">
-                <span className="relative flex size-1.5">
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-electric-soft opacity-70" />
-                  <span className="relative inline-flex size-1.5 rounded-full bg-electric-soft" />
-                </span>
-                <span className="text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-bone/80">
-                  <span className="sm:hidden">Long-horizon insurance</span>
-                  <span className="hidden sm:inline">
-                    Insurance for the long horizon
-                  </span>
-                </span>
-              </span>
-              <span className="hidden items-center gap-2 text-[0.62rem] font-medium uppercase tracking-[0.22em] text-bone/65 md:flex">
-                <PenLine className="size-3.5 text-electric-soft" />
-                Manual underwriting, by design
-              </span>
-            </div>
-
-            <div className="ml-auto flex items-center gap-2">
-              <span className="hidden text-[0.66rem] uppercase tracking-[0.2em] text-bone/65 sm:block">
-                Directly arranged cover
-              </span>
-              {!reduceMotion && (
-                <button
-                  type="button"
-                  onClick={togglePlayback}
-                  aria-label={paused ? "Play slide show" : "Pause slide show"}
-                  className="grid size-9 place-items-center rounded-full border border-white/15 bg-white/[0.06] text-bone/70 backdrop-blur-md transition-colors hover:border-white/35 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                >
-                  {paused ? (
-                    <Play className="size-3.5" />
-                  ) : (
-                    <Pause className="size-3.5" />
-                  )}
-                </button>
-              )}
-            </div>
+          <div className="relative z-10 mx-auto flex w-full max-w-[1180px] justify-end px-5 pb-1 pt-[5.25rem] sm:px-8 sm:pb-2 sm:pt-24">
+            {!reduceMotion && (
+              <button
+                type="button"
+                onClick={togglePlayback}
+                aria-label={paused ? "Play slide show" : "Pause slide show"}
+                className="grid size-9 place-items-center rounded-full border border-white/15 bg-white/[0.06] text-bone/70 backdrop-blur-md transition-colors hover:border-white/35 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                {paused ? (
+                  <Play className="size-3.5" />
+                ) : (
+                  <Pause className="size-3.5" />
+                )}
+              </button>
+            )}
           </div>
 
           {/* Slide copy */}
@@ -529,28 +504,39 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                 })}
               </div>
 
-              <div className="flex items-center gap-3 border-l border-white/10 pl-3 sm:pl-4">
-                <span className="hidden font-display text-sm italic tabular-nums text-bone/70 sm:block">
-                  {pad(index)}{" "}
-                  <span className="text-bone/40">/ {pad(slides.length - 1)}</span>
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => go(index - 1)}
-                    aria-label="Previous cover line"
-                    className="press grid size-9 place-items-center rounded-full border border-white/15 text-bone/65 transition-colors hover:border-white/40 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#071227]"
-                  >
-                    <ArrowLeft className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => go(index + 1)}
-                    aria-label="Next cover line"
-                    className="press grid size-9 place-items-center rounded-full border border-white/15 text-bone/65 transition-colors hover:border-white/40 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#071227]"
-                  >
-                    <ArrowRight className="size-4" />
-                  </button>
+              {/* Slide controls: the caption sits directly over the arrows like a
+                  small caption plate on a control deck. */}
+              <div className="flex shrink-0 flex-col items-end gap-2 border-l border-white/10 pl-3 sm:gap-2.5 sm:pl-4">
+                <p className="flex items-center gap-2 whitespace-nowrap text-[0.5rem] font-semibold uppercase leading-none tracking-[0.16em] text-bone/50 sm:text-[0.55rem] sm:tracking-[0.18em]">
+                  <span
+                    aria-hidden="true"
+                    className="hidden h-px w-6 bg-gradient-to-r from-transparent to-electric-soft/70 sm:block"
+                  />
+                  Directly arranged cover
+                </p>
+                <div className="flex items-center gap-3">
+                  <span className="hidden font-display text-sm italic tabular-nums text-bone/70 sm:block">
+                    {pad(index)}{" "}
+                    <span className="text-bone/40">/ {pad(slides.length - 1)}</span>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => go(index - 1)}
+                      aria-label="Previous cover line"
+                      className="press grid size-9 place-items-center rounded-full border border-white/15 text-bone/65 transition-colors hover:border-white/40 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#071227]"
+                    >
+                      <ArrowLeft className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => go(index + 1)}
+                      aria-label="Next cover line"
+                      className="press grid size-9 place-items-center rounded-full border border-white/15 text-bone/65 transition-colors hover:border-white/40 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#071227]"
+                    >
+                      <ArrowRight className="size-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
