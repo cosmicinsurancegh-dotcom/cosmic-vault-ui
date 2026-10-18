@@ -266,7 +266,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
         className="pointer-events-none absolute left-[-14%] top-[46%] size-[24rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.55),transparent_70%)] blur-2xl"
       />
 
-      <div className="relative pt-6 sm:pt-8">
+      <div className="relative">
         <div
           role="region"
           aria-roledescription="carousel"
@@ -328,8 +328,8 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
             <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#04101f]/85 to-transparent sm:h-32" />
           </div>
 
-          {/* Top bar */}
-          <div className="relative z-10 mx-auto flex w-full max-w-[1180px] flex-wrap items-start justify-between gap-3 px-5 pt-5 sm:flex-nowrap sm:px-8 sm:pt-7 lg:pt-8">
+          {/* Top bar — padded down so the floating navbar never covers it */}
+          <div className="relative z-10 mx-auto flex w-full max-w-[1180px] flex-wrap items-start justify-between gap-3 px-5 pt-24 pb-2 sm:flex-nowrap sm:px-8 sm:pt-28 lg:pt-28">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 py-1.5 pl-2 pr-3.5 backdrop-blur-md">
                 <span className="relative flex size-1.5">

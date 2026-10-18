@@ -193,7 +193,11 @@ function MegaPanel({
   );
 }
 
-export function Navbar() {
+/**
+ * `overlay` lifts the bar out of the page flow so it floats above whatever
+ * sits at the top of the page (the landing hero) instead of pushing it down.
+ */
+export function Navbar({ overlay = false }: { overlay?: boolean }) {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   // Menu state is stored with the path it was opened on, so a route change
@@ -288,11 +292,18 @@ export function Navbar() {
   );
 
   return (
-    <header className="sticky top-0 z-40">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[calc(100%+1.5rem)] bg-gradient-to-b from-background via-background/85 to-transparent"
-      />
+    <header
+      className={cn(
+        "z-40",
+        overlay ? "fixed inset-x-0 top-0" : "sticky top-0",
+      )}
+    >
+      {!overlay && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-[calc(100%+1.5rem)] bg-gradient-to-b from-background via-background/85 to-transparent"
+        />
+      )}
 
       <div
         ref={containerRef}
@@ -300,8 +311,11 @@ export function Navbar() {
       >
         <div
           className={cn(
-            "relative flex items-center justify-between gap-3 rounded-full border border-ink/10 px-3 py-2 backdrop-blur-xl transition-colors duration-300 sm:px-4",
-            scrolled ? "bg-background/92" : "bg-background/72",
+            "relative flex items-center justify-between gap-3 rounded-full border border-ink/10 px-3 py-2 backdrop-blur-xl transition-[background-color,box-shadow] duration-300 sm:px-4",
+            scrolled || overlay ? "bg-background/92" : "bg-background/72",
+            overlay &&
+              !scrolled &&
+              "shadow-[0_22px_54px_-30px_rgba(4,16,31,0.7)]",
           )}
         >
           <Brand compact className="pl-1.5 text-ink" />

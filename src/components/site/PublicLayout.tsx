@@ -29,7 +29,8 @@ export function PublicLayout() {
       >
         Skip to content
       </a>
-      <Navbar />
+      {/* The landing hero runs to the top of the page, so the bar floats over it. */}
+      <Navbar overlay={pathname === "/"} />
       <main id="main-content" className="flex-1">
         <Outlet />
       </main>
