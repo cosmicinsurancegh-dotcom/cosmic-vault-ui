@@ -1,4 +1,5 @@
 import { HeroBroadsheet } from "@/components/landing/heroes/HeroBroadsheet";
+import { HeroKeepsake } from "@/components/landing/heroes/HeroKeepsake";
 import { HeroSignal } from "@/components/landing/heroes/HeroSignal";
 import { HeroThreshold } from "@/components/landing/heroes/HeroThreshold";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,13 @@ const VARIANTS = [
     note: "Human · interactive",
     swatch: "#e08a5b",
     Component: HeroThreshold,
+  },
+  {
+    id: "keepsake",
+    name: "The Keepsake",
+    note: "Family · split",
+    swatch: "#2b61eb",
+    Component: HeroKeepsake,
   },
 ];
 
@@ -70,7 +78,7 @@ export default function HeroLab() {
       } else if (event.key === "ArrowLeft") {
         event.preventDefault();
         select(index - 1);
-      } else if (event.key === "1" || event.key === "2" || event.key === "3") {
+      } else if (["1", "2", "3", "4"].includes(event.key)) {
         event.preventDefault();
         select(Number(event.key) - 1);
       }

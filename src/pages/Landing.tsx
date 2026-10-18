@@ -1,5 +1,5 @@
 import { FinalCta } from "@/components/landing/FinalCta";
-import { HeroBroadsheet } from "@/components/landing/heroes/HeroBroadsheet";
+import { HeroKeepsake } from "@/components/landing/heroes/HeroKeepsake";
 import { Plans } from "@/components/landing/Plans";
 import { Process } from "@/components/landing/Process";
 import { Solutions } from "@/components/landing/Solutions";
@@ -37,7 +37,7 @@ export default function Landing() {
         className="fixed inset-x-0 top-0 z-50 h-[2px] origin-left bg-electric"
       />
 
-      <HeroBroadsheet onQuote={() => openQuote()} />
+      <HeroKeepsake onQuote={() => openQuote()} />
       <Story />
       <Why />
       <Solutions />
