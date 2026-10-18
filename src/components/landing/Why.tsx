@@ -2,7 +2,7 @@ import { Media } from "@/components/site/Media";
 import { Reveal } from "@/components/site/Reveal";
 import { IMAGES, type VaultImage } from "@/lib/imagery";
 import { AnimatePresence, motion } from "framer-motion";
-import { Minus, Plus, ShieldCheck } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -130,7 +130,7 @@ export function Why() {
           </div>
 
           <Reveal y={30} delay={0.1} className="lg:col-span-5">
-            <div className="group sticky top-28">
+            <div className="sticky top-28">
               <div className="relative h-full min-h-[22rem] overflow-hidden rounded-[1.8rem] border border-ink/10">
                 <AnimatePresence initial={false}>
                   <motion.div
@@ -166,20 +166,6 @@ export function Why() {
                       </p>
                     </motion.div>
                   </AnimatePresence>
-                </div>
-              </div>
-
-              <div className="absolute -left-3 top-5 flex items-center gap-2.5 rounded-full border border-line bg-card/95 px-4 py-2.5 backdrop-blur transition-transform duration-500 group-hover:-translate-y-1 sm:-left-5">
-                <span className="grid size-8 place-items-center rounded-full bg-electric/10 text-electric">
-                  <ShieldCheck className="size-4" />
-                </span>
-                <div className="pr-1">
-                  <p className="text-sm font-semibold leading-none text-ink">
-                    Manual underwriting
-                  </p>
-                  <p className="mt-1 text-[0.58rem] uppercase tracking-[0.16em] text-muted-foreground">
-                    Decisions by a person
-                  </p>
                 </div>
               </div>
             </div>

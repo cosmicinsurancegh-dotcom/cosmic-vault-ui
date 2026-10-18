@@ -32,15 +32,6 @@ export function Story() {
               <div className="absolute -bottom-10 -left-3 hidden w-28 overflow-hidden rounded-[1.3rem] border-[5px] border-background transition-transform duration-500 ease-out group-hover:-translate-y-1.5 sm:block lg:-left-6 lg:w-32">
                 <Media image={IMAGES.storyDetail} className="aspect-square w-full" />
               </div>
-
-              <div className="absolute -bottom-6 right-3 rounded-2xl border border-line bg-card px-5 py-4 transition-transform duration-500 ease-out group-hover:-translate-y-1 sm:-right-6">
-                <p className="font-display text-3xl italic leading-none text-electric">
-                  Clear terms
-                </p>
-                <p className="mt-1.5 text-[0.6rem] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  Written to be read, not skimmed
-                </p>
-              </div>
             </div>
           </Reveal>
 
