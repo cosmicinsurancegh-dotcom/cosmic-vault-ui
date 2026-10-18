@@ -100,6 +100,26 @@ export function formatMoney(
   }
 }
 
+/** Format a major-unit amount, optionally in compact notation (for axes). */
+export function formatMoneyValue(
+  value: number,
+  currency: string,
+  options: { compact?: boolean } = {},
+) {
+  try {
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency,
+      notation: options.compact ? "compact" : "standard",
+      maximumFractionDigits: options.compact ? 1 : 0,
+    }).format(value);
+  } catch {
+    return options.compact
+      ? `${Math.round(value).toLocaleString("en-GB")}`
+      : `${currency} ${Math.round(value).toLocaleString("en-GB")}`;
+  }
+}
+
 export function formatMoneyList(
   values: { currency: string; amount: number }[] | undefined,
   empty = "None",

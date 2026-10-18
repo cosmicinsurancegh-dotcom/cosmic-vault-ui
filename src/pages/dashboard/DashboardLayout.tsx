@@ -1,6 +1,23 @@
-import { Brand, BrandMark } from "@/components/site/Brand";
+import { BrandMark } from "@/components/site/Brand";
 import { ThemeToggle } from "@/components/site/ThemeToggle";
 import { Button } from "@/components/ui/button";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetContent,
@@ -8,15 +25,23 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import { normalizeRole, STAFF_PERMISSIONS, can, isStaff } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
+import { initials } from "@/lib/vault";
 import { useMutation, useQuery } from "convex/react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   Bell,
   CalendarClock,
+  ChevronDown,
   ChevronRight,
   ClipboardList,
   CreditCard,
@@ -29,7 +54,10 @@ import {
   LogOut,
   Menu,
   PackageSearch,
+  PanelLeftClose,
+  PanelLeftOpen,
   ScrollText,
+  Search,
   Settings2,
   ShieldCheck,
   Store,
@@ -37,82 +65,141 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import type { ComponentType, ReactNode } from "react";
-import { useState } from "react";
-import { Navigate, NavLink, Outlet, useNavigate } from "react-router";
+import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
+import { useTheme } from "next-themes";
+import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 
 type NavItem = {
   to: string;
   label: string;
-  Icon: ComponentType<{ className?: string }>;
+  Icon: ComponentType<{ className?: string; strokeWidth?: number }>;
   end?: boolean;
 };
 
-const CUSTOMER_NAV: NavItem[] = [
-  { to: "/dashboard", label: "Overview", Icon: LayoutGrid, end: true },
-  { to: "/dashboard/catalogue", label: "Products", Icon: Store },
-  { to: "/dashboard/quotes", label: "Quotations", Icon: FileText },
-  { to: "/dashboard/applications", label: "Applications", Icon: ClipboardList },
-  { to: "/dashboard/policies", label: "Policies", Icon: ScrollText },
-  { to: "/dashboard/claims", label: "Claims", Icon: LifeBuoy },
-  { to: "/dashboard/payments", label: "Payments", Icon: CreditCard },
-  { to: "/dashboard/documents", label: "Documents", Icon: FolderOpen },
-  { to: "/dashboard/support", label: "Support", Icon: Headset },
-  { to: "/dashboard/profile", label: "Profile", Icon: UserRound },
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
+
+const RAIL_STORAGE_KEY = "cosmic-vault-dashboard-rail";
+
+const CUSTOMER_NAV: NavGroup[] = [
+  {
+    label: "Workspace",
+    items: [
+      { to: "/dashboard", label: "Overview", Icon: LayoutGrid, end: true },
+    ],
+  },
+  {
+    label: "Cover",
+    items: [
+      { to: "/dashboard/catalogue", label: "Products", Icon: Store },
+      { to: "/dashboard/quotes", label: "Quotations", Icon: FileText },
+      { to: "/dashboard/applications", label: "Applications", Icon: ClipboardList },
+      { to: "/dashboard/policies", label: "Policies", Icon: ScrollText },
+      { to: "/dashboard/claims", label: "Claims", Icon: LifeBuoy },
+    ],
+  },
+  {
+    label: "Money & records",
+    items: [
+      { to: "/dashboard/payments", label: "Payments", Icon: CreditCard },
+      { to: "/dashboard/documents", label: "Documents", Icon: FolderOpen },
+    ],
+  },
+  {
+    label: "Account",
+    items: [
+      { to: "/dashboard/support", label: "Support", Icon: Headset },
+      { to: "/dashboard/profile", label: "Profile", Icon: UserRound },
+    ],
+  },
 ];
 
-const BROKER_NAV: NavItem[] = [
-  { to: "/dashboard", label: "Overview", Icon: LayoutGrid, end: true },
-  { to: "/dashboard/broker/customers", label: "My customers", Icon: Users },
-  { to: "/dashboard/catalogue", label: "Products", Icon: Store },
-  { to: "/dashboard/quotes", label: "Quotations", Icon: FileText },
-  { to: "/dashboard/applications", label: "Applications", Icon: ClipboardList },
-  { to: "/dashboard/policies", label: "Policies", Icon: ScrollText },
-  { to: "/dashboard/broker/reports", label: "Reports", Icon: CalendarClock },
-  { to: "/dashboard/support", label: "Support", Icon: Headset },
-  { to: "/dashboard/profile", label: "Profile", Icon: UserRound },
+const BROKER_NAV: NavGroup[] = [
+  {
+    label: "Workspace",
+    items: [
+      { to: "/dashboard", label: "Overview", Icon: LayoutGrid, end: true },
+    ],
+  },
+  {
+    label: "Your book",
+    items: [
+      { to: "/dashboard/broker/customers", label: "My customers", Icon: Users },
+      { to: "/dashboard/catalogue", label: "Products", Icon: Store },
+      { to: "/dashboard/quotes", label: "Quotations", Icon: FileText },
+      { to: "/dashboard/applications", label: "Applications", Icon: ClipboardList },
+      { to: "/dashboard/policies", label: "Policies", Icon: ScrollText },
+      { to: "/dashboard/broker/reports", label: "Reports", Icon: CalendarClock },
+    ],
+  },
+  {
+    label: "Account",
+    items: [
+      { to: "/dashboard/support", label: "Support", Icon: Headset },
+      { to: "/dashboard/profile", label: "Profile", Icon: UserRound },
+    ],
+  },
 ];
 
-function adminNav(permissions: string[] | undefined, role?: string): NavItem[] {
-  const items: NavItem[] = [
-    { to: "/dashboard", label: "Overview", Icon: LayoutGrid, end: true },
-  ];
+function adminNav(permissions: string[] | undefined, role?: string): NavGroup[] {
   const allow = (permission: string) => can(role, permissions, permission);
+  const operations: NavItem[] = [];
   if (allow(STAFF_PERMISSIONS.CUSTOMERS_VIEW)) {
-    items.push({ to: "/dashboard/admin/customers", label: "Customers", Icon: Users });
+    operations.push({ to: "/dashboard/admin/customers", label: "Customers", Icon: Users });
   }
   if (allow(STAFF_PERMISSIONS.PRODUCTS_MANAGE)) {
-    items.push({ to: "/dashboard/admin/products", label: "Products", Icon: PackageSearch });
+    operations.push({ to: "/dashboard/admin/products", label: "Products", Icon: PackageSearch });
   }
   if (allow(STAFF_PERMISSIONS.APPLICATIONS_REVIEW)) {
-    items.push({ to: "/dashboard/admin/applications", label: "Underwriting", Icon: ClipboardList });
+    operations.push({ to: "/dashboard/admin/applications", label: "Underwriting", Icon: ClipboardList });
   }
   if (allow(STAFF_PERMISSIONS.POLICIES_MANAGE)) {
-    items.push({ to: "/dashboard/admin/policies", label: "Policies", Icon: ScrollText });
+    operations.push({ to: "/dashboard/admin/policies", label: "Policies", Icon: ScrollText });
   }
   if (allow(STAFF_PERMISSIONS.CLAIMS_REVIEW)) {
-    items.push({ to: "/dashboard/admin/claims", label: "Claims", Icon: LifeBuoy });
+    operations.push({ to: "/dashboard/admin/claims", label: "Claims", Icon: LifeBuoy });
   }
   if (allow(STAFF_PERMISSIONS.PAYMENTS_VIEW)) {
-    items.push({ to: "/dashboard/admin/payments", label: "Payments", Icon: Wallet });
+    operations.push({ to: "/dashboard/admin/payments", label: "Payments", Icon: Wallet });
   }
   if (allow(STAFF_PERMISSIONS.BROKERS_MANAGE)) {
-    items.push({ to: "/dashboard/admin/brokers", label: "Brokers", Icon: Store });
+    operations.push({ to: "/dashboard/admin/brokers", label: "Brokers", Icon: Store });
   }
+
+  const insight: NavItem[] = [];
   if (allow(STAFF_PERMISSIONS.REPORTS_VIEW)) {
-    items.push({ to: "/dashboard/admin/reports", label: "Reports", Icon: CalendarClock });
-  }
-  if (allow(STAFF_PERMISSIONS.CUSTOMERS_VIEW)) {
-    items.push({ to: "/dashboard/admin/support", label: "Support", Icon: Headset });
+    insight.push({ to: "/dashboard/admin/reports", label: "Reports", Icon: CalendarClock });
   }
   if (allow(STAFF_PERMISSIONS.AUDIT_VIEW)) {
-    items.push({ to: "/dashboard/admin/audit", label: "Audit log", Icon: ShieldCheck });
+    insight.push({ to: "/dashboard/admin/audit", label: "Audit log", Icon: ShieldCheck });
+  }
+
+  const account: NavItem[] = [];
+  if (allow(STAFF_PERMISSIONS.CUSTOMERS_VIEW)) {
+    account.push({ to: "/dashboard/admin/support", label: "Support", Icon: Headset });
   }
   if (allow(STAFF_PERMISSIONS.SETTINGS_MANAGE)) {
-    items.push({ to: "/dashboard/admin/settings", label: "Settings", Icon: Settings2 });
+    account.push({ to: "/dashboard/admin/settings", label: "Settings", Icon: Settings2 });
   }
-  return items;
+
+  return [
+    {
+      label: "Workspace",
+      items: [{ to: "/dashboard", label: "Overview", Icon: LayoutGrid, end: true }],
+    },
+    { label: "Operations", items: operations },
+    { label: "Insight", items: insight },
+    { label: "Account", items: account },
+  ].filter((group) => group.items.length > 0);
+}
+
+function roleLabel(role: string) {
+  if (role === "broker") return "Broker desk";
+  if (role === "admin" || role === "super_admin") return "Operations";
+  return "Member vault";
 }
 
 export function RequireRole({
@@ -160,8 +247,9 @@ export function RequirePermission({
           Access restricted
         </h1>
         <p className="mt-2 text-xs leading-5 text-muted-foreground">
-          Your account does not include the permission required for this area. Ask a super admin to
-          review your staff permissions. This check is enforced on the server as well.
+          Your account does not include the permission required for this area. Ask
+          a super admin to review your staff permissions. This check is enforced on
+          the server as well.
         </p>
       </div>
     );
@@ -169,43 +257,304 @@ export function RequirePermission({
   return <>{children}</>;
 }
 
-function NavList({
-  items,
+function SidebarBody({
+  groups,
+  collapsed,
+  onToggle,
   onNavigate,
+  onSearch,
+  userName,
+  userEmail,
+  userRole,
+  onSignOut,
 }: {
-  items: NavItem[];
+  groups: NavGroup[];
+  collapsed: boolean;
+  onToggle?: () => void;
   onNavigate?: () => void;
+  onSearch: () => void;
+  userName: string;
+  userEmail: string;
+  userRole: string;
+  onSignOut: () => void;
 }) {
+  const searchButton = (
+    <button
+      type="button"
+      onClick={onSearch}
+      aria-label="Search workspace"
+      className={cn(
+        "mt-5 flex h-9 items-center rounded-full border border-line bg-card text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+        collapsed ? "mx-auto w-10 justify-center" : "w-full gap-2 px-3",
+      )}
+    >
+      <Search className="size-3.5 shrink-0" strokeWidth={1.9} />
+      {!collapsed && (
+        <>
+          <span className="truncate">Search workspace</span>
+          <kbd className="ml-auto rounded-md border border-line bg-ink/[0.03] px-1.5 py-0.5 font-sans text-[0.55rem] font-semibold text-muted-foreground">
+            ⌘K
+          </kbd>
+        </>
+      )}
+    </button>
+  );
+
   return (
-    <nav aria-label="Dashboard" className="space-y-1">
-      {items.map(({ to, label, Icon, end }) => (
+    <div className="flex h-full min-h-0 flex-col px-3 py-4">
+      <div
+        className={cn(
+          "flex items-center gap-2",
+          collapsed ? "flex-col justify-center gap-3" : "justify-between",
+        )}
+      >
         <NavLink
-          key={to}
-          to={to}
-          end={end}
+          to="/"
           onClick={onNavigate}
-          className={({ isActive }) =>
-            cn(
-              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-              isActive
-                ? "bg-primary text-primary-foreground"
-                : "text-ink/60 hover:bg-primary/8 hover:text-primary",
-            )
-          }
+          className={cn(
+            "flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-80",
+            collapsed && "justify-center",
+          )}
+          aria-label="Cosmic Vault home"
         >
-          <Icon className="size-4 shrink-0" />
-          {label}
+          <BrandMark className="size-8 shrink-0" />
+          <span
+            className={cn(
+              "flex min-w-0 flex-col overflow-hidden leading-none transition-all duration-200",
+              collapsed
+                ? "w-0 -translate-x-1 opacity-0"
+                : "w-auto translate-x-0 opacity-100",
+            )}
+          >
+            <span className="truncate text-[0.98rem] font-semibold tracking-[-0.03em] text-ink">
+              Cosmic Vault
+            </span>
+            <span className="mt-1 truncate text-[0.5rem] font-medium uppercase tracking-[0.26em] text-ink/45">
+              {userRole}
+            </span>
+          </span>
         </NavLink>
-      ))}
-    </nav>
+
+        {onToggle && (
+          <Tooltip delayDuration={180}>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onToggle}
+                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                aria-expanded={!collapsed}
+                className="grid size-8 shrink-0 place-items-center rounded-full border border-line bg-card text-ink/50 transition-colors hover:border-primary/35 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+                {collapsed ? (
+                  <PanelLeftOpen className="size-3.5" />
+                ) : (
+                  <PanelLeftClose className="size-3.5" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={10}>
+              {collapsed ? "Expand" : "Collapse"} sidebar
+              <span className="ml-1.5 opacity-50">⌘B</span>
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+
+      {collapsed ? (
+        <Tooltip delayDuration={180}>
+          <TooltipTrigger asChild>{searchButton}</TooltipTrigger>
+          <TooltipContent side="right" sideOffset={10}>
+            Search <span className="ml-1.5 opacity-50">⌘K</span>
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        searchButton
+      )}
+
+      <nav
+        aria-label="Dashboard"
+        className="mt-5 min-h-0 flex-1 space-y-5 overflow-y-auto overflow-x-hidden pb-2 pr-0.5"
+      >
+        {groups.map((group, groupIndex) => (
+          <div key={group.label}>
+            <div className={cn("pb-1.5", collapsed ? "px-2" : "px-3")}>
+              {collapsed ? (
+                groupIndex > 0 && <div className="h-px w-full bg-line/70" />
+              ) : (
+                <p className="text-[0.54rem] font-semibold uppercase tracking-[0.22em] text-ink/35">
+                  {group.label}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-0.5">
+              {group.items.map(({ to, label, Icon, end }) => {
+                const link = (
+                  <NavLink
+                    to={to}
+                    end={end}
+                    onClick={onNavigate}
+                    aria-label={collapsed ? label : undefined}
+                    className={({ isActive }) =>
+                      cn(
+                        "group relative flex w-full items-center rounded-xl text-[0.79rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                        collapsed
+                          ? "justify-center px-0 py-2.5"
+                          : "gap-2.5 px-3 py-2.5",
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-[0_10px_24px_-16px_rgba(29,116,245,0.85)]"
+                          : "text-ink/60 hover:bg-primary/[0.06] hover:text-primary",
+                      )
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <Icon
+                          className={cn(
+                            "size-[17px] shrink-0 transition-transform duration-200",
+                            !isActive && "group-hover:translate-x-0.5",
+                          )}
+                          strokeWidth={1.85}
+                        />
+                        <span
+                          aria-hidden={collapsed}
+                          className={cn(
+                            "overflow-hidden whitespace-nowrap transition-all duration-200",
+                            collapsed
+                              ? "w-0 -translate-x-1 opacity-0"
+                              : "w-auto translate-x-0 opacity-100",
+                          )}
+                        >
+                          {label}
+                        </span>
+                        {!collapsed && isActive && (
+                          <span
+                            aria-hidden="true"
+                            className="ml-auto size-1.5 rounded-full bg-primary-foreground/70"
+                          />
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                );
+
+                if (!collapsed) return <div key={to}>{link}</div>;
+
+                return (
+                  <Tooltip key={to} delayDuration={180}>
+                    <TooltipTrigger asChild>{link}</TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={12}>
+                      {label}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+
+      <div className="mt-2 space-y-3">
+        {collapsed ? (
+          <Tooltip delayDuration={180}>
+            <TooltipTrigger asChild>
+              <NavLink
+                to="/dashboard/support"
+                onClick={onNavigate}
+                aria-label="Open support"
+                className="grid h-10 w-full place-items-center rounded-xl bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                <Headset className="size-4" />
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={12}>
+              Support
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <div className="starfield relative overflow-hidden rounded-2xl bg-[#071227] p-3.5 text-bone">
+            <span className="pointer-events-none absolute -right-8 -top-10 size-24 rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.35),transparent_65%)]" />
+            <p className="relative text-[0.52rem] font-semibold uppercase tracking-[0.22em] text-bone/45">
+              Concierge
+            </p>
+            <p className="relative mt-1.5 text-[0.7rem] leading-5 text-bone/75">
+              A person with your file in front of them.
+            </p>
+            <NavLink
+              to="/dashboard/support"
+              onClick={onNavigate}
+              className="relative mt-2.5 inline-flex items-center gap-1 text-[0.65rem] font-semibold text-electric-soft transition-colors hover:text-bone"
+            >
+              Open support
+              <ChevronRight className="size-3" />
+            </NavLink>
+          </div>
+        )}
+
+        <div
+          className={cn(
+            "rounded-2xl border border-line bg-card/80 p-2.5",
+            collapsed ? "flex flex-col items-center gap-2" : "flex items-center gap-2.5",
+          )}
+        >
+          <Tooltip delayDuration={180}>
+            <TooltipTrigger asChild>
+              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-[0.62rem] font-semibold text-primary">
+                {initials(userName || userEmail)}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={10}>
+              {userName}
+              <span className="block text-[0.62rem] opacity-60">{userEmail}</span>
+            </TooltipContent>
+          </Tooltip>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[0.72rem] font-medium text-ink">
+                {userName}
+              </p>
+              <p className="truncate text-[0.58rem] text-muted-foreground">
+                {userEmail}
+              </p>
+            </div>
+          )}
+          <Tooltip delayDuration={180}>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onSignOut}
+                aria-label="Sign out"
+                className="grid size-7 shrink-0 place-items-center rounded-full text-ink/40 transition-colors hover:bg-ink/[0.05] hover:text-ink"
+              >
+                <LogOut className="size-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side={collapsed ? "right" : "top"}>Sign out</TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
+    </div>
   );
 }
 
 export default function DashboardLayout() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+  const reduceMotion = useReducedMotion();
+  const { resolvedTheme, setTheme } = useTheme();
+
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return window.localStorage.getItem(RAIL_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+
   const notifications = useQuery(api.notifications.mine, { limit: 25 });
   const markAllRead = useMutation(api.notifications.markAllRead);
   const status = useQuery(api.setup.status);
@@ -213,8 +562,55 @@ export default function DashboardLayout() {
 
   const role = normalizeRole(user?.role);
   const permissions = user?.permissions ?? [];
-  const nav = isStaff(role) ? adminNav(permissions, role) : role === "broker" ? BROKER_NAV : CUSTOMER_NAV;
+  const staff = isStaff(role);
+  const groups = staff
+    ? adminNav(permissions, role)
+    : role === "broker"
+      ? BROKER_NAV
+      : CUSTOMER_NAV;
+
   const unread = (notifications ?? []).filter((item) => !item.readAt).length;
+  const userName = user?.name ?? "Vault member";
+  const userEmail = user?.email ?? "Anonymous session";
+  const label = roleLabel(role);
+
+  const activeItem = useMemo(() => {
+    const items = groups
+      .flatMap((group) => group.items)
+      .slice()
+      .sort((a, b) => b.to.length - a.to.length);
+    return items.find((item) =>
+      item.to === "/dashboard"
+        ? location.pathname === "/dashboard"
+        : location.pathname.startsWith(item.to),
+    );
+  }, [groups, location.pathname]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(RAIL_STORAGE_KEY, collapsed ? "1" : "0");
+    } catch {
+      // Storage can be unavailable in sandboxed previews - collapsing still works.
+    }
+  }, [collapsed]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const modifier = event.metaKey || event.ctrlKey;
+      if (!modifier) return;
+      const key = event.key.toLowerCase();
+      if (key === "k") {
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
+      if (key === "b") {
+        event.preventDefault();
+        setCollapsed((value) => !value);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -231,190 +627,321 @@ export default function DashboardLayout() {
           : "A super admin already exists.",
       );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not claim access.");
+      toast.error(
+        error instanceof Error ? error.message : "Could not claim access.",
+      );
     }
   };
 
+  const openSearch = () => {
+    setMobileOpen(false);
+    setPaletteOpen(true);
+  };
+
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-[258px] shrink-0 flex-col border-r border-line bg-background px-3 py-5 lg:flex">
-        <div className="flex items-center gap-2.5 px-2">
-          <BrandMark className="size-8 text-ink" />
-          <span className="flex min-w-0 flex-col leading-none">
-            <span className="truncate text-[1rem] font-semibold tracking-[-0.03em] text-ink">
-              Cosmic Vault
-            </span>
-            <span className="mt-1 text-[0.5rem] font-medium uppercase tracking-[0.28em] text-ink/45">
-              {role === "broker" ? "Broker desk" : isStaff(role) ? "Operations" : "Member vault"}
-            </span>
-          </span>
-        </div>
+    <>
+      <div className="flex min-h-screen bg-background">
+        <motion.aside
+          initial={false}
+          animate={{ width: collapsed ? 82 : 272 }}
+          transition={
+            reduceMotion
+              ? { duration: 0 }
+              : { type: "spring", stiffness: 250, damping: 32, mass: 0.9 }
+          }
+          className="sticky top-0 hidden h-screen shrink-0 overflow-hidden border-r border-line bg-[linear-gradient(180deg,var(--card),var(--background))] will-change-[width] lg:block"
+        >
+          <SidebarBody
+            groups={groups}
+            collapsed={collapsed}
+            onToggle={() => setCollapsed((value) => !value)}
+            onSearch={openSearch}
+            userName={userName}
+            userEmail={userEmail}
+            userRole={label}
+            onSignOut={handleSignOut}
+          />
+        </motion.aside>
 
-        <div className="mt-7 flex-1 overflow-y-auto px-1">
-          <NavList items={nav} />
-        </div>
-
-        <div className="mt-4 space-y-3 px-1">
-          <div className="rounded-xl border border-line bg-card p-3">
-            <div className="flex items-center gap-2">
-              <span className="grid size-8 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                {(user?.name ?? user?.email ?? "M").slice(0, 1).toUpperCase()}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-xs font-medium text-ink">
-                  {user?.name ?? "Vault member"}
-                </p>
-                <p className="truncate text-[0.62rem] capitalize text-muted-foreground">
-                  {role.replace("_", " ")}
-                </p>
-              </div>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-ink/[0.04] hover:text-ink"
-          >
-            <LogOut className="size-3.5" />
-            Sign out
-          </button>
-        </div>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Top bar */}
-        <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-line bg-background/90 px-4 py-3 backdrop-blur-xl sm:px-7">
-          <div className="flex items-center gap-2 lg:hidden">
-            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-              <SheetTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Open dashboard menu"
-                  className="grid size-9 place-items-center rounded-full border border-line text-ink"
-                >
-                  <Menu className="size-4" />
-                </button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[280px] overflow-y-auto bg-background p-5">
-                <SheetTitle className="sr-only">Dashboard navigation</SheetTitle>
-                <Brand href="/" className="text-ink" />
-                <div className="mt-7">
-                  <NavList items={nav} onNavigate={() => setMenuOpen(false)} />
-                </div>
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  className="mt-7 flex w-full items-center gap-2 rounded-xl border border-line px-3 py-2.5 text-xs font-medium text-muted-foreground"
-                >
-                  <LogOut className="size-3.5" /> Sign out
-                </button>
-              </SheetContent>
-            </Sheet>
-            <Brand href="/" compact className="text-ink lg:hidden" />
-          </div>
-          <div className="hidden items-center gap-2 text-xs text-muted-foreground lg:flex">
-            <span className="capitalize">{role.replace("_", " ")} workspace</span>
-            <ChevronRight className="size-3" />
-            <span>{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <ThemeToggle className="size-9" />
-            <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
-              <SheetTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
-                  className="relative grid size-9 place-items-center rounded-full border border-line text-ink"
-                >
-                  <Bell className="size-4" />
-                  {unread > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-primary text-[0.55rem] font-semibold text-primary-foreground">
-                      {unread > 9 ? "9+" : unread}
-                    </span>
-                  )}
-                </button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-full overflow-y-auto bg-background p-5 sm:max-w-md">
-                <SheetHeader>
-                  <SheetTitle className="text-base tracking-tight">Notifications</SheetTitle>
-                </SheetHeader>
-                <div className="mt-4 flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">{unread} unread</p>
+        <div
+          className="flex min-w-0 flex-1 flex-col"
+          style={{
+            background:
+              "linear-gradient(180deg, color-mix(in oklab, var(--ice) 38%, transparent), transparent 420px)",
+          }}
+        >
+          <header className="sticky top-0 z-30 border-b border-line/80 bg-background/85 backdrop-blur-xl">
+            <div className="flex h-14 items-center gap-2 px-4 sm:px-6">
+              <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+                <SheetTrigger asChild>
                   <button
                     type="button"
-                    onClick={async () => {
-                      await markAllRead();
-                      toast.success("All caught up.");
-                    }}
-                    className="text-xs font-medium text-primary"
+                    aria-label="Open dashboard menu"
+                    className="grid size-9 shrink-0 place-items-center rounded-full border border-line text-ink lg:hidden"
                   >
-                    Mark all read
+                    <Menu className="size-4" />
                   </button>
-                </div>
-                <div className="mt-4 space-y-2">
-                  {notifications === undefined ? (
-                    <p className="py-8 text-center text-xs text-muted-foreground">Loading…</p>
-                  ) : notifications.length === 0 ? (
-                    <p className="py-8 text-center text-xs text-muted-foreground">
-                      Nothing needs your attention.
-                    </p>
-                  ) : (
-                    notifications.map((item) => (
-                      <button
-                        key={item._id}
-                        type="button"
-                        onClick={() => {
-                          if (item.href) navigate(item.href);
-                          setNotificationsOpen(false);
-                        }}
-                        className={cn(
-                          "block w-full rounded-xl border px-4 py-3 text-left transition-colors hover:border-primary/30",
-                          item.readAt ? "border-line bg-card" : "border-primary/25 bg-primary/[0.04]",
-                        )}
-                      >
-                        <p className="text-xs font-semibold text-ink">{item.title}</p>
-                        <p className="mt-1 text-[0.7rem] leading-5 text-muted-foreground">{item.body}</p>
-                        <p className="mt-1.5 text-[0.58rem] uppercase tracking-[0.12em] text-muted-foreground">
-                          {formatDateTime(item.createdAt)}
-                          {item.emailStatus === "failed" && " · email failed"}
-                        </p>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </SheetContent>
-            </Sheet>
-            <Button
-              variant="outline"
-              onClick={handleSignOut}
-              className="hidden h-9 rounded-full px-3 text-xs sm:inline-flex"
-            >
-              <LogOut className="size-3.5" /> Sign out
-            </Button>
-          </div>
-        </div>
+                </SheetTrigger>
+                <SheetContent
+                  side="left"
+                  className="w-[286px] overflow-hidden bg-background p-0"
+                >
+                  <SheetTitle className="sr-only">Dashboard navigation</SheetTitle>
+                  <SidebarBody
+                    groups={groups}
+                    collapsed={false}
+                    onNavigate={() => setMobileOpen(false)}
+                    onSearch={openSearch}
+                    userName={userName}
+                    userEmail={userEmail}
+                    userRole={label}
+                    onSignOut={handleSignOut}
+                  />
+                </SheetContent>
+              </Sheet>
 
-        <main className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-7 sm:px-7 sm:py-9">
-          {status && !status.hasSuperAdmin && (
-            <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-halo/50 bg-halo/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-ink">Founding administrator setup</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  No super admin exists yet. The first signed-in user can claim the founding role,
-                  then create products and staff accounts. This option disappears permanently once
-                  a super admin exists.
-                </p>
+              <NavLink
+                to="/dashboard"
+                className="flex items-center gap-2 lg:hidden"
+                aria-label="Cosmic Vault dashboard"
+              >
+                <BrandMark className="size-6" />
+                <span className="text-xs font-semibold tracking-[-0.02em] text-ink sm:text-[0.8rem]">
+                  Cosmic Vault
+                </span>
+              </NavLink>
+
+              <div className="hidden min-w-0 items-center gap-2 text-[0.68rem] text-muted-foreground md:flex">
+                <span className="truncate">{label}</span>
+                <ChevronRight className="size-3 shrink-0 opacity-50" />
+                <span className="truncate font-medium text-ink">
+                  {activeItem?.label ?? "Overview"}
+                </span>
               </div>
-              <Button onClick={claimAdmin} className="h-9 shrink-0 rounded-full px-4 text-xs">
-                Claim super admin
-              </Button>
+
+              <button
+                type="button"
+                onClick={openSearch}
+                className="ml-auto hidden h-9 w-full max-w-[260px] items-center gap-2 rounded-full border border-line bg-card px-3.5 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 md:flex"
+              >
+                <Search className="size-3.5 shrink-0" />
+                <span>Search workspace</span>
+                <kbd className="ml-auto rounded-md border border-line bg-ink/[0.03] px-1.5 py-0.5 font-sans text-[0.55rem] font-semibold">
+                  ⌘K
+                </kbd>
+              </button>
+
+              <div className="ml-auto flex items-center gap-1.5 md:ml-2">
+                <ThemeToggle className="size-9" />
+
+                <Sheet
+                  open={notificationsOpen}
+                  onOpenChange={setNotificationsOpen}
+                >
+                  <SheetTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
+                      className="relative grid size-9 place-items-center rounded-full border border-line text-ink transition-colors hover:border-primary/30"
+                    >
+                      <Bell className="size-4" />
+                      {unread > 0 && (
+                        <span className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-primary text-[0.52rem] font-semibold text-primary-foreground ring-2 ring-background">
+                          {unread > 9 ? "9+" : unread}
+                        </span>
+                      )}
+                    </button>
+                  </SheetTrigger>
+                  <SheetContent
+                    side="right"
+                    className="w-full overflow-y-auto bg-background p-5 sm:max-w-md"
+                  >
+                    <SheetHeader>
+                      <SheetTitle className="text-base tracking-tight">
+                        Notifications
+                      </SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-4 flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">
+                        {unread} unread
+                      </p>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await markAllRead();
+                          toast.success("All caught up.");
+                        }}
+                        className="text-xs font-medium text-primary"
+                      >
+                        Mark all read
+                      </button>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      {notifications === undefined ? (
+                        <p className="py-8 text-center text-xs text-muted-foreground">
+                          Loading…
+                        </p>
+                      ) : notifications.length === 0 ? (
+                        <p className="py-8 text-center text-xs text-muted-foreground">
+                          Nothing needs your attention.
+                        </p>
+                      ) : (
+                        notifications.map((item) => (
+                          <button
+                            key={item._id}
+                            type="button"
+                            onClick={() => {
+                              if (item.href) navigate(item.href);
+                              setNotificationsOpen(false);
+                            }}
+                            className={cn(
+                              "block w-full rounded-xl border px-4 py-3 text-left transition-colors hover:border-primary/30",
+                              item.readAt
+                                ? "border-line bg-card"
+                                : "border-primary/25 bg-primary/[0.04]",
+                            )}
+                          >
+                            <p className="text-xs font-semibold text-ink">
+                              {item.title}
+                            </p>
+                            <p className="mt-1 text-[0.7rem] leading-5 text-muted-foreground">
+                              {item.body}
+                            </p>
+                            <p className="mt-1.5 text-[0.58rem] uppercase tracking-[0.12em] text-muted-foreground">
+                              {formatDateTime(item.createdAt)}
+                              {item.emailStatus === "failed" && " · email failed"}
+                            </p>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </SheetContent>
+                </Sheet>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex h-9 items-center gap-2 rounded-full border border-line bg-card pl-1 pr-2 text-left transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    >
+                      <span className="grid size-7 place-items-center rounded-full bg-primary/10 text-[0.58rem] font-semibold text-primary">
+                        {initials(userName || userEmail)}
+                      </span>
+                      <span className="hidden max-w-[110px] truncate text-[0.7rem] font-medium text-ink xl:block">
+                        {userName}
+                      </span>
+                      <ChevronDown className="hidden size-3 text-muted-foreground sm:block" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel className="font-normal">
+                      <p className="text-xs font-medium text-ink">{userName}</p>
+                      <p className="mt-0.5 truncate text-[0.62rem] text-muted-foreground">
+                        {userEmail}
+                      </p>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        if (staff) {
+                          navigate("/dashboard/admin/settings");
+                        } else {
+                          navigate("/dashboard/profile");
+                        }
+                      }}
+                    >
+                      <Settings2 className="size-3.5" />
+                      {staff ? "Workspace settings" : "Profile"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={handleSignOut}>
+                      <LogOut className="size-3.5" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-          )}
-          <Outlet />
-        </main>
+          </header>
+
+          <main className="relative mx-auto w-full max-w-[1320px] flex-1 px-4 py-6 sm:px-6 sm:py-8">
+            {status && !status.hasSuperAdmin && (
+              <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-halo/50 bg-halo/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-ink">
+                    Founding administrator setup
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    No super admin exists yet. The first signed-in user can claim
+                    the founding role, then create products and staff accounts.
+                    This option disappears permanently once a super admin exists.
+                  </p>
+                </div>
+                <Button
+                  onClick={claimAdmin}
+                  className="h-9 shrink-0 rounded-full px-4 text-xs"
+                >
+                  Claim super admin
+                </Button>
+              </div>
+            )}
+            <Outlet />
+          </main>
+        </div>
       </div>
-    </div>
+
+      <CommandDialog
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        title="Search workspace"
+        description="Jump to a page or run an action"
+        className="sm:max-w-lg"
+      >
+        <CommandInput placeholder="Search pages, records, and actions…" />
+        <CommandList>
+          <CommandEmpty>No matches. Try a different word.</CommandEmpty>
+          {groups.map((group) => (
+            <CommandGroup key={group.label} heading={group.label}>
+              {group.items.map(({ to, label: itemLabel, Icon }) => (
+                <CommandItem
+                  key={to}
+                  value={`${itemLabel} ${to}`}
+                  onSelect={() => {
+                    setPaletteOpen(false);
+                    navigate(to);
+                  }}
+                >
+                  <Icon className="size-4" />
+                  {itemLabel}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          ))}
+          <CommandSeparator />
+          <CommandGroup heading="Actions">
+            <CommandItem
+              value="toggle theme dark light appearance"
+              onSelect={() => {
+                setTheme(resolvedTheme === "dark" ? "light" : "dark");
+                setPaletteOpen(false);
+              }}
+            >
+              <Settings2 className="size-4" />
+              Switch to {resolvedTheme === "dark" ? "light" : "dark"} mode
+            </CommandItem>
+            <CommandItem
+              value="sign out log out"
+              onSelect={() => {
+                setPaletteOpen(false);
+                handleSignOut();
+              }}
+            >
+              <LogOut className="size-4" />
+              Sign out
+            </CommandItem>
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
+    </>
   );
 }

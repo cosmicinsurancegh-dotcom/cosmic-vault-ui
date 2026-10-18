@@ -4,6 +4,7 @@ import type { QueryCtx } from "./_generated/server";
 import {
   PERMISSIONS,
   hasPermission,
+  isStaffRole,
   requirePermission,
   requireStaff,
   requireViewer,
@@ -366,6 +367,527 @@ export const overview = query({
           severity: "warning",
         },
       ],
+    };
+  },
+});
+
+const BOARD_CATEGORY_LABELS: Record<string, string> = {
+  motor: "Motor",
+  health: "Health",
+  home: "Home",
+  travel: "Travel",
+  life: "Life",
+  business: "Business",
+};
+
+const OPEN_CLAIM_SET = new Set([
+  "submitted",
+  "under_review",
+  "additional_info_required",
+  "under_assessment",
+  "payment_pending",
+]);
+
+function categoryLabel(key: string) {
+  return (
+    BOARD_CATEGORY_LABELS[key] ??
+    key.replace(/[_-]/g, " ").replace(/^./, (letter) => letter.toUpperCase())
+  );
+}
+
+function monthBuckets(now: number, months: number) {
+  const current = new Date(now);
+  return Array.from({ length: months }, (_, index) => {
+    const offset = index - (months - 1);
+    const start = Date.UTC(
+      current.getUTCFullYear(),
+      current.getUTCMonth() + offset,
+      1,
+    );
+    const end = Date.UTC(
+      current.getUTCFullYear(),
+      current.getUTCMonth() + offset + 1,
+      1,
+    ) - 1;
+    return {
+      start,
+      end,
+      label: new Date(start).toLocaleDateString("en-GB", {
+        month: "short",
+        timeZone: "UTC",
+      }),
+      premium: 0,
+      claims: 0,
+      collected: 0,
+      newBusiness: 0,
+      policies: 0,
+      ratio: 0,
+    };
+  });
+}
+
+/** A claim is "incurred" at its approved amount once decided, at the claimed
+ *  amount while it is still open, and at zero when it has been declined. */
+function incurredAmount(claim: {
+  status: string;
+  amountClaimed: number;
+  approvedAmount?: number;
+}) {
+  if (claim.status === "declined") return 0;
+  return claim.approvedAmount ?? claim.amountClaimed;
+}
+
+/**
+ * One role-scoped read for the dashboard board. Staff see the company book,
+ * brokers see only their assigned customers, customers see only their own
+ * records. Every monetary series is filtered to the reporting currency so
+ * currencies are never silently added together.
+ */
+export const board = query({
+  args: { months: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const viewer = await requireViewer(ctx);
+    const viewerRole = viewer.role;
+    const staff = isStaffRole(viewerRole);
+    if (!staff) {
+      throw new Error("This dashboard is restricted to staff.");
+    }
+    const settings = await getSettings(ctx);
+    const snapshot = await loadSnapshot(ctx);
+    const now = Date.now();
+    const months = Math.min(24, Math.max(3, Math.round(args.months ?? 6)));
+    const currency = settings.defaultCurrency;
+    const canSeeMoney = staff
+      ? hasPermission(viewer, PERMISSIONS.PAYMENTS_VIEW)
+      : true;
+
+    const names = new Map(
+      snapshot.users.map((user) => [
+        user._id,
+        user.name ?? user.email ?? "Customer",
+      ]),
+    );
+
+    const assignedCustomerIds =
+      viewer.role === "broker"
+        ? new Set(
+            snapshot.assignments
+              .filter(
+                (assignment) =>
+                  assignment.brokerUserId === viewer.user._id &&
+                  assignment.status === "active",
+              )
+              .map((assignment) => assignment.customerUserId),
+          )
+        : null;
+
+    const scopedPolicies = staff
+      ? snapshot.policies
+      : viewer.role === "broker"
+        ? snapshot.policies.filter(
+            (policy) =>
+              policy.brokerUserId === viewer.user._id ||
+              assignedCustomerIds?.has(policy.customerUserId),
+          )
+        : snapshot.policies.filter(
+            (policy) => policy.customerUserId === viewer.user._id,
+          );
+
+    const scopedPolicyIds = new Set(scopedPolicies.map((policy) => policy._id));
+
+    const scopedClaims = staff
+      ? snapshot.claims
+      : viewer.role === "broker"
+        ? snapshot.claims.filter((claim) => scopedPolicyIds.has(claim.policyId))
+        : snapshot.claims.filter(
+            (claim) => claim.customerUserId === viewer.user._id,
+          );
+
+    const scopedTransactions = staff
+      ? snapshot.transactions
+      : viewer.role === "broker"
+        ? snapshot.transactions.filter(
+            (tx) => tx.policyId !== undefined && scopedPolicyIds.has(tx.policyId),
+          )
+        : snapshot.transactions.filter(
+            (tx) => tx.customerUserId === viewer.user._id,
+          );
+
+    const scopedApplications = staff
+      ? snapshot.applications
+      : viewer.role === "broker"
+        ? snapshot.applications.filter((app) =>
+            assignedCustomerIds?.has(app.customerUserId),
+          )
+        : snapshot.applications.filter(
+            (app) => app.customerUserId === viewer.user._id,
+          );
+
+    const moneyPolicies = scopedPolicies.filter(
+      (policy) => policy.currency === currency,
+    );
+    const moneyClaims = scopedClaims.filter(
+      (claim) => claim.currency === currency,
+    );
+    const moneyTransactions = scopedTransactions.filter(
+      (tx) => tx.currency === currency,
+    );
+    const otherCurrencies = new Set(
+      [...scopedPolicies, ...scopedClaims, ...scopedTransactions]
+        .map((row) => row.currency)
+        .filter((code) => code !== currency),
+    ).size;
+
+    const buckets = monthBuckets(now, months);
+    const firstBucket = buckets[0];
+
+    for (const bucket of buckets) {
+      for (const policy of moneyPolicies) {
+        const wasLive =
+          policy.startDate <= bucket.end &&
+          policy.endDate >= bucket.start &&
+          !["draft", "pending_approval", "cancelled"].includes(policy.status);
+        if (wasLive) bucket.premium += policy.premium / 100;
+        if (policy.startDate >= bucket.start && policy.startDate <= bucket.end) {
+          bucket.policies += 1;
+          bucket.newBusiness += policy.premium / 100;
+        }
+      }
+      for (const claim of moneyClaims) {
+        if (claim.reportedAt >= bucket.start && claim.reportedAt <= bucket.end) {
+          bucket.claims += incurredAmount(claim) / 100;
+        }
+      }
+      for (const tx of moneyTransactions) {
+        if (
+          tx.type === "premium" &&
+          tx.status === "succeeded" &&
+          tx.createdAt >= bucket.start &&
+          tx.createdAt <= bucket.end
+        ) {
+          bucket.collected += tx.amount / 100;
+        }
+      }
+      bucket.premium = Math.round(bucket.premium);
+      bucket.claims = Math.round(bucket.claims);
+      bucket.collected = Math.round(bucket.collected);
+      bucket.newBusiness = Math.round(bucket.newBusiness);
+      bucket.ratio =
+        bucket.premium > 0
+          ? Math.round((bucket.claims / (bucket.premium / 12)) * 100)
+          : 0;
+    }
+    if (!canSeeMoney) {
+      for (const bucket of buckets) {
+        bucket.premium = 0;
+        bucket.claims = 0;
+        bucket.collected = 0;
+        bucket.newBusiness = 0;
+        bucket.ratio = 0;
+      }
+    }
+    const monthly = buckets.map((bucket) => ({
+      label: bucket.label,
+      premium: bucket.premium,
+      claims: bucket.claims,
+      collected: bucket.collected,
+      newBusiness: bucket.newBusiness,
+      policies: bucket.policies,
+      ratio: bucket.ratio,
+    }));
+
+    const livePolicies = moneyPolicies.filter(
+      (policy) =>
+        policy.status === "active" || policy.status === "renewal_pending",
+    );
+    const premiumInForce = canSeeMoney
+      ? Math.round(
+          livePolicies.reduce((total, policy) => total + policy.premium / 100, 0),
+        )
+      : 0;
+    const activePolicies = livePolicies.length;
+    const claimsInWindow = canSeeMoney
+      ? Math.round(
+          moneyClaims
+            .filter((claim) => claim.reportedAt >= firstBucket.start)
+            .reduce((total, claim) => total + incurredAmount(claim) / 100, 0),
+        )
+      : 0;
+    const earnedPremium = premiumInForce * (months / 12);
+    const lossRatio =
+      canSeeMoney && earnedPremium > 0
+        ? Math.round((claimsInWindow / earnedPremium) * 100)
+        : 0;
+    const collected = canSeeMoney
+      ? Math.round(
+          moneyTransactions
+            .filter(
+              (tx) =>
+                tx.type === "premium" &&
+                tx.status === "succeeded" &&
+                tx.createdAt >= firstBucket.start,
+            )
+            .reduce((total, tx) => total + tx.amount / 100, 0),
+        )
+      : 0;
+    const newBusiness = canSeeMoney
+      ? Math.round(
+          moneyPolicies
+            .filter((policy) => policy.startDate >= firstBucket.start)
+            .reduce((total, policy) => total + policy.premium / 100, 0),
+        )
+      : 0;
+
+    const priorStart = (() => {
+      const date = new Date(firstBucket.start);
+      return Date.UTC(
+        date.getUTCFullYear(),
+        date.getUTCMonth() - months,
+        1,
+      );
+    })();
+    const priorClaims = canSeeMoney
+      ? moneyClaims
+          .filter(
+            (claim) =>
+              claim.reportedAt >= priorStart &&
+              claim.reportedAt < firstBucket.start,
+          )
+          .reduce((total, claim) => total + incurredAmount(claim) / 100, 0)
+      : 0;
+    const priorBusiness = canSeeMoney
+      ? moneyPolicies
+          .filter(
+            (policy) =>
+              policy.startDate >= priorStart &&
+              policy.startDate < firstBucket.start,
+          )
+          .reduce((total, policy) => total + policy.premium / 100, 0)
+      : 0;
+    const percentChange = (current: number, prior: number) =>
+      prior > 0 ? Math.round(((current - prior) / prior) * 100) : null;
+
+    const lineMap = new Map<
+      string,
+      {
+        key: string;
+        label: string;
+        activePolicies: number;
+        policies: number;
+        premium: number;
+      }
+    >();
+    for (const policy of moneyPolicies) {
+      const key = policy.categoryKey || "other";
+      const row = lineMap.get(key) ?? {
+        key,
+        label: categoryLabel(key),
+        activePolicies: 0,
+        policies: 0,
+        premium: 0,
+      };
+      row.policies += 1;
+      if (
+        policy.status === "active" ||
+        policy.status === "renewal_pending"
+      ) {
+        row.activePolicies += 1;
+        if (canSeeMoney) row.premium += policy.premium / 100;
+      }
+      lineMap.set(key, row);
+    }
+    const lines = [...lineMap.values()]
+      .filter((line) => line.activePolicies > 0 || line.premium > 0)
+      .map((line) => ({
+        ...line,
+        premium: Math.round(line.premium),
+        share:
+          premiumInForce > 0
+            ? Math.round((line.premium / premiumInForce) * 100)
+            : 0,
+      }))
+      .sort((a, b) => b.premium - a.premium || b.policies - a.policies)
+      .slice(0, 4);
+
+    const claimsMix = [
+      {
+        key: "settled",
+        label: "Settled",
+        value: moneyClaims.filter((claim) =>
+          ["approved", "partially_approved", "paid", "closed"].includes(
+            claim.status,
+          ),
+        ).length,
+      },
+      {
+        key: "open",
+        label: "In review",
+        value: moneyClaims.filter((claim) => OPEN_CLAIM_SET.has(claim.status))
+          .length,
+      },
+      {
+        key: "declined",
+        label: "Declined",
+        value: moneyClaims.filter((claim) => claim.status === "declined")
+          .length,
+      },
+    ].filter((row) => row.value > 0);
+
+    const openClaims = scopedClaims.filter((claim) =>
+      OPEN_CLAIM_SET.has(claim.status),
+    ).length;
+    const renewalsDue = scopedPolicies.filter(
+      (policy) =>
+        (policy.status === "active" || policy.status === "renewal_pending") &&
+        policy.endDate <= now + settings.renewalNoticeDays * DAY,
+    ).length;
+    const pendingApplications = scopedApplications.filter((app) =>
+      OPEN_APPLICATION_STATUSES.includes(app.status),
+    ).length;
+    const customers = staff
+      ? snapshot.profiles.length
+      : viewer.role === "broker"
+        ? (assignedCustomerIds?.size ?? 0)
+        : 1;
+
+    const plans = livePolicies
+      .slice()
+      .sort((a, b) => a.endDate - b.endDate)
+      .slice(0, 4)
+      .map((policy) => ({
+        id: policy._id,
+        policyNumber: policy.policyNumber,
+        productName: policy.productName,
+        categoryKey: policy.categoryKey,
+        categoryLabel: categoryLabel(policy.categoryKey),
+        customerName:
+          viewer.role === "customer"
+            ? undefined
+            : (names.get(policy.customerUserId) ?? "Customer"),
+        premium: canSeeMoney ? Math.round(policy.premium / 100) : 0,
+        currency: policy.currency,
+        startDate: policy.startDate,
+        endDate: policy.endDate,
+        status: policy.status,
+      }));
+
+    const recentClaims = scopedClaims
+      .slice()
+      .sort((a, b) => b.reportedAt - a.reportedAt)
+      .slice(0, 4)
+      .map((claim) => ({
+        id: claim._id,
+        reference: claim.reference,
+        productName: claim.productName,
+        customerName:
+          viewer.role === "customer"
+            ? undefined
+            : (names.get(claim.customerUserId) ?? "Customer"),
+        status: claim.status,
+        amount: canSeeMoney ? Math.round(claim.amountClaimed / 100) : 0,
+        currency: claim.currency,
+        reportedAt: claim.reportedAt,
+      }));
+
+    const alerts = staff
+      ? [
+          {
+            key: "claims-sla",
+            label: "Claims past the SLA clock",
+            count: scopedClaims.filter(
+              (claim) =>
+                OPEN_CLAIM_SET.has(claim.status) &&
+                claim.reportedAt < now - settings.claimSlaDays * DAY,
+            ).length,
+            href: "/dashboard/admin/claims",
+            severity: "critical" as const,
+          },
+          {
+            key: "premium-overdue",
+            label: "Overdue premium invoices",
+            count: moneyTransactions.filter(
+              (tx) =>
+                tx.type === "premium" &&
+                tx.status === "pending" &&
+                tx.dueDate !== undefined &&
+                tx.dueDate < now,
+            ).length,
+            href: "/dashboard/admin/payments",
+            severity: "critical" as const,
+          },
+          {
+            key: "unassigned",
+            label: "Applications without a reviewer",
+            count: scopedApplications.filter(
+              (app) =>
+                OPEN_APPLICATION_STATUSES.includes(app.status) && !app.assignedTo,
+            ).length,
+            href: "/dashboard/admin/applications",
+            severity: "warning" as const,
+          },
+          {
+            key: "renewals",
+            label: "Renewals inside the notice window",
+            count: renewalsDue,
+            href: "/dashboard/admin/policies",
+            severity: "warning" as const,
+          },
+        ]
+      : [
+          {
+            key: "renewals",
+            label: `Renewals in the next ${settings.renewalNoticeDays} days`,
+            count: renewalsDue,
+            href: viewer.role === "broker" ? "/dashboard/policies" : "/dashboard/policies",
+            severity: "warning" as const,
+          },
+          {
+            key: "claims",
+            label: "Claims being reviewed",
+            count: openClaims,
+            href: viewer.role === "broker" ? "/dashboard/policies" : "/dashboard/claims",
+            severity: "info" as const,
+          },
+          {
+            key: "applications",
+            label: "Applications in underwriting",
+            count: pendingApplications,
+            href: "/dashboard/applications",
+            severity: "info" as const,
+          },
+        ];
+
+    return {
+      scope: staff ? ("company" as const) : viewer.role === "broker" ? ("book" as const) : ("member" as const),
+      currency,
+      months,
+      asOf: now,
+      canSeeMoney,
+      otherCurrencies,
+      kpis: {
+        premiumInForce,
+        activePolicies,
+        openClaims,
+        renewalsDue,
+        pendingApplications,
+        customers,
+        collected,
+        newBusiness,
+        claimsInWindow,
+        lossRatio,
+        avgPremium:
+          activePolicies > 0
+            ? Math.round(premiumInForce / activePolicies)
+            : 0,
+        newBusinessChange: percentChange(newBusiness, priorBusiness),
+        claimsChange: percentChange(claimsInWindow, priorClaims),
+      },
+      lines,
+      monthly,
+      claimsMix,
+      plans,
+      recentClaims,
+      alerts,
     };
   },
 });
