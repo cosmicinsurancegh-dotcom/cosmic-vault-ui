@@ -1,3 +1,4 @@
+import { forgetThemePreference } from "@/lib/consent";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { Moon, Sun } from "lucide-react";
@@ -10,7 +11,12 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <button
       type="button"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      onClick={() => {
+        setTheme(isDark ? "light" : "dark");
+        /* next-themes persists on setTheme; drop the key again when the
+           visitor has declined interface preferences. */
+        forgetThemePreference();
+      }}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       title={isDark ? "Light mode" : "Dark mode"}
       className={cn(

@@ -1,5 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
+import { CookieConsent } from "@/components/site/CookieConsent";
 import { MissingConvexConfig } from "@/components/site/MissingConvexConfig";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { PUBLIC_ROUTES } from "@/lib/publicRoutes";
@@ -227,6 +228,7 @@ createRoot(document.getElementById("root")!).render(
           >
             <BrowserRouter>
               <RouteSyncer />
+              <CookieConsent />
               <Suspense fallback={<RouteLoading />}>
                 <Routes>
                   {/* Public marketing site: one shared shell with mega-menu navigation */}

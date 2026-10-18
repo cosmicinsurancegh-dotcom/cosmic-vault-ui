@@ -173,8 +173,9 @@ export const LEGAL_PAGES: Record<string, LegalPageConfig> = {
         heading: "What is used today",
         bullets: [
           "A session cookie that keeps you signed in after verifying a one-time code. Without it, you would be signed out on every page.",
-          "Browser local storage that remembers your light or dark theme preference.",
+          "Browser local storage that remembers your light or dark theme preference, when you allow interface preferences.",
           "Browser local storage used by the dashboard interface to remember minor interface state, such as a collapsed sidebar.",
+          "A record of the cookie choice you made, kept for 180 days so the question is not asked on every visit.",
         ],
       },
       {
@@ -186,7 +187,8 @@ export const LEGAL_PAGES: Record<string, LegalPageConfig> = {
       {
         heading: "Managing them",
         paragraphs: [
-          "You can clear cookies and site storage at any time in your browser settings. Clearing the session cookie will sign you out, and clearing local storage will reset interface preferences such as the theme.",
+          "The banner that appears on your first visit asks once, then remembers the answer for 180 days. You can change that answer at any time from the cookie settings control in the footer, or from the account menu when you are signed in.",
+          "Choosing essential storage only clears optional interface storage straight away: the theme you are using stays applied for that visit, but it is not remembered next time. You can also clear cookies and site storage at any time in your browser settings. Clearing the session cookie will sign you out.",
         ],
       },
       {

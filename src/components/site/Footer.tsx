@@ -1,5 +1,6 @@
 import { Brand } from "@/components/site/Brand";
 import { Media } from "@/components/site/Media";
+import { requestCookieSettings } from "@/lib/consent";
 import { COVERS } from "@/lib/covers";
 import { coverImage } from "@/lib/imagery";
 import { FOOTER_COLUMNS } from "@/lib/navigation";
@@ -82,6 +83,13 @@ export function Footer() {
             >
               Regulatory information
             </Link>
+            <button
+              type="button"
+              onClick={requestCookieSettings}
+              className="link-slide transition-colors hover:text-bone"
+            >
+              Cookie settings
+            </button>
             <button
               type="button"
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}

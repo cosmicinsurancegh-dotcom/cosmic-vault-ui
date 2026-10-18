@@ -32,6 +32,11 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
+import {
+  forgetThemePreference,
+  preferencesAllowed,
+  requestCookieSettings,
+} from "@/lib/consent";
 import { normalizeRole, STAFF_PERMISSIONS, can, isStaff } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
@@ -44,6 +49,7 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardList,
+  Cookie,
   CreditCard,
   FileText,
   FolderOpen,
@@ -587,6 +593,9 @@ export default function DashboardLayout() {
   }, [groups, location.pathname]);
 
   useEffect(() => {
+    /* The collapsed rail is an optional preference, so it is only remembered
+       when the visitor has allowed interface storage. */
+    if (!preferencesAllowed()) return;
     try {
       window.localStorage.setItem(RAIL_STORAGE_KEY, collapsed ? "1" : "0");
     } catch {
@@ -853,6 +862,10 @@ export default function DashboardLayout() {
                       <Settings2 className="size-3.5" />
                       {staff ? "Workspace settings" : "Profile"}
                     </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => requestCookieSettings()}>
+                      <Cookie className="size-3.5" />
+                      Cookie settings
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onSelect={handleSignOut}>
                       <LogOut className="size-3.5" />
@@ -923,6 +936,7 @@ export default function DashboardLayout() {
               value="toggle theme dark light appearance"
               onSelect={() => {
                 setTheme(resolvedTheme === "dark" ? "light" : "dark");
+                forgetThemePreference();
                 setPaletteOpen(false);
               }}
             >
