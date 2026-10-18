@@ -1,5 +1,5 @@
+import AcidSquares from "@/components/reactbits/AcidSquares";
 import { Brand } from "@/components/site/Brand";
-import { Media } from "@/components/site/Media";
 import { ThemeToggle } from "@/components/site/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,6 @@ import {
 import { Label } from "@/components/ui/label";
 
 import { useAuth } from "@/hooks/use-auth";
-import { IMAGES } from "@/lib/imagery";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -122,42 +121,33 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
   return (
     <main className="min-h-screen bg-background lg:grid lg:grid-cols-[0.92fr_1.08fr]">
       {/* Narrative panel */}
-      <aside className="starfield relative hidden flex-col overflow-hidden bg-[#071227] p-10 text-bone lg:flex xl:p-14">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-24 top-1/4 size-[26rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.28),transparent_66%)]"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-32 -right-20 size-[24rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.14),transparent_68%)]"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute right-[-18%] top-16 size-[26rem] rounded-full border border-white/[0.07]"
-        >
-          <span className="absolute inset-12 rounded-full border border-white/[0.05]" />
-          <span className="absolute -left-1 top-1/2 size-2 rounded-full bg-electric-soft" />
+      <aside className="relative hidden flex-col overflow-hidden bg-[#071227] p-10 text-bone lg:flex xl:p-14">
+        <div aria-hidden="true" className="absolute inset-0">
+          <AcidSquares
+            color="#071227"
+            accentColor="#4c7dff"
+            secondaryColor="#e4d9c4"
+            tileSize={1.15}
+            gap={0.14}
+            roundness={0.28}
+            rotation={35}
+            waves={1}
+            pulse={1}
+            lighting="split"
+            tilt={0.66}
+            grain={0.1}
+            fade={0.22}
+            opacity={0.95}
+            intro
+            mouseInteraction
+          />
         </div>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(7,18,39,0.94)_0%,rgba(7,18,39,0.55)_38%,rgba(7,18,39,0.12)_66%,rgba(7,18,39,0.55)_100%)]"
+        />
 
         <Brand href="/" className="relative text-bone" />
-
-        <div className="group relative mt-8 min-h-[12rem] flex-1 overflow-hidden rounded-[1.5rem] border border-white/10">
-          <Media
-            image={IMAGES.auth}
-            overlay="cosmic"
-            parallax={18}
-            eager
-            className="absolute inset-0"
-          />
-          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
-            <p className="text-[0.58rem] font-semibold uppercase tracking-[0.24em] text-bone/75">
-              Insurance for the long horizon
-            </p>
-            <span className="grid size-7 shrink-0 place-items-center rounded-full border border-white/25 bg-white/10 text-bone backdrop-blur transition-transform duration-500 group-hover:rotate-45">
-              <ArrowRight className="size-3.5" />
-            </span>
-          </div>
-        </div>
 
         <div className="relative mt-auto pt-8">
           <p className="flex items-center gap-3 text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-bone/45">
@@ -195,7 +185,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
           </div>
         </div>
 
-        <div className="relative mt-10 flex items-center justify-between border-t border-white/10 pt-5 text-[0.62rem] uppercase tracking-[0.16em] text-bone/35">
+        <div className="relative mt-10 flex items-center justify-between border-t border-white/10 pt-5 text-[0.62rem] uppercase tracking-[0.16em] text-bone/45">
           <span>Email code sign-in, no password</span>
           <span>Demonstration platform</span>
         </div>
