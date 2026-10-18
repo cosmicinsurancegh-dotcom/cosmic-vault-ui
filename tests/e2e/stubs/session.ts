@@ -43,6 +43,9 @@ export const ADMIN_SESSION: E2ESession = {
 
 export const VALID_CODE = "123456";
 
+/** The only password the stub accepts for `signIn("password", ...)`. */
+export const TEST_PASSWORD = "correct horse battery";
+
 let session: E2ESession | null =
   typeof window === "undefined" ? null : (window.__E2E_SESSION__ ?? null);
 

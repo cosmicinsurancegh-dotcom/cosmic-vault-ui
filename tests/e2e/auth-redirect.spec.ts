@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
-import { CUSTOMER_SESSION, VALID_CODE } from "./stubs/session";
+import { CUSTOMER_SESSION, TEST_PASSWORD, VALID_CODE } from "./stubs/session";
 
 async function pathname(page: Page) {
   return new URL(page.url()).pathname;
@@ -19,6 +19,10 @@ async function enterCode(page: Page, code: string) {
   await otp.click();
   await otp.pressSequentially(code);
   await page.getByRole("button", { name: /verify & enter the vault/i }).click();
+}
+
+async function choosePasswordMethod(page: Page) {
+  await page.getByRole("button", { name: "Password", exact: true }).click();
 }
 
 test.describe("sign-in redirect flow", () => {
@@ -62,6 +66,60 @@ test.describe("sign-in redirect flow", () => {
     await expect(
       page.getByRole("button", { name: /sign out/i }).first(),
     ).toBeVisible();
+  });
+
+  test("the password method signs in with the account password", async ({
+    page,
+  }) => {
+    await page.goto("/auth?returnTo=%2Fdashboard%2Fpolicies");
+    await choosePasswordMethod(page);
+
+    await page.getByLabel("Email address").fill("ada@example.com");
+    await page.getByLabel("Password", { exact: true }).fill(TEST_PASSWORD);
+    await page.getByRole("button", { name: /sign in with password/i }).click();
+
+    await expect.poll(() => pathname(page)).toBe("/dashboard/policies");
+    await expect(
+      page.getByRole("button", { name: /sign out/i }).first(),
+    ).toBeVisible();
+  });
+
+  test("a password account confirms an emailed code before it is usable", async ({
+    page,
+  }) => {
+    await page.goto("/auth?returnTo=%2Fdashboard");
+    await page.getByRole("button", { name: /create account/i }).click();
+    await choosePasswordMethod(page);
+
+    await page.getByLabel("Email address").fill("new@example.com");
+    await page.getByLabel("Password", { exact: true }).fill(TEST_PASSWORD);
+    await page.getByLabel("Confirm password").fill(TEST_PASSWORD);
+    await page.getByRole("button", { name: /create my account/i }).click();
+
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      /check your inbox/i,
+    );
+    await expect.poll(() => pathname(page)).toBe("/auth");
+    expect(new URL(page.url()).searchParams.get("returnTo")).toBe("/dashboard");
+
+    await enterCode(page, VALID_CODE);
+    await expect.poll(() => pathname(page)).toBe("/dashboard");
+  });
+
+  test("a wrong password keeps the visitor on /auth with a helpful message", async ({
+    page,
+  }) => {
+    await page.goto("/auth");
+    await choosePasswordMethod(page);
+
+    await page.getByLabel("Email address").fill("ada@example.com");
+    await page.getByLabel("Password", { exact: true }).fill("not the password");
+    await page.getByRole("button", { name: /sign in with password/i }).click();
+
+    await expect(
+      page.getByText(/email and password don't match/i),
+    ).toBeVisible();
+    await expect.poll(() => pathname(page)).toBe("/auth");
   });
 
   test("a wrong code keeps the visitor on /auth with returnTo intact", async ({

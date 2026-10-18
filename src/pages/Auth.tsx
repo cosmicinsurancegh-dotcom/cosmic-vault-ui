@@ -297,7 +297,12 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
       }
       navigate(redirect);
     } catch (error) {
-      console.error("Verification error:", error);
+      console.error(
+        step.intent === "email-code"
+          ? "OTP verification error:"
+          : "Password verification error:",
+        error,
+      );
       setError(
         step.intent === "email-code"
           ? "The verification code you entered is incorrect."
