@@ -1,6 +1,7 @@
+import AcidSquares from "@/components/reactbits/AcidSquares";
 import { CtaButton } from "@/components/site/Cta";
 import { Media } from "@/components/site/Media";
-import { ADVISOR_FACES, coverImage } from "@/lib/imagery";
+import { ADVISOR_FACES } from "@/lib/imagery";
 import { SectionLabel } from "./SectionLabel";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -295,35 +296,30 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
           }}
           className="group/hero relative isolate flex w-full touch-pan-y flex-col overflow-hidden bg-[#071227] text-bone outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          {/* Slide photography, stacked and cross-faded */}
-          <div aria-hidden="true" className="absolute inset-0 -z-10">
-            {slides.map((item, itemIndex) => {
-              const active = itemIndex === index;
-              return (
-                <motion.div
-                  key={item.slug}
-                  className="absolute inset-0"
-                  initial={false}
-                  animate={{
-                    opacity: active ? 1 : 0,
-                    scale: active && !reduceMotion ? 1.05 : 1,
-                  }}
-                  transition={{
-                    opacity: { duration: reduceMotion ? 0 : 1.1, ease: "easeOut" },
-                    scale: { duration: 10, ease: "linear" },
-                  }}
-                >
-                  <Media
-                    image={coverImage(item.slug)}
-                    eager={itemIndex === 0}
-                    className="size-full"
-                  />
-                </motion.div>
-              );
-            })}
+          {/* The vault surface: one acid-tile field behind every cover line,
+              lit from either side and dimmed at the foot so the copy holds. */}
+          <div aria-hidden="true" className="absolute inset-0 -z-10 overflow-hidden">
+            <AcidSquares
+              color="#071227"
+              accentColor="#4c7dff"
+              secondaryColor="#e4d9c4"
+              tileSize={1.15}
+              gap={0.14}
+              roundness={0.28}
+              rotation={35}
+              waves={1}
+              pulse={1}
+              lighting="split"
+              tilt={0.68}
+              grain={0.1}
+              fade={0.2}
+              opacity={0.95}
+              intro
+              mouseInteraction
+            />
 
-            <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(4,16,31,0.97)_0%,rgba(4,16,31,0.9)_34%,rgba(4,16,31,0.75)_62%,rgba(4,16,31,0.6)_100%)]" />
-            <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,rgba(4,16,31,0.9)_0%,rgba(4,16,31,0.5)_42%,rgba(4,16,31,0.05)_76%)] lg:block" />
+            <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(4,16,31,0.92)_0%,rgba(4,16,31,0.5)_34%,rgba(4,16,31,0.14)_64%,rgba(4,16,31,0.55)_100%)]" />
+            <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,rgba(4,16,31,0.88)_0%,rgba(4,16,31,0.4)_44%,transparent_74%)] lg:block" />
             <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#04101f]/85 to-transparent sm:h-32" />
           </div>
 
