@@ -59,7 +59,7 @@ export function Process({ onQuote }: { onQuote: () => void }) {
             </div>
 
             <div className="relative mx-auto max-w-2xl text-center">
-              <SectionLabel index="04" className="justify-center text-bone/45">
+              <SectionLabel className="justify-center text-bone/45">
                 The process
               </SectionLabel>
               <h2 className="mt-5 text-balance text-[clamp(2.1rem,4.7vw,3.7rem)] font-semibold leading-[1.02] tracking-[-0.045em]">

@@ -60,7 +60,7 @@ export function Testimonials() {
       <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
         <div className="grid gap-6 lg:grid-cols-12 lg:items-end">
           <Reveal className="lg:col-span-7">
-            <SectionLabel index="06" className="text-ink/65">
+            <SectionLabel className="text-ink/65">
               Our commitments
             </SectionLabel>
             <h2 className="mt-4 text-balance text-[clamp(2.1rem,4.5vw,3.6rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">

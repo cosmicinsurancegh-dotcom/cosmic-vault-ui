@@ -10,8 +10,6 @@ import {
   ArrowRight,
   ArrowUpRight,
   Check,
-  Pause,
-  Play,
   ShieldCheck,
 } from "lucide-react";
 import {
@@ -124,12 +122,9 @@ const slides: Slide[] = [
   },
 ];
 
-const pad = (value: number) => String(value + 1).padStart(2, "0");
-
 export function Hero({ onQuote }: { onQuote: () => void }) {
   const reduceMotion = useReducedMotion();
   const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [keyboardFocus, setKeyboardFocus] = useState(false);
   const [pageHidden, setPageHidden] = useState(false);
@@ -138,29 +133,14 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const elapsedRef = useRef(0);
   const swipeRef = useRef<{ x: number; y: number } | null>(null);
-  const suppressHoverRef = useRef(false);
 
   const slide = slides[index];
-  const playing =
-    !paused && !hovered && !keyboardFocus && !pageHidden && !reduceMotion;
+  const playing = !hovered && !keyboardFocus && !pageHidden && !reduceMotion;
 
   const go = useCallback((next: number) => {
     elapsedRef.current = 0;
     setIndex(((next % slides.length) + slides.length) % slides.length);
   }, []);
-
-  /* Resuming from the explicit control should also lift the temporary hover
-     and focus holds, otherwise the show appears not to restart until the
-     pointer leaves the panel. */
-  const togglePlayback = () => {
-    const next = !paused;
-    setPaused(next);
-    if (!next) {
-      suppressHoverRef.current = true;
-      setHovered(false);
-      setKeyboardFocus(false);
-    }
-  };
 
   /* Pause the show while the tab is in the background. */
   useEffect(() => {
@@ -282,13 +262,8 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
           onPointerCancel={() => (swipeRef.current = null)}
-          onMouseEnter={() => {
-            if (!suppressHoverRef.current) setHovered(true);
-          }}
-          onMouseLeave={() => {
-            suppressHoverRef.current = false;
-            setHovered(false);
-          }}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
           onFocusCapture={(event) => {
             /* Only a keyboard focus should stop the show — a click should not. */
             if ((event.target as HTMLElement).matches?.(":focus-visible")) {
@@ -354,7 +329,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                       ease: [0.22, 1, 0.36, 1],
                     }}
                   >
-                    <SectionLabel index={pad(index)} className="text-bone/70">
+                    <SectionLabel className="text-bone/70">
                       {slide.kicker}
                     </SectionLabel>
 
@@ -430,32 +405,6 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
             </div>
           </div>
 
-          {/* Directly arranged cover — its own line above the rail, with the
-              play/pause control beside it and outside the arrow controls. */}
-          <div className="relative z-10 mx-auto flex w-full max-w-[1180px] items-center justify-end gap-2.5 px-5 pb-3 sm:gap-3 sm:px-8 sm:pb-4">
-            <p className="flex items-center gap-2 whitespace-nowrap text-[0.5rem] font-semibold uppercase leading-none tracking-[0.16em] text-bone/50 sm:text-[0.55rem] sm:tracking-[0.2em]">
-              <span
-                aria-hidden="true"
-                className="hidden h-px w-6 bg-gradient-to-r from-transparent to-electric-soft/70 sm:block"
-              />
-              Directly arranged cover
-            </p>
-            {!reduceMotion && (
-              <button
-                type="button"
-                onClick={togglePlayback}
-                aria-label={paused ? "Play slide show" : "Pause slide show"}
-                className="grid size-9 place-items-center rounded-full border border-white/15 bg-white/[0.06] text-bone/70 backdrop-blur-md transition-colors hover:border-white/35 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                {paused ? (
-                  <Play className="size-3.5" />
-                ) : (
-                  <Pause className="size-3.5" />
-                )}
-              </button>
-            )}
-          </div>
-
           {/* Chapter rail */}
           <div className="relative z-10 border-t border-white/10 bg-[#071227]/40 py-3.5 backdrop-blur-md">
             <div className="mx-auto flex w-full max-w-[1180px] items-center gap-3 px-5 sm:px-8">
@@ -496,14 +445,6 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                       )}
                       <span
                         className={cn(
-                          "relative text-[0.62rem] font-semibold tabular-nums transition-colors",
-                          active ? "text-electric-soft" : "text-bone/40",
-                        )}
-                      >
-                        {pad(itemIndex)}
-                      </span>
-                      <span
-                        className={cn(
                           "relative text-[0.78rem] transition-colors",
                           active
                             ? "font-medium text-bone"
@@ -517,12 +458,8 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                 })}
               </div>
 
-              {/* Slide controls — counter and arrows only. */}
+              {/* Slide controls */}
               <div className="flex shrink-0 items-center gap-3 border-l border-white/10 pl-3 sm:pl-4">
-                <span className="hidden font-display text-sm italic tabular-nums text-bone/70 sm:block">
-                  {pad(index)}{" "}
-                  <span className="text-bone/40">/ {pad(slides.length - 1)}</span>
-                </span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"

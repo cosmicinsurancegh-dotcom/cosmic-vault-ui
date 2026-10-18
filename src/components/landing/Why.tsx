@@ -48,7 +48,7 @@ export function Why() {
       <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
         <Reveal className="mx-auto max-w-2xl text-center">
           <p className="text-[0.66rem] font-semibold uppercase tracking-[0.30em] text-ink/65">
-            02 — How we work
+            How we work
           </p>
           <h2 className="mt-4 text-balance text-[clamp(2.1rem,4.6vw,3.7rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
             Why we do it <span className="text-electric">this way.</span>
@@ -162,7 +162,7 @@ export function Why() {
                         {shown.caption}
                       </p>
                       <p className="mt-2 text-[0.65rem] uppercase tracking-[0.2em] text-bone/60">
-                        0{visual + 1} — How we work
+                        How we work
                       </p>
                     </motion.div>
                   </AnimatePresence>

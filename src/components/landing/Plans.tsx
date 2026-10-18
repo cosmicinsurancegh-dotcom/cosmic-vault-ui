@@ -40,7 +40,7 @@ export function Plans({ onQuote }: { onQuote: () => void }) {
       <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
         <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
           <Reveal className="lg:col-span-7">
-            <SectionLabel index="05" className="text-ink/65">
+            <SectionLabel className="text-ink/65">
               Pricing
             </SectionLabel>
             <h2 className="mt-4 max-w-xl text-balance text-[clamp(2.1rem,4.5vw,3.6rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">

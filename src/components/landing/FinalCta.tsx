@@ -39,7 +39,7 @@ export function FinalCta({ onQuote }: { onQuote: () => void }) {
 
             <div className="relative grid gap-10 lg:grid-cols-[1.25fr_1fr] lg:items-center">
               <div>
-                <SectionLabel index="07" className="text-bone/55">
+                <SectionLabel className="text-bone/55">
                   Your next chapter
                 </SectionLabel>
                 <h2 className="mt-5 max-w-xl text-balance text-[clamp(2.2rem,4.6vw,3.7rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-bone">

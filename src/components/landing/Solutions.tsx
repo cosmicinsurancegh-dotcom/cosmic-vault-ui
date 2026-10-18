@@ -32,7 +32,7 @@ export function Solutions() {
       <div className="relative mx-auto max-w-[1180px] px-5 sm:px-8">
         <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
           <Reveal className="lg:col-span-7">
-            <SectionLabel index="03" className="text-ink/65">
+            <SectionLabel className="text-ink/65">
               Coverage
             </SectionLabel>
             <h2 className="mt-4 text-balance text-[clamp(2.15rem,4.7vw,3.8rem)] font-semibold leading-[1.01] tracking-[-0.045em] text-ink">

@@ -9,7 +9,7 @@ export function Story() {
     <section id="about" className="relative mt-24 scroll-mt-28 sm:mt-32">
       <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
         <Reveal>
-          <SectionLabel index="01" className="text-ink/65">
+          <SectionLabel className="text-ink/65">
             Our promise
           </SectionLabel>
         </Reveal>
