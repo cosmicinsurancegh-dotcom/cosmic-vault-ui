@@ -135,7 +135,6 @@ export function HeroKeepsake({ onQuote }: HeroVariantProps) {
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -left-24 top-[18%] hidden size-[24rem] rotate-[16deg] rounded-[4px] border border-ink/[0.04] bg-card/60 shadow-[0_60px_120px_-90px_rgba(8,18,39,0.6)] sm:block" />
         <div className="absolute -left-10 top-[34%] hidden size-[15rem] -rotate-6 rounded-[4px] border border-ink/[0.04] bg-card/50 sm:block" />
-        <div className="absolute right-[42%] top-0 size-[26rem] rounded-full bg-primary/[0.05] blur-3xl" />
         <div className="absolute bottom-0 left-0 size-[22rem] rounded-full bg-halo/[0.12] blur-3xl" />
       </div>
 
