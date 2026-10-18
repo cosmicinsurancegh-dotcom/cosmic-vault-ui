@@ -397,10 +397,6 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
           </div>
         </div>
 
-        <div className="relative mt-10 flex items-center justify-between border-t border-white/10 pt-5 text-[0.62rem] uppercase tracking-[0.16em] text-bone/45">
-          <span>Email code or password sign-in</span>
-          <span>Demonstration platform</span>
-        </div>
       </aside>
 
       {/* Form panel */}
