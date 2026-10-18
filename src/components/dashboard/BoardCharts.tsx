@@ -108,10 +108,10 @@ function LegendChip({
   value?: string;
 }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-line/80 bg-ink/[0.02] px-2.5 py-1 text-[0.62rem] font-medium text-muted-foreground">
+    <span className="inline-flex items-center gap-2 rounded-[4px] border border-line/80 bg-ink/[0.02] px-2.5 py-1 text-[0.62rem] font-medium text-muted-foreground">
       <span
         aria-hidden="true"
-        className="size-1.5 rounded-full"
+        className="size-1.5 rounded-[4px]"
         style={{ background: color }}
       />
       {label}
@@ -144,7 +144,7 @@ export function PortfolioChart({
       subtitle={`Premium in force against claims incurred · last ${months} months, ${currency}`}
       badge={
         hasData ? (
-          <span className="rounded-full border border-primary/15 bg-primary/[0.06] px-2 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-primary">
+          <span className="rounded-[4px] border border-primary/15 bg-primary/[0.06] px-2 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-primary">
             Live
           </span>
         ) : undefined
@@ -320,7 +320,7 @@ export function LossRatioChart({
       badge={
         hasClaims ? (
           <span
-            className="rounded-full border px-2 py-0.5 text-[0.58rem] font-semibold"
+            className="rounded-[4px] border px-2 py-0.5 text-[0.58rem] font-semibold"
             style={{
               borderColor: `color-mix(in oklab, ${tone} 30%, transparent)`,
               background: `color-mix(in oklab, ${tone} 10%, transparent)`,
@@ -550,7 +550,7 @@ export function ClaimsMixChart({
               <li key={point.key} className="flex items-center gap-2.5">
                 <span
                   aria-hidden="true"
-                  className="size-2 shrink-0 rounded-full"
+                  className="size-2 shrink-0 rounded-[4px]"
                   style={{
                     background: MIX_COLORS[point.key] ?? "var(--chart-1)",
                   }}

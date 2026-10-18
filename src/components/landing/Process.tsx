@@ -46,18 +46,18 @@ export function Process({ onQuote }: { onQuote: () => void }) {
             />
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute -left-24 -top-24 size-[26rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.28),transparent_65%)]"
+              className="pointer-events-none absolute -left-24 -top-24 size-[26rem] rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.28),transparent_65%)]"
             />
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute -bottom-32 -right-10 size-[24rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.13),transparent_65%)]"
+              className="pointer-events-none absolute -bottom-32 -right-10 size-[24rem] rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.13),transparent_65%)]"
             />
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute -right-20 top-1/2 hidden size-[24rem] -translate-y-1/2 rounded-full border border-white/[0.07] lg:block"
+              className="pointer-events-none absolute -right-20 top-1/2 hidden size-[24rem] -translate-y-1/2 rounded-[4px] border border-white/[0.07] lg:block"
             >
-              <span className="absolute inset-12 rounded-full border border-white/[0.05]" />
-              <span className="absolute left-1/2 top-0 size-1.5 -translate-x-1/2 rounded-full bg-electric-soft" />
+              <span className="absolute inset-12 rounded-[4px] border border-white/[0.05]" />
+              <span className="absolute left-1/2 top-0 size-1.5 -translate-x-1/2 rounded-[4px] bg-electric-soft" />
             </div>
 
             <div className="relative mx-auto max-w-2xl text-center">
@@ -78,7 +78,7 @@ export function Process({ onQuote }: { onQuote: () => void }) {
               {steps.map((step, index) => (
                 <Reveal key={step.number} delay={index * 0.1}>
                   <div className="group relative border-t border-white/12 pt-6">
-                    <span className="absolute -top-[3px] left-0 size-1.5 rounded-full bg-electric-soft transition-transform duration-500 group-hover:scale-150" />
+                    <span className="absolute -top-[3px] left-0 size-1.5 rounded-[4px] bg-electric-soft transition-transform duration-500 group-hover:scale-150" />
                     <div className="flex items-baseline justify-between">
                       <span className="font-display text-5xl italic leading-none text-bone/20 transition-colors duration-500 group-hover:text-electric-soft sm:text-6xl">
                         {step.number}

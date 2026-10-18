@@ -84,7 +84,7 @@ export function PaymentsPage() {
             aria-label="Filter transactions"
             value={status}
             onChange={(event) => setStatus(event.target.value)}
-            className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+            className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
           >
             {FILTERS.map((value) => (
               <option key={value} value={value}>
@@ -144,7 +144,7 @@ export function PaymentsPage() {
                     ) : (
                       <Button
                         size="sm"
-                        className="mt-2 h-8 rounded-full px-3"
+                        className="mt-2 h-8 rounded-[4px] px-3"
                         disabled={pending === application._id}
                         onClick={async () => {
                           setPending(application._id);
@@ -190,7 +190,7 @@ export function PaymentsPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="mt-2 h-8 rounded-full bg-transparent px-3"
+                    className="mt-2 h-8 rounded-[4px] bg-transparent px-3"
                     disabled={pending === request._id}
                     onClick={async () => {
                       setPending(request._id);
@@ -290,7 +290,7 @@ export function PaymentsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 rounded-full bg-transparent px-3"
+                        className="h-8 rounded-[4px] bg-transparent px-3"
                         onClick={() => setSelectedId(transaction._id)}
                       >
                         Details
@@ -396,7 +396,7 @@ function TransactionDialog({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="rounded-full bg-transparent"
+                    className="rounded-[4px] bg-transparent"
                     disabled={pending || message.trim().length < 10}
                     onClick={async () => {
                       setPending(true);
@@ -422,7 +422,7 @@ function TransactionDialog({
                 </div>
               </div>
               <div className="flex justify-end">
-                <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>
+                <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>
                   Close
                 </Button>
               </div>
@@ -455,7 +455,7 @@ export function DocumentsPage() {
             aria-label="Filter documents"
             value={category}
             onChange={(event) => setCategory(event.target.value)}
-            className="h-9 rounded-full border border-line bg-card px-3 text-xs capitalize text-ink"
+            className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs capitalize text-ink"
           >
             {categories.map((value) => (
               <option key={value} value={value}>
@@ -478,7 +478,7 @@ export function DocumentsPage() {
         <div className="grid gap-3 sm:grid-cols-2">
           {filtered.map((document) => (
             <Panel key={document._id} className="flex items-start gap-3 p-4">
-              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-ice text-primary">
+              <span className="grid size-9 shrink-0 place-items-center rounded-[4px] bg-ice text-primary">
                 <FileText className="size-4" />
               </span>
               <div className="min-w-0 flex-1">

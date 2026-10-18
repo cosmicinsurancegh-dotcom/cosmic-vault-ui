@@ -66,7 +66,7 @@ export default function AdminBrokersPage() {
         description="Brokers see only customers explicitly assigned to their brokerage. They cannot decide underwriting or claims."
         actions={
           canManage ? (
-            <Button className="h-10 rounded-full px-5" onClick={() => setCreateOpen(true)}>
+            <Button className="h-10 rounded-[4px] px-5" onClick={() => setCreateOpen(true)}>
               <Plus className="size-4" /> Add broker
             </Button>
           ) : undefined
@@ -115,7 +115,7 @@ export default function AdminBrokersPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 rounded-full bg-transparent px-3"
+                      className="h-8 rounded-[4px] bg-transparent px-3"
                       onClick={() => setAssignmentsFor({ profileId: broker._id, orgName: broker.orgName })}
                     >
                       Manage
@@ -177,8 +177,8 @@ export default function AdminBrokersPage() {
                       }
                       className={
                         checked
-                          ? "rounded-full bg-primary px-3 py-1.5 text-[0.62rem] font-medium text-primary-foreground"
-                          : "rounded-full border border-line px-3 py-1.5 text-[0.62rem] font-medium text-muted-foreground"
+                          ? "rounded-[4px] bg-primary px-3 py-1.5 text-[0.62rem] font-medium text-primary-foreground"
+                          : "rounded-[4px] border border-line px-3 py-1.5 text-[0.62rem] font-medium text-muted-foreground"
                       }
                     >
                       {country.code}
@@ -197,9 +197,9 @@ export default function AdminBrokersPage() {
             </label>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" className="rounded-full" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button variant="outline" className="rounded-[4px]" onClick={() => setCreateOpen(false)}>Cancel</Button>
             <Button
-              className="rounded-full"
+              className="rounded-[4px]"
               disabled={pending || !form.email || !form.orgName || !form.contactName || form.countries.length === 0}
               onClick={async () => {
                 setPending(true);
@@ -307,7 +307,7 @@ function AssignmentsDialog({
               </select>
               <Button
                 size="sm"
-                className="h-9 rounded-full"
+                className="h-9 rounded-[4px]"
                 disabled={pending || !customerId || !brokerUserId}
                 onClick={async () => {
                   setPending(true);
@@ -350,7 +350,7 @@ function AssignmentsDialog({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 rounded-full border-destructive/40 bg-transparent text-destructive"
+                        className="h-8 rounded-[4px] border-destructive/40 bg-transparent text-destructive"
                         disabled={pending || reason.trim().length < 3}
                         onClick={async () => {
                           setPending(true);
@@ -388,7 +388,7 @@ function AssignmentsDialog({
               <Button
                 size="sm"
                 variant="outline"
-                className="h-8 rounded-full bg-transparent"
+                className="h-8 rounded-[4px] bg-transparent"
                 disabled={pending || !broker}
                 onClick={async () => {
                   setPending(true);
@@ -407,7 +407,7 @@ function AssignmentsDialog({
               <Button
                 size="sm"
                 variant="outline"
-                className="h-8 rounded-full border-destructive/40 bg-transparent text-destructive"
+                className="h-8 rounded-[4px] border-destructive/40 bg-transparent text-destructive"
                 disabled={pending || reason.trim().length < 3}
                 onClick={async () => {
                   setPending(true);
@@ -427,7 +427,7 @@ function AssignmentsDialog({
           </section>
 
           <div className="flex justify-end">
-            <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>Close</Button>
+            <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>Close</Button>
           </div>
         </div>
       </DialogContent>

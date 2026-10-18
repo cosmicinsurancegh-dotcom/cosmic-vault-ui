@@ -284,7 +284,7 @@ function SidebarBody({
       onClick={onSearch}
       aria-label="Search workspace"
       className={cn(
-        "mt-5 flex h-9 items-center rounded-full border border-line bg-card text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+        "mt-5 flex h-9 items-center rounded-[4px] border border-line bg-card text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
         collapsed ? "mx-auto w-10 justify-center" : "w-full gap-2 px-3",
       )}
     >
@@ -343,7 +343,7 @@ function SidebarBody({
                 onClick={onToggle}
                 aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                 aria-expanded={!collapsed}
-                className="grid size-8 shrink-0 place-items-center rounded-full border border-line bg-card text-ink/50 transition-colors hover:border-primary/35 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                className="grid size-8 shrink-0 place-items-center rounded-[4px] border border-line bg-card text-ink/50 transition-colors hover:border-primary/35 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 {collapsed ? (
                   <PanelLeftOpen className="size-3.5" />
@@ -430,7 +430,7 @@ function SidebarBody({
                         {!collapsed && isActive && (
                           <span
                             aria-hidden="true"
-                            className="ml-auto size-1.5 rounded-full bg-primary-foreground/70"
+                            className="ml-auto size-1.5 rounded-[4px] bg-primary-foreground/70"
                           />
                         )}
                       </>
@@ -473,7 +473,7 @@ function SidebarBody({
           </Tooltip>
         ) : (
           <div className="starfield relative overflow-hidden rounded-2xl bg-[#071227] p-3.5 text-bone">
-            <span className="pointer-events-none absolute -right-8 -top-10 size-24 rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.35),transparent_65%)]" />
+            <span className="pointer-events-none absolute -right-8 -top-10 size-24 rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.35),transparent_65%)]" />
             <p className="relative text-[0.52rem] font-semibold uppercase tracking-[0.22em] text-bone/45">
               Concierge
             </p>
@@ -499,7 +499,7 @@ function SidebarBody({
         >
           <Tooltip delayDuration={180}>
             <TooltipTrigger asChild>
-              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-[0.62rem] font-semibold text-primary">
+              <span className="grid size-8 shrink-0 place-items-center rounded-[4px] bg-primary/10 text-[0.62rem] font-semibold text-primary">
                 {initials(userName || userEmail)}
               </span>
             </TooltipTrigger>
@@ -524,7 +524,7 @@ function SidebarBody({
                 type="button"
                 onClick={onSignOut}
                 aria-label="Sign out"
-                className="grid size-7 shrink-0 place-items-center rounded-full text-ink/40 transition-colors hover:bg-ink/[0.05] hover:text-ink"
+                className="grid size-7 shrink-0 place-items-center rounded-[4px] text-ink/40 transition-colors hover:bg-ink/[0.05] hover:text-ink"
               >
                 <LogOut className="size-3.5" />
               </button>
@@ -677,7 +677,7 @@ export default function DashboardLayout() {
                   <button
                     type="button"
                     aria-label="Open dashboard menu"
-                    className="grid size-9 shrink-0 place-items-center rounded-full border border-line text-ink lg:hidden"
+                    className="grid size-9 shrink-0 place-items-center rounded-[4px] border border-line text-ink lg:hidden"
                   >
                     <Menu className="size-4" />
                   </button>
@@ -722,7 +722,7 @@ export default function DashboardLayout() {
               <button
                 type="button"
                 onClick={openSearch}
-                className="ml-auto hidden h-9 w-full max-w-[260px] items-center gap-2 rounded-full border border-line bg-card px-3.5 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 md:flex"
+                className="ml-auto hidden h-9 w-full max-w-[260px] items-center gap-2 rounded-[4px] border border-line bg-card px-3.5 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 md:flex"
               >
                 <Search className="size-3.5 shrink-0" />
                 <span>Search workspace</span>
@@ -742,11 +742,11 @@ export default function DashboardLayout() {
                     <button
                       type="button"
                       aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
-                      className="relative grid size-9 place-items-center rounded-full border border-line text-ink transition-colors hover:border-primary/30"
+                      className="relative grid size-9 place-items-center rounded-[4px] border border-line text-ink transition-colors hover:border-primary/30"
                     >
                       <Bell className="size-4" />
                       {unread > 0 && (
-                        <span className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-primary text-[0.52rem] font-semibold text-primary-foreground ring-2 ring-background">
+                        <span className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-[4px] bg-primary text-[0.52rem] font-semibold text-primary-foreground ring-2 ring-background">
                           {unread > 9 ? "9+" : unread}
                         </span>
                       )}
@@ -822,9 +822,9 @@ export default function DashboardLayout() {
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="flex h-9 items-center gap-2 rounded-full border border-line bg-card pl-1 pr-2 text-left transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                      className="flex h-9 items-center gap-2 rounded-[4px] border border-line bg-card pl-1 pr-2 text-left transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     >
-                      <span className="grid size-7 place-items-center rounded-full bg-primary/10 text-[0.58rem] font-semibold text-primary">
+                      <span className="grid size-7 place-items-center rounded-[4px] bg-primary/10 text-[0.58rem] font-semibold text-primary">
                         {initials(userName || userEmail)}
                       </span>
                       <span className="hidden max-w-[110px] truncate text-[0.7rem] font-medium text-ink xl:block">
@@ -879,7 +879,7 @@ export default function DashboardLayout() {
                 </div>
                 <Button
                   onClick={claimAdmin}
-                  className="h-9 shrink-0 rounded-full px-4 text-xs"
+                  className="h-9 shrink-0 rounded-[4px] px-4 text-xs"
                 >
                   Claim super admin
                 </Button>

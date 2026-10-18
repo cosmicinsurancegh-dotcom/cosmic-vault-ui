@@ -377,7 +377,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
 
           <div className="mt-10 max-w-md rounded-2xl border border-white/12 bg-white/[0.035] p-5">
             <div className="flex items-center gap-3">
-              <span className="grid size-9 place-items-center rounded-full border border-white/15 text-electric-soft">
+              <span className="grid size-9 place-items-center rounded-[4px] border border-white/15 text-electric-soft">
                 <ShieldCheck className="size-4" />
               </span>
               <div>
@@ -414,7 +414,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
               onClick={() => navigate("/")}
               className="group inline-flex items-center gap-2 text-xs font-medium text-muted-foreground transition-colors hover:text-ink"
             >
-              <span className="grid size-7 place-items-center rounded-full border border-line transition-colors group-hover:border-ink/30">
+              <span className="grid size-7 place-items-center rounded-[4px] border border-line transition-colors group-hover:border-ink/30">
                 <ArrowLeft className="size-3.5" />
               </span>
               Back to home
@@ -433,7 +433,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.3, ease: "easeOut" }}
                 >
-                  <div className="relative inline-flex items-center rounded-full border border-line bg-card p-1">
+                  <div className="relative inline-flex items-center rounded-[4px] border border-line bg-card p-1">
                     {[
                       { label: "Sign in", value: "signin" as const },
                       { label: "Create account", value: "signup" as const },
@@ -446,7 +446,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                           onClick={() => selectMode(option.value)}
                           aria-pressed={active}
                           className={cn(
-                            "relative rounded-full px-4 py-2 text-xs font-medium transition-colors duration-300",
+                            "relative rounded-[4px] px-4 py-2 text-xs font-medium transition-colors duration-300",
                             active
                               ? "text-primary-foreground"
                               : "text-ink/55 hover:text-ink",
@@ -455,7 +455,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                           {active && (
                             <motion.span
                               layoutId="auth-mode-pill"
-                              className="absolute inset-0 rounded-full bg-primary"
+                              className="absolute inset-0 rounded-[4px] bg-primary"
                               transition={{
                                 type: "spring",
                                 stiffness: 380,
@@ -486,7 +486,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                         : "Use your email and we'll send a six-digit code. No password to remember, no account to remember either."}
                   </p>
 
-                  <div className="mt-6 grid grid-cols-2 gap-1 rounded-full border border-line bg-card p-1">
+                  <div className="mt-6 grid grid-cols-2 gap-1 rounded-[4px] border border-line bg-card p-1">
                     {[
                       { value: "code" as const, label: "Email code", icon: Mail },
                       {
@@ -504,14 +504,14 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                           onClick={() => selectMethod(option.value)}
                           aria-pressed={active}
                           className={cn(
-                            "relative inline-flex items-center justify-center gap-2 rounded-full px-3 py-2 text-xs font-medium transition-colors duration-300",
+                            "relative inline-flex items-center justify-center gap-2 rounded-[4px] px-3 py-2 text-xs font-medium transition-colors duration-300",
                             active ? "text-ink" : "text-ink/50 hover:text-ink",
                           )}
                         >
                           {active && (
                             <motion.span
                               layoutId="auth-method-pill"
-                              className="absolute inset-0 rounded-full bg-muted"
+                              className="absolute inset-0 rounded-[4px] bg-muted"
                               transition={{
                                 type: "spring",
                                 stiffness: 380,
@@ -641,7 +641,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
 
                     <Button
                       type="submit"
-                      className="h-12 w-full rounded-full"
+                      className="h-12 w-full rounded-[4px]"
                       disabled={isLoading}
                     >
                       {isLoading ? (
@@ -679,7 +679,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-12 w-full rounded-full bg-card"
+                    className="h-12 w-full rounded-[4px] bg-card"
                     onClick={handleGuestLogin}
                     disabled={isLoading}
                   >
@@ -822,7 +822,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
 
                     <Button
                       type="submit"
-                      className="mt-6 h-12 w-full rounded-full"
+                      className="mt-6 h-12 w-full rounded-[4px]"
                       disabled={isLoading || otp.length !== 6}
                     >
                       {isLoading ? (

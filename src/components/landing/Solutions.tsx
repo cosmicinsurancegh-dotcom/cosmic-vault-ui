@@ -22,11 +22,11 @@ export function Solutions() {
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-28 -top-32 size-[30rem] rounded-full border border-electric/10"
+        className="pointer-events-none absolute -right-28 -top-32 size-[30rem] rounded-[4px] border border-electric/10"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -left-24 bottom-0 size-[22rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.9),transparent_68%)]"
+        className="pointer-events-none absolute -left-24 bottom-0 size-[22rem] rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.9),transparent_68%)]"
       />
 
       <div className="relative mx-auto max-w-[1180px] px-5 sm:px-8">
@@ -70,7 +70,7 @@ export function Solutions() {
                       overlay="soft"
                       className="aspect-[16/9] w-full"
                     />
-                    <span className="absolute left-5 top-5 grid size-11 place-items-center rounded-full bg-background/92 text-primary shadow-sm backdrop-blur transition-colors duration-500 group-hover:bg-primary group-hover:text-primary-foreground sm:left-6">
+                    <span className="absolute left-5 top-5 grid size-11 place-items-center rounded-[4px] bg-background/92 text-primary shadow-sm backdrop-blur transition-colors duration-500 group-hover:bg-primary group-hover:text-primary-foreground sm:left-6">
                       <Icon className="size-5" strokeWidth={1.8} />
                     </span>
                     <span className="absolute right-5 top-5 text-[0.62rem] font-semibold tracking-[0.22em] text-bone/75 sm:right-6">
@@ -90,7 +90,7 @@ export function Solutions() {
                       <span className="link-slide text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-ink/60 transition-colors group-hover:text-primary">
                         Explore this cover
                       </span>
-                      <span className="grid size-9 place-items-center rounded-full border border-ink/12 text-ink transition-all duration-500 group-hover:rotate-45 group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
+                      <span className="grid size-9 place-items-center rounded-[4px] border border-ink/12 text-ink transition-all duration-500 group-hover:rotate-45 group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
                         <ArrowUpRight className="size-4" />
                       </span>
                     </span>
@@ -115,7 +115,7 @@ export function Solutions() {
               className="group inline-flex items-center gap-2 text-sm font-medium text-electric"
             >
               <span className="link-slide">Understanding your coverage</span>
-              <span className="grid size-7 place-items-center rounded-full bg-electric text-white transition-transform duration-300 group-hover:rotate-45">
+              <span className="grid size-7 place-items-center rounded-[4px] bg-electric text-white transition-transform duration-300 group-hover:rotate-45">
                 <ArrowUpRight className="size-3.5" />
               </span>
             </Link>

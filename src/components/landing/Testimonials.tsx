@@ -95,7 +95,7 @@ export function Testimonials() {
                 </AnimatePresence>
 
                 <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-5">
-                  <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-bone backdrop-blur">
+                  <span className="rounded-[4px] border border-white/20 bg-white/10 px-2.5 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-bone backdrop-blur">
                     On the record
                   </span>
                   <span className="font-display text-sm italic text-bone/70">
@@ -158,7 +158,7 @@ export function Testimonials() {
                         aria-label={`Show ${entry.label}`}
                         aria-current={dotIndex === index}
                         className={cn(
-                          "h-1.5 rounded-full transition-all duration-300",
+                          "h-1.5 rounded-[4px] transition-all duration-300",
                           dotIndex === index
                             ? "w-7 bg-electric"
                             : "w-1.5 bg-ink/15 hover:bg-ink/30",
@@ -171,7 +171,7 @@ export function Testimonials() {
                       type="button"
                       onClick={() => go(-1)}
                       aria-label="Previous commitment"
-                      className="press grid size-9 place-items-center rounded-full border border-line text-ink/60 transition-colors hover:border-ink/30 hover:text-ink"
+                      className="press grid size-9 place-items-center rounded-[4px] border border-line text-ink/60 transition-colors hover:border-ink/30 hover:text-ink"
                     >
                       <ArrowLeft className="size-4" />
                     </button>
@@ -179,7 +179,7 @@ export function Testimonials() {
                       type="button"
                       onClick={() => go(1)}
                       aria-label="Next commitment"
-                      className="press grid size-9 place-items-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
+                      className="press grid size-9 place-items-center rounded-[4px] bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
                     >
                       <ArrowRight className="size-4" />
                     </button>

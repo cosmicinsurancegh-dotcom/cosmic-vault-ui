@@ -99,7 +99,7 @@ export function DashSidebar({
             onClick={onToggle}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-expanded={!collapsed}
-            className="grid size-8 shrink-0 place-items-center rounded-full border border-line text-ink/50 transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="grid size-8 shrink-0 place-items-center rounded-[4px] border border-line text-ink/50 transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             <motion.span
               animate={{ rotate: collapsed ? 180 : 0 }}
@@ -162,7 +162,7 @@ export function DashSidebar({
                 {showBadge && !collapsed && (
                   <span
                     className={cn(
-                      "ml-auto rounded-full px-2 py-0.5 text-[0.6rem] font-semibold tabular-nums",
+                      "ml-auto rounded-[4px] px-2 py-0.5 text-[0.6rem] font-semibold tabular-nums",
                       active
                         ? "bg-primary-foreground/20 text-primary-foreground"
                         : "bg-ink/8 text-ink/60",
@@ -172,7 +172,7 @@ export function DashSidebar({
                   </span>
                 )}
                 {showBadge && collapsed && (
-                  <span className="absolute right-2.5 top-2 size-1.5 rounded-full bg-primary" />
+                  <span className="absolute right-2.5 top-2 size-1.5 rounded-[4px] bg-primary" />
                 )}
               </button>
             );
@@ -226,7 +226,7 @@ export function DashSidebar({
                 transition={{ duration: 0.14 }}
                 className="starfield relative overflow-hidden rounded-2xl bg-[#071227] p-4 text-bone"
               >
-                <span className="absolute -right-6 -top-6 size-20 rounded-full bg-primary/30 blur-2xl" />
+                <span className="absolute -right-6 -top-6 size-20 rounded-[4px] bg-primary/30 blur-2xl" />
                 <p className="text-[0.58rem] font-semibold uppercase tracking-[0.22em] text-bone/45">
                   Concierge
                 </p>
@@ -252,7 +252,7 @@ export function DashSidebar({
             )}
           >
             <span
-              className="grid size-9 shrink-0 place-items-center rounded-full bg-foreground text-[0.68rem] font-semibold text-background"
+              className="grid size-9 shrink-0 place-items-center rounded-[4px] bg-foreground text-[0.68rem] font-semibold text-background"
               title={userName}
             >
               {initials}
@@ -280,7 +280,7 @@ export function DashSidebar({
               type="button"
               onClick={onSignOut}
               aria-label="Sign out"
-              className="grid size-8 shrink-0 place-items-center rounded-full text-ink/45 transition-colors hover:bg-ink/[0.06] hover:text-ink"
+              className="grid size-8 shrink-0 place-items-center rounded-[4px] text-ink/45 transition-colors hover:bg-ink/[0.06] hover:text-ink"
             >
               <LogOut className="size-3.5" />
             </button>

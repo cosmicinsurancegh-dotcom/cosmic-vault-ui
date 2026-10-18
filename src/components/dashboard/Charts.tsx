@@ -52,7 +52,7 @@ function ChartPanel({
             </p>
           </div>
           {badge && (
-            <span className="shrink-0 rounded-full border border-line bg-ink/[0.03] px-2.5 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            <span className="shrink-0 rounded-[4px] border border-line bg-ink/[0.03] px-2.5 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
               {badge}
             </span>
           )}
@@ -218,7 +218,7 @@ export function CoverageMixChart({
                 className="flex items-center gap-3 text-sm"
               >
                 <span
-                  className="size-2.5 shrink-0 rounded-full"
+                  className="size-2.5 shrink-0 rounded-[4px]"
                   style={{ background: `var(--color-${point.key})` }}
                 />
                 <span className="flex-1 text-ink/75">{point.label}</span>

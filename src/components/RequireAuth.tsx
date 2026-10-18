@@ -60,7 +60,7 @@ export function RequireAuth({
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center">
-              <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
+              <div className="mb-4 flex size-12 items-center justify-center rounded-[4px] bg-muted">
                 <Lock className="size-5 text-muted-foreground" />
               </div>
             </div>

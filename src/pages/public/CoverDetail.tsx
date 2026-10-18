@@ -56,7 +56,7 @@ export default function CoverDetail({ slug }: { slug: string }) {
           </>
         }
       >
-        <p className="mt-8 inline-flex items-center gap-2 rounded-full border border-line bg-card px-4 py-2 text-[0.72rem] text-muted-foreground">
+        <p className="mt-8 inline-flex items-center gap-2 rounded-[4px] border border-line bg-card px-4 py-2 text-[0.72rem] text-muted-foreground">
           <ShieldCheck className="size-3.5 text-electric" />
           Configured product: {cover.productName}
         </p>
@@ -109,7 +109,7 @@ export default function CoverDetail({ slug }: { slug: string }) {
                   key={item}
                   className="flex gap-3 border-b border-line pb-4 last:border-b-0"
                 >
-                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-electric" />
+                  <span className="mt-2 size-1.5 shrink-0 rounded-[4px] bg-electric" />
                   <span className="text-[0.88rem] leading-6 text-ink/75">
                     {item}
                   </span>

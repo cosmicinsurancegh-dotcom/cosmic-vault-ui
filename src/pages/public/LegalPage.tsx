@@ -76,7 +76,7 @@ export default function LegalPage({ slug }: { slug: string }) {
                     <ul className="mt-4 space-y-2.5">
                       {section.bullets.map((bullet) => (
                         <li key={bullet} className="flex gap-3">
-                          <span className="mt-2 size-1.5 shrink-0 rounded-full bg-electric/70" />
+                          <span className="mt-2 size-1.5 shrink-0 rounded-[4px] bg-electric/70" />
                           <span className="text-[0.85rem] leading-6 text-muted-foreground">
                             {bullet}
                           </span>

@@ -350,10 +350,10 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                 </CtaButton>
                 <Link
                   to={`/cover/${slide.slug}`}
-                  className="group/explore inline-flex items-center gap-2.5 self-start rounded-full px-2 py-2 text-[0.86rem] font-medium text-bone/70 transition-colors hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:self-auto"
+                  className="group/explore inline-flex items-center gap-2.5 self-start rounded-[4px] px-2 py-2 text-[0.86rem] font-medium text-bone/70 transition-colors hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:self-auto"
                 >
                   <span className="link-slide">Explore this cover</span>
-                  <span className="grid size-8 place-items-center rounded-full border border-white/20 transition-colors group-hover/explore:border-white/45">
+                  <span className="grid size-8 place-items-center rounded-[4px] border border-white/20 transition-colors group-hover/explore:border-white/45">
                     <ArrowUpRight className="size-3.5 transition-transform duration-300 group-hover/explore:-translate-y-0.5 group-hover/explore:translate-x-0.5" />
                   </span>
                 </Link>
@@ -390,7 +390,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                         key={feature}
                         className="flex items-start gap-2.5 text-[0.8rem] leading-5 text-bone/65"
                       >
-                        <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full bg-white/10 text-electric-soft">
+                        <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-[4px] bg-white/10 text-electric-soft">
                           <Check className="size-2.5" strokeWidth={3} />
                         </span>
                         {feature}
@@ -430,7 +430,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                       aria-controls="hero-slide-panel"
                       onClick={() => go(itemIndex)}
                       className={cn(
-                        "group/tab relative flex shrink-0 items-center gap-2.5 rounded-full px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#071227]",
+                        "group/tab relative flex shrink-0 items-center gap-2.5 rounded-[4px] px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#071227]",
                         !active && "hover:bg-white/[0.05]",
                       )}
                     >
@@ -441,7 +441,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                             duration: reduceMotion ? 0 : 0.35,
                             ease: [0.22, 1, 0.36, 1],
                           }}
-                          className="absolute inset-0 rounded-full bg-white/10"
+                          className="absolute inset-0 rounded-[4px] bg-white/10"
                         />
                       )}
                       <span
@@ -466,7 +466,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                     type="button"
                     onClick={() => go(index - 1)}
                     aria-label="Previous cover line"
-                    className="press grid size-9 place-items-center rounded-full border border-white/15 text-bone/65 transition-colors hover:border-white/40 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#071227]"
+                    className="press grid size-9 place-items-center rounded-[4px] border border-white/15 text-bone/65 transition-colors hover:border-white/40 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#071227]"
                   >
                     <ArrowLeft className="size-4" />
                   </button>
@@ -474,7 +474,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                     type="button"
                     onClick={() => go(index + 1)}
                     aria-label="Next cover line"
-                    className="press grid size-9 place-items-center rounded-full border border-white/15 text-bone/65 transition-colors hover:border-white/40 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#071227]"
+                    className="press grid size-9 place-items-center rounded-[4px] border border-white/15 text-bone/65 transition-colors hover:border-white/40 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[#071227]"
                   >
                     <ArrowRight className="size-4" />
                   </button>
@@ -501,7 +501,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
                 <Media
                   key={face.src}
                   image={face}
-                  className="size-6 rounded-full border border-background"
+                  className="size-6 rounded-[4px] border border-background"
                   imgClassName="scale-105"
                 />
               )).reverse()}

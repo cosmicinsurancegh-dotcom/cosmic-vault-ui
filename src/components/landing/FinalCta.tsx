@@ -29,12 +29,12 @@ export function FinalCta({ onQuote }: { onQuote: () => void }) {
 
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute -right-24 -top-24 size-[26rem] rounded-full border border-white/10"
+              className="pointer-events-none absolute -right-24 -top-24 size-[26rem] rounded-[4px] border border-white/10"
             >
-              <span className="absolute inset-10 rounded-full border border-white/[0.07]" />
-              <span className="absolute inset-24 rounded-full border border-white/[0.05]" />
-              <span className="absolute bottom-8 left-6 size-2 animate-[float-soft_7s_ease-in-out_infinite] rounded-full bg-electric-soft" />
-              <span className="absolute right-10 top-1/3 size-1.5 rounded-full bg-halo" />
+              <span className="absolute inset-10 rounded-[4px] border border-white/[0.07]" />
+              <span className="absolute inset-24 rounded-[4px] border border-white/[0.05]" />
+              <span className="absolute bottom-8 left-6 size-2 animate-[float-soft_7s_ease-in-out_infinite] rounded-[4px] bg-electric-soft" />
+              <span className="absolute right-10 top-1/3 size-1.5 rounded-[4px] bg-halo" />
             </div>
 
             <div className="relative grid gap-10 lg:grid-cols-[1.25fr_1fr] lg:items-center">
@@ -65,7 +65,7 @@ export function FinalCta({ onQuote }: { onQuote: () => void }) {
                     to="/support/contact"
                     className="group inline-flex items-center gap-2.5 text-sm font-medium text-bone/70 transition-colors hover:text-bone"
                   >
-                    <span className="grid size-8 place-items-center rounded-full border border-white/20 transition-colors group-hover:border-white/45 group-hover:bg-white/10">
+                    <span className="grid size-8 place-items-center rounded-[4px] border border-white/20 transition-colors group-hover:border-white/45 group-hover:bg-white/10">
                       <MessageCircle className="size-3.5" />
                     </span>
                     <span className="link-slide">Prefer to ask first? Contact support</span>

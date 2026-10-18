@@ -76,7 +76,7 @@ export default function AdminAuditPage() {
                 setPage(1);
               }}
               placeholder="Filter by action (for example policy.issued)"
-              className="h-9 rounded-full bg-card pl-9 text-xs"
+              className="h-9 rounded-[4px] bg-card pl-9 text-xs"
             />
           </div>
           <select
@@ -86,7 +86,7 @@ export default function AdminAuditPage() {
               setEntityType(event.target.value);
               setPage(1);
             }}
-            className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+            className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
           >
             {ENTITY_TYPES.map((value) => (
               <option key={value} value={value}>

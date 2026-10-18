@@ -136,7 +136,7 @@ export function HelpCentre() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Try “excess”, “refund”, “renewal”…"
-              className="h-12 rounded-full bg-card pl-11 pr-11"
+              className="h-12 rounded-[4px] bg-card pl-11 pr-11"
               autoComplete="off"
             />
             {query && (
@@ -144,7 +144,7 @@ export function HelpCentre() {
                 type="button"
                 onClick={() => setQuery("")}
                 aria-label="Clear search"
-                className="absolute right-3 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-ink/[0.05] hover:text-ink"
+                className="absolute right-3 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-[4px] text-muted-foreground transition-colors hover:bg-ink/[0.05] hover:text-ink"
               >
                 <X className="size-3.5" />
               </button>
@@ -194,7 +194,7 @@ export function HelpCentre() {
                 className="flex flex-col rounded-[1.3rem] border border-line bg-card p-6"
               >
                 <div className="flex items-start justify-between gap-4">
-                  <span className="grid size-10 place-items-center rounded-full bg-ice text-primary">
+                  <span className="grid size-10 place-items-center rounded-[4px] bg-ice text-primary">
                     <Icon className="size-4" strokeWidth={1.8} />
                   </span>
                   <span className="text-[0.6rem] uppercase tracking-[0.16em] text-muted-foreground">
@@ -364,7 +364,7 @@ export function Faqs() {
                   updateParams(category, event.target.value);
                 }}
                 placeholder="Search every answer"
-                className="h-12 rounded-full bg-card pl-11"
+                className="h-12 rounded-[4px] bg-card pl-11"
                 autoComplete="off"
               />
             </div>
@@ -379,7 +379,7 @@ export function Faqs() {
                 }}
                 aria-pressed={category === "all"}
                 className={cn(
-                  "rounded-full border px-3.5 py-2 text-[0.75rem] font-medium transition-colors",
+                  "rounded-[4px] border px-3.5 py-2 text-[0.75rem] font-medium transition-colors",
                   category === "all"
                     ? "border-primary/40 bg-primary/10 text-primary"
                     : "border-line bg-card text-ink/60 hover:border-ink/25 hover:text-ink",
@@ -397,7 +397,7 @@ export function Faqs() {
                   }}
                   aria-pressed={category === item}
                   className={cn(
-                    "rounded-full border px-3.5 py-2 text-[0.75rem] font-medium transition-colors",
+                    "rounded-[4px] border px-3.5 py-2 text-[0.75rem] font-medium transition-colors",
                     category === item
                       ? "border-primary/40 bg-primary/10 text-primary"
                       : "border-line bg-card text-ink/60 hover:border-ink/25 hover:text-ink",

@@ -139,7 +139,7 @@ export default function AdminSettingsPage() {
         description="Changes here are audited. Roles and permissions take effect immediately on the server."
         actions={
           <Button
-            className="h-10 rounded-full px-5"
+            className="h-10 rounded-[4px] px-5"
             disabled={pending}
             onClick={save}
           >
@@ -228,8 +228,8 @@ export default function AdminSettingsPage() {
                     }
                     className={
                       checked
-                        ? "rounded-full bg-primary px-3 py-1.5 text-[0.62rem] font-medium text-primary-foreground"
-                        : "rounded-full border border-line px-3 py-1.5 text-[0.62rem] font-medium text-muted-foreground"
+                        ? "rounded-[4px] bg-primary px-3 py-1.5 text-[0.62rem] font-medium text-primary-foreground"
+                        : "rounded-[4px] border border-line px-3 py-1.5 text-[0.62rem] font-medium text-muted-foreground"
                     }
                   >
                     {currency.code}
@@ -244,7 +244,7 @@ export default function AdminSettingsPage() {
             <div className="px-5 py-4">
               <Button
                 variant="outline"
-                className="rounded-full bg-transparent"
+                className="rounded-[4px] bg-transparent"
                 onClick={async () => {
                   try {
                     const result = await seed();
@@ -269,7 +269,7 @@ export default function AdminSettingsPage() {
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 rounded-full"
+              className="h-8 rounded-[4px]"
               onClick={async () => {
                 await resetTemplates();
                 toast.success("Templates reset to defaults.");
@@ -316,7 +316,7 @@ export default function AdminSettingsPage() {
           <Button
             size="sm"
             variant="outline"
-            className="rounded-full bg-transparent"
+            className="rounded-[4px] bg-transparent"
             onClick={() =>
               setTemplates((current) => [
                 ...current,
@@ -354,7 +354,7 @@ export default function AdminSettingsPage() {
               </select>
               <Button
                 size="sm"
-                className="h-9 rounded-full px-3"
+                className="h-9 rounded-[4px] px-3"
                 disabled={pending || !staffEmail}
                 onClick={async () => {
                   setPending(true);
@@ -402,7 +402,7 @@ export default function AdminSettingsPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-8 rounded-full bg-transparent px-2.5"
+                          className="h-8 rounded-[4px] bg-transparent px-2.5"
                           onClick={() => {
                             setPermissionTarget(member._id);
                             setPermissionDraft(member.permissions);
@@ -415,7 +415,7 @@ export default function AdminSettingsPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-8 rounded-full bg-transparent px-2.5"
+                          className="h-8 rounded-[4px] bg-transparent px-2.5"
                           disabled={pending || staffReason.trim().length < 3}
                           onClick={async () => {
                             setPending(true);
@@ -437,7 +437,7 @@ export default function AdminSettingsPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-8 rounded-full px-2.5 text-destructive"
+                          className="h-8 rounded-[4px] px-2.5 text-destructive"
                           disabled={pending || staffReason.trim().length < 3}
                           onClick={async () => {
                             setPending(true);
@@ -483,12 +483,12 @@ export default function AdminSettingsPage() {
                         ))}
                       </div>
                       <div className="mt-2 flex justify-end gap-2">
-                        <Button size="sm" variant="ghost" className="h-8 rounded-full" onClick={() => setPermissionTarget(null)}>
+                        <Button size="sm" variant="ghost" className="h-8 rounded-[4px]" onClick={() => setPermissionTarget(null)}>
                           Cancel
                         </Button>
                         <Button
                           size="sm"
-                          className="h-8 rounded-full"
+                          className="h-8 rounded-[4px]"
                           disabled={pending}
                           onClick={async () => {
                             setPending(true);
@@ -540,7 +540,7 @@ export default function AdminSettingsPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 rounded-full bg-transparent px-3"
+                  className="h-8 rounded-[4px] bg-transparent px-3"
                   onClick={async () => {
                     try {
                       await retryEmail({ notificationId: item._id });
@@ -636,7 +636,7 @@ function SupabasePanel() {
             <Button
               size="sm"
               variant="outline"
-              className="h-8 rounded-full bg-transparent px-3"
+              className="h-8 rounded-[4px] bg-transparent px-3"
               disabled={!supabaseConfigured || pending !== null}
               onClick={runBrowserCheck}
             >
@@ -677,7 +677,7 @@ function SupabasePanel() {
             <Button
               size="sm"
               variant="outline"
-              className="h-8 rounded-full bg-transparent px-3"
+              className="h-8 rounded-[4px] bg-transparent px-3"
               disabled={pending !== null}
               onClick={runServerCheck}
             >

@@ -31,7 +31,7 @@ function PulseSkeleton() {
     <div className="grid overflow-hidden rounded-2xl border border-line bg-card/70 sm:grid-cols-2 sm:divide-x sm:divide-line lg:grid-cols-4">
       {[0, 1, 2, 3].map((index) => (
         <div key={index} className="flex items-start gap-3 px-4 py-3.5 sm:px-5">
-          <Skeleton className="size-8 shrink-0 rounded-full" />
+          <Skeleton className="size-8 shrink-0 rounded-[4px]" />
           <div className="min-w-0 flex-1 space-y-2">
             <Skeleton className="h-2.5 w-20" />
             <Skeleton className="h-4 w-24" />
@@ -51,7 +51,7 @@ function CommandChartSkeleton({ tall = false }: { tall?: boolean }) {
           <Skeleton className="h-4 w-36" />
           <Skeleton className="h-2.5 w-52" />
         </div>
-        <Skeleton className="h-5 w-24 rounded-full" />
+        <Skeleton className="h-5 w-24 rounded-[4px]" />
       </div>
       <div
         className={`relative mt-5 flex items-end gap-2 overflow-hidden rounded-lg bg-ink/[0.015] px-2 ${
@@ -85,14 +85,14 @@ function RailCardSkeleton({ rows = 3 }: { rows?: number }) {
           <Skeleton className="h-4 w-32" />
           <Skeleton className="h-2.5 w-40" />
         </div>
-        <Skeleton className="h-5 w-14 rounded-full" />
+        <Skeleton className="h-5 w-14 rounded-[4px]" />
       </div>
       <div className="mt-4 space-y-3.5">
         {Array.from({ length: rows }).map((_, index) => (
           <div key={index} className="space-y-2 border-t border-line/60 pt-3 first:border-0 first:pt-0">
             <div className="flex items-center justify-between gap-3">
               <Skeleton className="h-3 w-2/5" />
-              <Skeleton className="h-6 w-16 rounded-full" />
+              <Skeleton className="h-6 w-16 rounded-[4px]" />
             </div>
             <Skeleton className="h-2.5 w-3/5" />
             <div className="flex items-center justify-between gap-3">
@@ -117,8 +117,8 @@ export function CommandCentreSkeleton() {
           <Skeleton className="h-3 w-full max-w-xl" />
         </div>
         <div className="flex gap-2">
-          <Skeleton className="h-10 w-28 rounded-full" />
-          <Skeleton className="h-10 w-40 rounded-full" />
+          <Skeleton className="h-10 w-28 rounded-[4px]" />
+          <Skeleton className="h-10 w-40 rounded-[4px]" />
         </div>
       </div>
 
@@ -136,13 +136,13 @@ export function CommandCentreSkeleton() {
                 <Skeleton className="h-2.5 w-24" />
                 <Skeleton className="h-6 w-28" />
               </div>
-              <Skeleton className="size-9 rounded-full" />
+              <Skeleton className="size-9 rounded-[4px]" />
             </div>
             <div className="mt-5 flex justify-between gap-3">
               <Skeleton className="h-2.5 w-24" />
               <Skeleton className="h-2.5 w-16" />
             </div>
-            <Skeleton className="mt-2 h-1 w-full rounded-full" />
+            <Skeleton className="mt-2 h-1 w-full rounded-[4px]" />
           </div>
         ))}
       </div>
@@ -179,7 +179,7 @@ export function DashboardSkeleton() {
           >
             <div className="flex items-center justify-between">
               <Skeleton className="h-3 w-24" />
-              <Skeleton className="size-4 rounded-full" />
+              <Skeleton className="size-4 rounded-[4px]" />
             </div>
             <Skeleton
               className="mt-4 h-7 w-20"
@@ -202,12 +202,12 @@ export function DashboardSkeleton() {
           <div className="mt-5 space-y-3.5">
             {[0, 1, 2, 3].map((index) => (
               <div key={index} className="flex items-center gap-3">
-                <Skeleton className="size-9 shrink-0 rounded-full" />
+                <Skeleton className="size-9 shrink-0 rounded-[4px]" />
                 <div className="min-w-0 flex-1 space-y-2">
                   <Skeleton className="h-3 w-2/5" />
                   <Skeleton className="h-2.5 w-3/5" />
                 </div>
-                <Skeleton className="h-5 w-16 rounded-full" />
+                <Skeleton className="h-5 w-16 rounded-[4px]" />
               </div>
             ))}
           </div>

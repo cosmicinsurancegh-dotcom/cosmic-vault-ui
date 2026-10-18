@@ -138,7 +138,7 @@ export default function AdminReportsPage() {
           </p>
           <Button
             variant="outline"
-            className="h-9 rounded-full bg-transparent"
+            className="h-9 rounded-[4px] bg-transparent"
             disabled={!result || result.rows.length === 0}
             onClick={() => {
               if (!result) return;

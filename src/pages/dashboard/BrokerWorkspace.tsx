@@ -30,7 +30,7 @@ export function BrokerCustomersPage() {
         title="Your assigned book."
         description="You can only see customers explicitly assigned to your brokerage. Ask an administrator to add or revoke assignments."
         actions={
-          <Button asChild className="h-10 rounded-full px-5">
+          <Button asChild className="h-10 rounded-[4px] px-5">
             <Link to="/dashboard/catalogue">Start a quotation</Link>
           </Button>
         }
@@ -90,7 +90,7 @@ export function BrokerCustomersPage() {
                     {row.commission !== null ? formatMoneyList(row.commission, "None") : "Disabled"}
                   </Td>
                   <Td className="text-right">
-                    <Button asChild size="sm" variant="outline" className="h-8 rounded-full bg-transparent px-3">
+                    <Button asChild size="sm" variant="outline" className="h-8 rounded-[4px] bg-transparent px-3">
                       <Link to="/dashboard/quotes">Quote</Link>
                     </Button>
                   </Td>

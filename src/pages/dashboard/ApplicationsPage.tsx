@@ -52,7 +52,7 @@ export default function ApplicationsPage() {
             : "Track every application from draft to a policy decision. Submitted answers are preserved as originally filed."
         }
         actions={
-          <Button asChild className="h-10 rounded-full px-5">
+          <Button asChild className="h-10 rounded-[4px] px-5">
             <Link to="/dashboard/catalogue">Start from a quotation <ArrowUpRight className="size-4" /></Link>
           </Button>
         }
@@ -65,7 +65,7 @@ export default function ApplicationsPage() {
             title="No applications yet"
             description="A quotation becomes an application when you're ready to apply. Upload the product's required documents, then submit for review."
             action={
-              <Button asChild size="sm" className="rounded-full">
+              <Button asChild size="sm" className="rounded-[4px]">
                 <Link to="/dashboard/catalogue">Browse products</Link>
               </Button>
             }
@@ -111,7 +111,7 @@ export default function ApplicationsPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-9 rounded-full bg-transparent px-4"
+                    className="h-9 rounded-[4px] bg-transparent px-4"
                     onClick={() => setSelectedId(application._id)}
                   >
                     {application.status === "draft" ? "Continue" : "Open"}
@@ -265,7 +265,7 @@ function ApplicationDialog({
                 <div className="flex justify-end">
                   <Button
                     size="sm"
-                    className="rounded-full"
+                    className="rounded-[4px]"
                     disabled={pending || response.trim().length < 2}
                     onClick={async () => {
                       setPending(true);
@@ -388,7 +388,7 @@ function ApplicationDialog({
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-9 rounded-full px-3"
+                            className="h-9 rounded-[4px] px-3"
                             disabled={pending || !requiredFile[required.key]}
                             onClick={() =>
                               uploadRequired(required.key, required.label, requiredFile[required.key]!)
@@ -420,7 +420,7 @@ function ApplicationDialog({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-9 shrink-0 rounded-full px-3"
+                      className="h-9 shrink-0 rounded-[4px] px-3"
                       disabled={pending || !otherFile}
                       onClick={uploadOther}
                     >
@@ -454,7 +454,7 @@ function ApplicationDialog({
               <div className="mt-3 flex justify-end">
                 <Button
                   size="sm"
-                  className="rounded-full"
+                  className="rounded-[4px]"
                   disabled={pending || !terms}
                   onClick={async () => {
                     setPending(true);
@@ -497,7 +497,7 @@ function ApplicationDialog({
               ) : (
                 <Button
                   size="sm"
-                  className="mt-3 rounded-full"
+                  className="mt-3 rounded-[4px]"
                   disabled={pending}
                   onClick={startPayment}
                 >
@@ -534,7 +534,7 @@ function ApplicationDialog({
           )}
 
           <div className="flex justify-end">
-            <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>
               Close
             </Button>
           </div>

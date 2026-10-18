@@ -51,7 +51,7 @@ export function SiteButton({
   icon?: boolean;
 }) {
   const classes = cn(
-    "group inline-flex h-11 items-center justify-between gap-3 rounded-full pl-5 pr-2 text-[0.88rem] font-medium tracking-[-0.01em] transition-all duration-300 active:scale-[0.975] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    "group inline-flex h-11 items-center justify-between gap-3 rounded-[4px] pl-5 pr-2 text-[0.88rem] font-medium tracking-[-0.01em] transition-all duration-300 active:scale-[0.975] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     actionStyles[variant],
     className,
   );
@@ -62,7 +62,7 @@ export function SiteButton({
       {icon && (
         <span
           className={cn(
-            "grid size-7 shrink-0 place-items-center rounded-full transition-transform duration-500 group-hover:rotate-45",
+            "grid size-7 shrink-0 place-items-center rounded-[4px] transition-transform duration-500 group-hover:rotate-45",
             actionChip[variant],
           )}
         >
@@ -121,18 +121,18 @@ export function PageHero({
     <section className="relative overflow-hidden border-b border-line/70">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-40 -top-48 size-[32rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.16),transparent_66%)] blur-2xl"
+        className="pointer-events-none absolute -right-40 -top-48 size-[32rem] rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.16),transparent_66%)] blur-2xl"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -left-32 top-1/2 size-[22rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.35),transparent_70%)] blur-2xl"
+        className="pointer-events-none absolute -left-32 top-1/2 size-[22rem] rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.35),transparent_70%)] blur-2xl"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute right-[-6%] top-16 hidden size-[22rem] rounded-full border border-electric/10 lg:block"
+        className="pointer-events-none absolute right-[-6%] top-16 hidden size-[22rem] rounded-[4px] border border-electric/10 lg:block"
       >
-        <span className="absolute inset-12 rounded-full border border-ink/[0.05]" />
-        <span className="absolute left-1/2 top-0 size-1.5 -translate-x-1/2 rounded-full bg-electric/60" />
+        <span className="absolute inset-12 rounded-[4px] border border-ink/[0.05]" />
+        <span className="absolute left-1/2 top-0 size-1.5 -translate-x-1/2 rounded-[4px] bg-electric/60" />
       </div>
 
       <div className="relative mx-auto max-w-[1180px] px-5 pb-12 pt-10 sm:px-8 sm:pb-16 sm:pt-14">
@@ -330,7 +330,7 @@ export function FeatureGrid({
           className="group rounded-[1.3rem] border border-line bg-card p-6 transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_24px_50px_-44px_rgba(8,18,39,0.5)]"
         >
           {Icon && (
-            <span className="grid size-10 place-items-center rounded-full bg-ice text-primary transition-colors duration-500 group-hover:bg-primary group-hover:text-primary-foreground">
+            <span className="grid size-10 place-items-center rounded-[4px] bg-ice text-primary transition-colors duration-500 group-hover:bg-primary group-hover:text-primary-foreground">
               <Icon className="size-4 transition-transform duration-500 group-hover:scale-110" strokeWidth={1.8} />
             </span>
           )}
@@ -375,7 +375,7 @@ export function CheckList({ items }: { items: string[] }) {
     <ul className="space-y-3">
       {items.map((item) => (
         <li key={item} className="flex items-start gap-3">
-          <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+          <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-[4px] bg-primary/10 text-primary">
             <Check className="size-3" strokeWidth={3} />
           </span>
           <span className="text-[0.88rem] leading-6 text-ink/75">{item}</span>
@@ -430,7 +430,7 @@ export function FaqList({ items }: { items: FaqEntry[] }) {
         <details key={item.question} className="group border-t border-line py-5">
           <summary className="flex cursor-pointer list-none items-start justify-between gap-6 text-[0.98rem] font-medium tracking-[-0.01em] text-ink marker:hidden [&::-webkit-details-marker]:hidden">
             <span>{item.question}</span>
-            <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full border border-line text-ink/50 transition-transform duration-300 group-open:rotate-180">
+            <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-[4px] border border-line text-ink/50 transition-transform duration-300 group-open:rotate-180">
               <ChevronDown className="size-3.5" />
             </span>
           </summary>
@@ -461,11 +461,11 @@ export function CtaPanel({
       <div className="starfield relative overflow-hidden rounded-[1.8rem] bg-[#071227] px-6 py-12 text-bone sm:rounded-[2.2rem] sm:px-10 sm:py-14">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-24 -top-24 size-[24rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.26),transparent_65%)]"
+          className="pointer-events-none absolute -right-24 -top-24 size-[24rem] rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.26),transparent_65%)]"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -bottom-28 -left-16 size-[20rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.12),transparent_68%)]"
+          className="pointer-events-none absolute -bottom-28 -left-16 size-[20rem] rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.12),transparent_68%)]"
         />
         <div className="relative grid gap-8 lg:grid-cols-[1.3fr_0.7fr] lg:items-center">
           <div>
@@ -486,7 +486,7 @@ export function CtaPanel({
             {secondary && (
               <Link
                 to={secondary.to}
-                className="group inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-[0.82rem] font-medium text-bone/75 transition-colors hover:border-white/35 hover:text-bone"
+                className="group inline-flex items-center justify-center gap-2 rounded-[4px] border border-white/15 px-5 py-2.5 text-[0.82rem] font-medium text-bone/75 transition-colors hover:border-white/35 hover:text-bone"
               >
                 {secondary.label}
                 <ArrowUpRight className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />

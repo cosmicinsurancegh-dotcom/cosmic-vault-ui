@@ -134,7 +134,7 @@ export default function QuotePage() {
           <div className="lg:col-span-7">
             {reference ? (
               <div className="rounded-[1.4rem] border border-line bg-card p-6 sm:p-8">
-                <span className="grid size-12 place-items-center rounded-full bg-primary text-primary-foreground">
+                <span className="grid size-12 place-items-center rounded-[4px] bg-primary text-primary-foreground">
                   <Check className="size-5" strokeWidth={2.6} />
                 </span>
                 <h3 className="mt-5 text-2xl font-semibold tracking-[-0.03em] text-ink">
@@ -168,7 +168,7 @@ export default function QuotePage() {
                   </SiteButton>
                   <Button
                     variant="outline"
-                    className="h-11 rounded-full px-5"
+                    className="h-11 rounded-[4px] px-5"
                     onClick={() => {
                       setReference(null);
                       setMessage("");
@@ -206,7 +206,7 @@ export default function QuotePage() {
                         >
                           <span
                             className={cn(
-                              "grid size-7 shrink-0 place-items-center rounded-full transition-colors",
+                              "grid size-7 shrink-0 place-items-center rounded-[4px] transition-colors",
                               active
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-ink/[0.05] text-ink/60",
@@ -278,7 +278,7 @@ export default function QuotePage() {
                   <Button
                     type="submit"
                     disabled={pending}
-                    className="h-11 w-full rounded-full px-6 sm:w-auto"
+                    className="h-11 w-full rounded-[4px] px-6 sm:w-auto"
                   >
                     {pending ? (
                       <>

@@ -78,7 +78,7 @@ export default function AdminUnderwritingPage() {
                 setPage(1);
               }}
               placeholder="Reference or product"
-              className="h-9 rounded-full bg-card pl-9 text-xs"
+              className="h-9 rounded-[4px] bg-card pl-9 text-xs"
             />
           </div>
           <select
@@ -88,7 +88,7 @@ export default function AdminUnderwritingPage() {
               setStatus(event.target.value);
               setPage(1);
             }}
-            className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+            className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
           >
             {STATUSES.map((value) => (
               <option key={value} value={value}>
@@ -134,7 +134,7 @@ export default function AdminUnderwritingPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 rounded-full bg-transparent px-3"
+                        className="h-8 rounded-[4px] bg-transparent px-3"
                         onClick={() => setSelectedId(application._id)}
                       >
                         Review
@@ -316,7 +316,7 @@ function ReviewDialog({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 rounded-full bg-transparent"
+                  className="h-8 rounded-[4px] bg-transparent"
                   disabled={pending || application.assignedTo === user?._id}
                   onClick={async () => {
                     setPending(true);
@@ -341,7 +341,7 @@ function ReviewDialog({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 rounded-full bg-transparent"
+                    className="h-8 rounded-[4px] bg-transparent"
                     disabled={pending || info.trim().length < 5}
                     onClick={async () => {
                       setPending(true);
@@ -368,7 +368,7 @@ function ReviewDialog({
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 rounded-full"
+                    className="h-8 rounded-[4px]"
                     disabled={pending || noteText.trim().length < 3}
                     onClick={async () => {
                       setPending(true);
@@ -396,7 +396,7 @@ function ReviewDialog({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 rounded-full border-destructive/40 bg-transparent text-destructive"
+                      className="h-8 rounded-[4px] border-destructive/40 bg-transparent text-destructive"
                       disabled={pending || reason.trim().length < 5}
                       onClick={async () => {
                         setPending(true);
@@ -415,7 +415,7 @@ function ReviewDialog({
                     </Button>
                     <Button
                       size="sm"
-                      className="h-8 rounded-full"
+                      className="h-8 rounded-[4px]"
                       disabled={pending || reason.trim().length < 5}
                       onClick={async () => {
                         setPending(true);
@@ -463,7 +463,7 @@ function ReviewDialog({
               <div className="flex justify-end">
                 <Button
                   size="sm"
-                  className="h-8 rounded-full"
+                  className="h-8 rounded-[4px]"
                   disabled={pending || !confirmedPayment || !canIssue}
                   onClick={async () => {
                     setPending(true);
@@ -511,7 +511,7 @@ function ReviewDialog({
             <Link to="/dashboard/admin/payments" className="inline-flex items-center gap-1.5 text-xs font-medium text-primary">
               Finance queue <ArrowUpRight className="size-3.5" />
             </Link>
-            <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>
               Close
             </Button>
           </div>

@@ -80,7 +80,7 @@ export default function AdminClaimsPage() {
                 setPage(1);
               }}
               placeholder="Claim reference, product, or location"
-              className="h-9 rounded-full bg-card pl-9 text-xs"
+              className="h-9 rounded-[4px] bg-card pl-9 text-xs"
             />
           </div>
           <select
@@ -90,7 +90,7 @@ export default function AdminClaimsPage() {
               setStatus(event.target.value);
               setPage(1);
             }}
-            className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+            className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
           >
             {STATUSES.map((value) => (
               <option key={value} value={value}>
@@ -131,7 +131,7 @@ export default function AdminClaimsPage() {
                     <Td>{formatDate(claim.incidentDate)}</Td>
                     <Td><StatusPill status={claim.status} /></Td>
                     <Td className="text-right">
-                      <Button size="sm" variant="outline" className="h-8 rounded-full bg-transparent px-3" onClick={() => setSelectedId(claim._id)}>
+                      <Button size="sm" variant="outline" className="h-8 rounded-[4px] bg-transparent px-3" onClick={() => setSelectedId(claim._id)}>
                         Review
                       </Button>
                     </Td>
@@ -294,7 +294,7 @@ function ClaimReviewDialog({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 rounded-full bg-transparent"
+                  className="h-8 rounded-[4px] bg-transparent"
                   disabled={pending || claim.assignedTo === user?._id}
                   onClick={async () => {
                     setPending(true);
@@ -318,7 +318,7 @@ function ClaimReviewDialog({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 rounded-full bg-transparent"
+                    className="h-8 rounded-[4px] bg-transparent"
                     disabled={pending || info.trim().length < 5}
                     onClick={async () => {
                       setPending(true);
@@ -342,7 +342,7 @@ function ClaimReviewDialog({
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 rounded-full"
+                    className="h-8 rounded-[4px]"
                     disabled={pending || noteText.trim().length < 3}
                     onClick={async () => {
                       setPending(true);
@@ -375,8 +375,8 @@ function ClaimReviewDialog({
                     onClick={() => setDecision(option)}
                     className={
                       decision === option
-                        ? "rounded-full bg-primary px-3 py-1.5 text-[0.65rem] font-medium text-primary-foreground"
-                        : "rounded-full border border-line px-3 py-1.5 text-[0.65rem] font-medium text-muted-foreground"
+                        ? "rounded-[4px] bg-primary px-3 py-1.5 text-[0.65rem] font-medium text-primary-foreground"
+                        : "rounded-[4px] border border-line px-3 py-1.5 text-[0.65rem] font-medium text-muted-foreground"
                     }
                   >
                     {statusLabel(option)}
@@ -403,7 +403,7 @@ function ClaimReviewDialog({
               <div className="flex justify-end">
                 <Button
                   size="sm"
-                  className="h-8 rounded-full"
+                  className="h-8 rounded-[4px]"
                   disabled={pending || reason.trim().length < 5 || (decision !== "declined" && !amount)}
                   onClick={async () => {
                     setPending(true);
@@ -462,7 +462,7 @@ function ClaimReviewDialog({
               <div className="flex justify-end">
                 <Button
                   size="sm"
-                  className="h-8 rounded-full"
+                  className="h-8 rounded-[4px]"
                   disabled={pending || providerRef.trim().length < 3}
                   onClick={async () => {
                     setPending(true);
@@ -490,7 +490,7 @@ function ClaimReviewDialog({
                 <Input value={closeReason} onChange={(event) => setCloseReason(event.target.value)} placeholder="Closure reason" className="h-9 rounded-lg bg-card text-xs" />
                 <Button
                   size="sm"
-                  className="h-9 shrink-0 rounded-full"
+                  className="h-9 shrink-0 rounded-[4px]"
                   disabled={pending || closeReason.trim().length < 3}
                   onClick={async () => {
                     setPending(true);
@@ -540,7 +540,7 @@ function ClaimReviewDialog({
           </section>
 
           <div className="flex justify-end">
-            <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>Close</Button>
+            <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>Close</Button>
           </div>
         </div>
       </DialogContent>

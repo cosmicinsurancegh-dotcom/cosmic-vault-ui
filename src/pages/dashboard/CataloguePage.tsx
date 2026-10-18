@@ -74,7 +74,7 @@ export default function CataloguePage() {
               aria-label="Country"
               value={activeCountry}
               onChange={(event) => setCountry(event.target.value)}
-              className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+              className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
             >
               {countries.map((item) => (
                 <option key={item.code} value={item.code}>
@@ -86,7 +86,7 @@ export default function CataloguePage() {
               aria-label="Category"
               value={category}
               onChange={(event) => setCategory(event.target.value)}
-              className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+              className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
             >
               <option value="all">All categories</option>
               {categories.map((item) => (
@@ -106,7 +106,7 @@ export default function CataloguePage() {
             title="No products available in this market yet"
             description="Products must be configured and published by an authorised administrator. Try another country or speak to support."
             action={
-              <Button asChild variant="outline" size="sm" className="rounded-full">
+              <Button asChild variant="outline" size="sm" className="rounded-[4px]">
                 <Link to="/dashboard/support">Ask support</Link>
               </Button>
             }
@@ -125,7 +125,7 @@ export default function CataloguePage() {
                   overlay="soft"
                   className="aspect-[16/7] w-full"
                 />
-                <span className="absolute left-4 top-4 rounded-full border border-white/20 bg-white/12 px-2.5 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-bone backdrop-blur-md">
+                <span className="absolute left-4 top-4 rounded-[4px] border border-white/20 bg-white/12 px-2.5 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-bone backdrop-blur-md">
                   {categories.find((item) => item.key === product.categoryKey)?.name ?? product.categoryKey}
                 </span>
                 <span className="absolute right-4 top-4 text-[0.6rem] uppercase tracking-[0.14em] text-bone/75">
@@ -151,10 +151,10 @@ export default function CataloguePage() {
                 </div>
               </dl>
               <div className="mt-4 flex gap-2">
-                <Button variant="outline" size="sm" className="h-9 flex-1 rounded-full bg-transparent" onClick={() => setSelected(product)}>
+                <Button variant="outline" size="sm" className="h-9 flex-1 rounded-[4px] bg-transparent" onClick={() => setSelected(product)}>
                   Details
                 </Button>
-                <Button size="sm" className="h-9 flex-1 rounded-full" onClick={() => setQuoteProduct(product)}>
+                <Button size="sm" className="h-9 flex-1 rounded-[4px]" onClick={() => setQuoteProduct(product)}>
                   Get a quote
                 </Button>
               </div>
@@ -237,11 +237,11 @@ export default function CataloguePage() {
                   application, the premium is confirmed, and a policy is issued.
                 </Callout>
                 <div className="flex flex-wrap justify-end gap-2">
-                  <Button variant="outline" className="rounded-full" onClick={() => setSelected(null)}>
+                  <Button variant="outline" className="rounded-[4px]" onClick={() => setSelected(null)}>
                     Close
                   </Button>
                   <Button
-                    className="rounded-full"
+                    className="rounded-[4px]"
                     onClick={() => {
                       setQuoteProduct(selected);
                       setSelected(null);
@@ -389,7 +389,7 @@ function QuoteDialog({
 
         {saved ? (
           <div className="px-5 py-8 text-center sm:px-8">
-            <span className="mx-auto grid size-14 place-items-center rounded-full bg-primary text-primary-foreground">
+            <span className="mx-auto grid size-14 place-items-center rounded-[4px] bg-primary text-primary-foreground">
               <Check className="size-6" />
             </span>
             <h3 className="mt-5 text-2xl font-semibold tracking-[-0.03em] text-ink">
@@ -400,10 +400,10 @@ function QuoteDialog({
               application whenever you're ready, then upload the required documents.
             </p>
             <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
-              <Button asChild className="rounded-full">
+              <Button asChild className="rounded-[4px]">
                 <Link to="/dashboard/quotes">Open quotations</Link>
               </Button>
-              <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>
                 Keep browsing
               </Button>
             </div>
@@ -543,14 +543,14 @@ function QuoteDialog({
             )}
 
             <div className="flex flex-col-reverse gap-2 border-t border-line pt-4 sm:flex-row sm:justify-end">
-              <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button variant="outline" className="rounded-full" onClick={calculate} disabled={pending}>
+              <Button variant="outline" className="rounded-[4px]" onClick={calculate} disabled={pending}>
                 {pending ? <Loader2 className="size-4 animate-spin" /> : <Calculator className="size-4" />}
                 Calculate premium
               </Button>
-              <Button className="rounded-full" onClick={save} disabled={pending || !result}>
+              <Button className="rounded-[4px]" onClick={save} disabled={pending || !result}>
                 {pending ? <Loader2 className="size-4 animate-spin" /> : null}
                 Save quotation
               </Button>

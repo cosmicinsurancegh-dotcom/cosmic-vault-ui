@@ -116,7 +116,7 @@ function ErrorDialog({
       <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto border-zinc-700 bg-zinc-950 text-zinc-100 sm:max-w-lg">
         <DialogHeader className="pr-8">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-400/10">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[4px] bg-amber-400/10">
               <AlertTriangle className="h-4 w-4 text-amber-300" />
             </div>
             <div>

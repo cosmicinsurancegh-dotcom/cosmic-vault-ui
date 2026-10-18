@@ -245,17 +245,17 @@ export function CommandCentre({
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 text-[0.6rem] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
             {copy.eyebrow}
-            <span className="size-1 rounded-full bg-primary/60" />
+            <span className="size-1 rounded-[4px] bg-primary/60" />
             {new Date().toLocaleDateString("en-GB", {
               weekday: "long",
               day: "numeric",
               month: "long",
             })}
-            <span className="size-1 rounded-full bg-primary/60" />
+            <span className="size-1 rounded-[4px] bg-primary/60" />
             <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
               <span className="relative flex size-1.5">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-60" />
-                <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
+                <span className="absolute inline-flex size-full animate-ping rounded-[4px] bg-emerald-500 opacity-60" />
+                <span className="relative inline-flex size-1.5 rounded-[4px] bg-emerald-500" />
               </span>
               Live book
             </span>
@@ -272,7 +272,7 @@ export function CommandCentre({
           <div
             role="group"
             aria-label="Chart range"
-            className="relative flex items-center rounded-full border border-line bg-card p-0.5"
+            className="relative flex items-center rounded-[4px] border border-line bg-card p-0.5"
           >
             {[6, 12].map((value) => {
               const active = value === months;
@@ -283,7 +283,7 @@ export function CommandCentre({
                   onClick={() => onMonthsChange(value)}
                   aria-pressed={active}
                   className={cn(
-                    "relative rounded-full px-3.5 py-1.5 text-[0.68rem] font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                    "relative rounded-[4px] px-3.5 py-1.5 text-[0.68rem] font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
                     active
                       ? "text-primary-foreground"
                       : "text-muted-foreground hover:text-ink",
@@ -292,7 +292,7 @@ export function CommandCentre({
                   {active && (
                     <motion.span
                       layoutId="board-range-pill"
-                      className="absolute inset-0 rounded-full bg-primary"
+                      className="absolute inset-0 rounded-[4px] bg-primary"
                       transition={
                         reduceMotion
                           ? { duration: 0 }
@@ -305,7 +305,7 @@ export function CommandCentre({
               );
             })}
           </div>
-          <Button asChild className="h-10 rounded-full px-4">
+          <Button asChild className="h-10 rounded-[4px] px-4">
             <Link to={copy.primaryHref}>
               {copy.primaryLabel}
               <ArrowUpRight className="size-3.5" />
@@ -318,7 +318,7 @@ export function CommandCentre({
       <div className="grid overflow-hidden rounded-2xl border border-line bg-card/70 sm:grid-cols-2 sm:divide-x sm:divide-line lg:grid-cols-4">
         {pulse.map(({ label, value, helper, Icon, tone }) => (
           <div key={label} className="flex items-start gap-3 px-4 py-3.5 sm:px-5">
-            <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-primary/[0.07] text-primary">
+            <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-[4px] bg-primary/[0.07] text-primary">
               <Icon className="size-3.5" strokeWidth={1.9} />
             </span>
             <div className="min-w-0">
@@ -346,7 +346,7 @@ export function CommandCentre({
       {/* Line cards */}
       {board.lines.length === 0 ? (
         <section className="starfield relative overflow-hidden rounded-[1.5rem] bg-[#071227] p-6 text-bone sm:p-8">
-          <span className="pointer-events-none absolute -right-20 -top-24 size-64 rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.35),transparent_65%)]" />
+          <span className="pointer-events-none absolute -right-20 -top-24 size-64 rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.35),transparent_65%)]" />
           <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-lg">
               <p className="text-[0.6rem] font-semibold uppercase tracking-[0.24em] text-bone/45">
@@ -361,7 +361,7 @@ export function CommandCentre({
             </div>
             <Button
               asChild
-              className="h-10 shrink-0 rounded-full bg-primary px-5 text-primary-foreground hover:bg-primary/90"
+              className="h-10 shrink-0 rounded-[4px] bg-primary px-5 text-primary-foreground hover:bg-primary/90"
             >
               <Link to={actionForEmpty}>
                 {copy.primaryLabel}
@@ -413,7 +413,7 @@ export function CommandCentre({
                     </p>
                   </div>
                   <span
-                    className="grid size-9 shrink-0 place-items-center rounded-full border border-white/50 text-ink shadow-[0_8px_24px_-16px_rgba(8,18,39,0.55)] dark:border-white/10"
+                    className="grid size-9 shrink-0 place-items-center rounded-[4px] border border-white/50 text-ink shadow-[0_8px_24px_-16px_rgba(8,18,39,0.55)] dark:border-white/10"
                     style={{
                       background: `color-mix(in oklab, ${color} 22%, var(--card))`,
                     }}
@@ -433,7 +433,7 @@ export function CommandCentre({
                     {line.share}% of book
                   </p>
                 </div>
-                <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-ink/[0.06] dark:bg-white/10">
+                <div className="mt-2 h-1 w-full overflow-hidden rounded-[4px] bg-ink/[0.06] dark:bg-white/10">
                   <motion.div
                     initial={reduceMotion ? false : { width: 0 }}
                     animate={{ width: `${Math.max(3, line.share)}%` }}
@@ -442,7 +442,7 @@ export function CommandCentre({
                       delay: 0.25 + index * 0.07,
                       ease: [0.22, 1, 0.36, 1],
                     }}
-                    className="h-full rounded-full"
+                    className="h-full rounded-[4px]"
                     style={{ background: color }}
                   />
                 </div>
@@ -506,7 +506,7 @@ export function CommandCentre({
               board.otherCurrencies === 1 ? "currency is" : "currencies are"
             } never added into these totals.`
           : " Currencies are never added together."}
-        <span className="size-1 rounded-full bg-line" />
+        <span className="size-1 rounded-[4px] bg-line" />
         Synced{" "}
         {new Date(board.asOf).toLocaleTimeString("en-GB", {
           hour: "2-digit",
@@ -592,7 +592,7 @@ function ActivePlans({
                     asChild
                     variant="outline"
                     size="sm"
-                    className="h-7 shrink-0 rounded-full px-3 text-[0.62rem]"
+                    className="h-7 shrink-0 rounded-[4px] px-3 text-[0.62rem]"
                   >
                     <Link to={href}>Manage</Link>
                   </Button>
@@ -650,7 +650,7 @@ function Alerts({ alerts }: { alerts: Board["alerts"] }) {
         </div>
         <span
           className={cn(
-            "rounded-full border px-2 py-0.5 text-[0.58rem] font-semibold tabular-nums",
+            "rounded-[4px] border px-2 py-0.5 text-[0.58rem] font-semibold tabular-nums",
             open > 0
               ? "border-halo/40 bg-halo/15 text-[#7a5a1c] dark:text-halo"
               : "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
@@ -670,7 +670,7 @@ function Alerts({ alerts }: { alerts: Board["alerts"] }) {
               <span
                 aria-hidden="true"
                 className={cn(
-                  "size-1.5 shrink-0 rounded-full",
+                  "size-1.5 shrink-0 rounded-[4px]",
                   alert.count === 0
                     ? "bg-emerald-500/60"
                     : alert.severity === "critical"

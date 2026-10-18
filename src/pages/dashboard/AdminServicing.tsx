@@ -73,7 +73,7 @@ export default function AdminPoliciesPage() {
                   </p>
                   <p className="mt-0.5 text-[0.65rem] text-muted-foreground">{request.details}</p>
                 </div>
-                <Button size="sm" className="h-8 shrink-0 self-start rounded-full px-3" onClick={() => setRequestId(request._id)}>
+                <Button size="sm" className="h-8 shrink-0 self-start rounded-[4px] px-3" onClick={() => setRequestId(request._id)}>
                   Review
                 </Button>
               </li>
@@ -93,7 +93,7 @@ export default function AdminPoliciesPage() {
                 setPage(1);
               }}
               placeholder="Policy number, customer, or product"
-              className="h-9 rounded-full bg-card pl-9 text-xs"
+              className="h-9 rounded-[4px] bg-card pl-9 text-xs"
             />
           </div>
           <select
@@ -103,7 +103,7 @@ export default function AdminPoliciesPage() {
               setStatus(event.target.value);
               setPage(1);
             }}
-            className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+            className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
           >
             {["all", "active", "suspended", "expired", "cancelled", "renewal_pending"].map((value) => (
               <option key={value} value={value}>
@@ -111,7 +111,7 @@ export default function AdminPoliciesPage() {
               </option>
             ))}
           </select>
-          <label className="flex items-center gap-2 rounded-full border border-line px-3 text-xs text-muted-foreground">
+          <label className="flex items-center gap-2 rounded-[4px] border border-line px-3 text-xs text-muted-foreground">
             <input type="checkbox" checked={expiring} onChange={(event) => setExpiring(event.target.checked)} className="accent-[var(--primary)]" />
             Expiring soon
           </label>
@@ -146,7 +146,7 @@ export default function AdminPoliciesPage() {
                     <Td>{formatDate(policy.endDate)}</Td>
                     <Td><StatusPill status={policy.status} /></Td>
                     <Td className="text-right">
-                      <Button size="sm" variant="outline" className="h-8 rounded-full bg-transparent px-3" onClick={() => setSelectedId(policy._id)}>
+                      <Button size="sm" variant="outline" className="h-8 rounded-[4px] bg-transparent px-3" onClick={() => setSelectedId(policy._id)}>
                         Open
                       </Button>
                     </Td>
@@ -203,10 +203,10 @@ function RequestDecisionDialog({
         <div className="space-y-3">
           <Textarea value={note} onChange={(event) => setNote(event.target.value)} className="rounded-xl bg-card" placeholder="Decision note" />
           <div className="flex justify-end gap-2">
-            <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button
               variant="outline"
-              className="rounded-full border-destructive/40 bg-transparent text-destructive"
+              className="rounded-[4px] border-destructive/40 bg-transparent text-destructive"
               disabled={pending || note.trim().length < 3}
               onClick={async () => {
                 setPending(true);
@@ -224,7 +224,7 @@ function RequestDecisionDialog({
               Decline
             </Button>
             <Button
-              className="rounded-full"
+              className="rounded-[4px]"
               disabled={pending || note.trim().length < 3}
               onClick={async () => {
                 setPending(true);
@@ -399,7 +399,7 @@ function PolicyAdminDialog({
                     key={target}
                     size="sm"
                     variant="outline"
-                    className="h-8 rounded-full bg-transparent capitalize"
+                    className="h-8 rounded-[4px] bg-transparent capitalize"
                     disabled={pending || policy.status === target || reason.trim().length < 3}
                     onClick={async () => {
                       setPending(true);
@@ -422,7 +422,7 @@ function PolicyAdminDialog({
           </section>
 
           <div className="flex justify-end">
-            <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>Close</Button>
+            <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>Close</Button>
           </div>
         </div>
       </DialogContent>

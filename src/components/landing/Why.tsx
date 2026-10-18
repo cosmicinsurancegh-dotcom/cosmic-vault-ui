@@ -79,7 +79,7 @@ export function Why() {
                     >
                       <span
                         className={cn(
-                          "mt-0.5 grid size-9 shrink-0 place-items-center rounded-full text-[0.68rem] font-semibold transition-all duration-300",
+                          "mt-0.5 grid size-9 shrink-0 place-items-center rounded-[4px] text-[0.68rem] font-semibold transition-all duration-300",
                           isOpen
                             ? "bg-electric text-white"
                             : "bg-ink/[0.05] text-ink/55 group-hover:bg-ink/10",
@@ -97,7 +97,7 @@ export function Why() {
                           >
                             {pillar.title}
                           </span>
-                          <span className="grid size-7 shrink-0 place-items-center rounded-full border border-line text-ink/50 transition-colors group-hover:border-ink/30 group-hover:text-ink">
+                          <span className="grid size-7 shrink-0 place-items-center rounded-[4px] border border-line text-ink/50 transition-colors group-hover:border-ink/30 group-hover:text-ink">
                             {isOpen ? (
                               <Minus className="size-3.5" />
                             ) : (

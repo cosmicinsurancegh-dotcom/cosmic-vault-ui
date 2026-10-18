@@ -72,7 +72,7 @@ export function AdminCustomersPage() {
                 setPage(1);
               }}
               placeholder="Name, email, reference, or policy number"
-              className="h-9 rounded-full bg-card pl-9 text-xs"
+              className="h-9 rounded-[4px] bg-card pl-9 text-xs"
             />
           </div>
           <select
@@ -82,7 +82,7 @@ export function AdminCustomersPage() {
               setStatus(event.target.value);
               setPage(1);
             }}
-            className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+            className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
           >
             <option value="all">All account states</option>
             <option value="active">Active</option>
@@ -95,7 +95,7 @@ export function AdminCustomersPage() {
               setCountry(event.target.value);
               setPage(1);
             }}
-            className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+            className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
           >
             <option value="all">All countries</option>
             {(reference?.countries ?? []).map((item) => (
@@ -111,7 +111,7 @@ export function AdminCustomersPage() {
               setVerification(event.target.value);
               setPage(1);
             }}
-            className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+            className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
           >
             <option value="all">All verification</option>
             <option value="unverified">Unverified</option>
@@ -152,7 +152,7 @@ export function AdminCustomersPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 rounded-full bg-transparent px-3"
+                        className="h-8 rounded-[4px] bg-transparent px-3"
                         onClick={() => setSelectedUserId(row.userId)}
                       >
                         Open
@@ -281,7 +281,7 @@ function CustomerDialog({
                   Account controls
                 </h3>
                 {!editing && (
-                  <Button size="sm" variant="outline" className="h-8 rounded-full bg-transparent" onClick={startEdit}>
+                  <Button size="sm" variant="outline" className="h-8 rounded-[4px] bg-transparent" onClick={startEdit}>
                     Edit profile
                   </Button>
                 )}
@@ -330,7 +330,7 @@ function CustomerDialog({
                   <div className="flex gap-2 sm:col-span-2">
                     <Button
                       size="sm"
-                      className="rounded-full"
+                      className="rounded-[4px]"
                       disabled={pending}
                       onClick={async () => {
                         setPending(true);
@@ -347,7 +347,7 @@ function CustomerDialog({
                     >
                       {pending && <Loader2 className="size-3.5 animate-spin" />} Save changes
                     </Button>
-                    <Button size="sm" variant="ghost" className="rounded-full" onClick={() => setEditing(false)}>
+                    <Button size="sm" variant="ghost" className="rounded-[4px]" onClick={() => setEditing(false)}>
                       Cancel
                     </Button>
                   </div>
@@ -367,7 +367,7 @@ function CustomerDialog({
                     <Button
                       size="sm"
                       variant={user?.status === "suspended" ? "outline" : "destructive"}
-                      className="h-9 shrink-0 rounded-full"
+                      className="h-9 shrink-0 rounded-[4px]"
                       disabled={pending || reason.trim().length < 3}
                       onClick={async () => {
                         setPending(true);
@@ -412,7 +412,7 @@ function CustomerDialog({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-9 rounded-full bg-transparent"
+                      className="h-9 rounded-[4px] bg-transparent"
                       disabled={pending || !brokerId}
                       onClick={async () => {
                         setPending(true);
@@ -522,7 +522,7 @@ function CustomerDialog({
           </section>
 
           <div className="flex justify-end">
-            <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>Close</Button>
+            <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>Close</Button>
           </div>
         </div>
       </DialogContent>
@@ -592,7 +592,7 @@ export function AdminSupportPage() {
               setPage(1);
             }}
             placeholder="Reference or subject"
-            className="h-9 min-w-[220px] flex-1 rounded-full bg-card text-xs"
+            className="h-9 min-w-[220px] flex-1 rounded-[4px] bg-card text-xs"
           />
           <select
             aria-label="Ticket status"
@@ -601,7 +601,7 @@ export function AdminSupportPage() {
               setStatus(event.target.value);
               setPage(1);
             }}
-            className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+            className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
           >
             <option value="all">All statuses</option>
             <option value="open">Open</option>
@@ -639,7 +639,7 @@ export function AdminSupportPage() {
                     <Td>{formatDate(ticket.updatedAt)}</Td>
                     <Td><StatusPill status={ticket.status} /></Td>
                     <Td className="text-right">
-                      <Button size="sm" variant="outline" className="h-8 rounded-full bg-transparent px-3" onClick={() => setSelectedId(ticket._id)}>
+                      <Button size="sm" variant="outline" className="h-8 rounded-[4px] bg-transparent px-3" onClick={() => setSelectedId(ticket._id)}>
                         Open
                       </Button>
                     </Td>

@@ -77,7 +77,7 @@ export default function ClaimsPage() {
               aria-label="Filter claims"
               value={status}
               onChange={(event) => setStatus(event.target.value)}
-              className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+              className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
             >
               {STATUSES.map((value) => (
                 <option key={value} value={value}>
@@ -85,7 +85,7 @@ export default function ClaimsPage() {
                 </option>
               ))}
             </select>
-            <Button className="h-9 rounded-full px-4" onClick={() => setSubmitOpen(true)}>
+            <Button className="h-9 rounded-[4px] px-4" onClick={() => setSubmitOpen(true)}>
               <LifeBuoy className="size-3.5" /> New claim
             </Button>
           </div>
@@ -99,7 +99,7 @@ export default function ClaimsPage() {
             title={claims.length === 0 ? "No claims submitted" : "No claims in this state"}
             description="You can claim against an active policy. Have the incident date, location, amount, and supporting evidence ready."
             action={
-              <Button size="sm" className="rounded-full" onClick={() => setSubmitOpen(true)}>
+              <Button size="sm" className="rounded-[4px]" onClick={() => setSubmitOpen(true)}>
                 Submit a claim
               </Button>
             }
@@ -140,7 +140,7 @@ export default function ClaimsPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-9 rounded-full bg-transparent px-4"
+                    className="h-9 rounded-[4px] bg-transparent px-4"
                     onClick={() => setSelectedId(claim._id)}
                   >
                     Open
@@ -316,11 +316,11 @@ function SubmitClaimDialog({
               </div>
 
               <div className="flex justify-end gap-2 border-t border-line pt-4">
-                <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>
+                <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>
                   Cancel
                 </Button>
                 <Button
-                  className="rounded-full"
+                  className="rounded-[4px]"
                   disabled={pending}
                   onClick={async () => {
                     setPending(true);
@@ -428,7 +428,7 @@ function ClaimDialog({
                 <div className="flex justify-end">
                   <Button
                     size="sm"
-                    className="rounded-full"
+                    className="rounded-[4px]"
                     disabled={pending || response.trim().length < 2}
                     onClick={async () => {
                       setPending(true);
@@ -539,7 +539,7 @@ function ClaimDialog({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-9 rounded-full px-3"
+                  className="h-9 rounded-[4px] px-3"
                   disabled={pending || !file}
                   onClick={async () => {
                     if (!file) return;
@@ -610,7 +610,7 @@ function ClaimDialog({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="rounded-full bg-transparent"
+                      className="rounded-[4px] bg-transparent"
                       disabled={pending || complaint.trim().length < 10}
                       onClick={async () => {
                         setPending(true);
@@ -639,7 +639,7 @@ function ClaimDialog({
             <p className="flex items-center gap-1.5 text-[0.62rem] text-muted-foreground">
               <ShieldCheck className="size-3.5" /> Decisions are made only by authorised staff.
             </p>
-            <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>
               Close
             </Button>
           </div>

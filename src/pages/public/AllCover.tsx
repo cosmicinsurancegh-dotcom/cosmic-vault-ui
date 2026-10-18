@@ -72,7 +72,7 @@ export default function AllCover() {
                     overlay="soft"
                     className="aspect-[16/9] w-full"
                   />
-                  <span className="absolute left-5 top-5 rounded-full border border-white/20 bg-white/12 px-2.5 py-1 text-[0.56rem] font-semibold uppercase tracking-[0.16em] text-bone backdrop-blur-md">
+                  <span className="absolute left-5 top-5 rounded-[4px] border border-white/20 bg-white/12 px-2.5 py-1 text-[0.56rem] font-semibold uppercase tracking-[0.16em] text-bone backdrop-blur-md">
                     {cover.productName}
                   </span>
                   <span className="absolute right-5 top-5 text-[0.58rem] font-semibold tracking-[0.18em] text-bone/70">
@@ -90,7 +90,7 @@ export default function AllCover() {
 
                   <span className="relative mt-6 inline-flex items-center justify-between gap-2 text-[0.8rem] font-medium text-ink transition-colors group-hover:text-primary">
                     <span className="link-slide">Explore this cover</span>
-                    <span className="grid size-7 place-items-center rounded-full border border-ink/12 transition-all duration-500 group-hover:rotate-45 group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
+                    <span className="grid size-7 place-items-center rounded-[4px] border border-ink/12 transition-all duration-500 group-hover:rotate-45 group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
                       <ScanLine className="size-3.5" />
                     </span>
                   </span>

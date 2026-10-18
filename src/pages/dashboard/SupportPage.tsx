@@ -49,7 +49,7 @@ export default function SupportPage() {
         title="A person, not a phone tree."
         description="Tickets stay separate from claim decisions and payments, but can be linked to the record in question."
         actions={
-          <Button className="h-10 rounded-full px-5" onClick={() => setCreateOpen(true)}>
+          <Button className="h-10 rounded-[4px] px-5" onClick={() => setCreateOpen(true)}>
             New request <ArrowUpRight className="size-4" />
           </Button>
         }
@@ -62,7 +62,7 @@ export default function SupportPage() {
             title="No support requests"
             description="Questions about a payment, a policy change, a claim, or your data all start here."
             action={
-              <Button size="sm" className="rounded-full" onClick={() => setCreateOpen(true)}>
+              <Button size="sm" className="rounded-[4px]" onClick={() => setCreateOpen(true)}>
                 Contact support
               </Button>
             }
@@ -78,7 +78,7 @@ export default function SupportPage() {
                     <p className="text-sm font-semibold text-ink">{ticket.subject}</p>
                     <StatusPill status={ticket.status} />
                     {ticket.priority === "high" && (
-                      <span className="rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[0.58rem] font-semibold text-destructive">
+                      <span className="rounded-[4px] border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[0.58rem] font-semibold text-destructive">
                         High priority
                       </span>
                     )}
@@ -90,7 +90,7 @@ export default function SupportPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-9 rounded-full bg-transparent px-4"
+                  className="h-9 rounded-[4px] bg-transparent px-4"
                   onClick={() => setSelectedId(ticket._id)}
                 >
                   Open thread
@@ -219,11 +219,11 @@ function CreateTicketDialog({
             />
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button
-              className="rounded-full"
+              className="rounded-[4px]"
               disabled={pending}
               onClick={async () => {
                 setPending(true);
@@ -352,7 +352,7 @@ export function TicketDialog({
                             toast.error(error instanceof Error ? error.message : "Could not update the ticket.");
                           }
                         }}
-                        className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+                        className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
                       >
                         <option value="open">Open</option>
                         <option value="awaiting_customer">Awaiting customer</option>
@@ -362,7 +362,7 @@ export function TicketDialog({
                     )}
                     <Button
                       size="sm"
-                      className="rounded-full"
+                      className="rounded-[4px]"
                       disabled={pending || body.trim().length < 2}
                       onClick={async () => {
                         setPending(true);
@@ -386,7 +386,7 @@ export function TicketDialog({
               )}
 
               <div className="flex justify-end">
-                <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>
+                <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>
                   Close
                 </Button>
               </div>

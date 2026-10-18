@@ -166,7 +166,7 @@ export default function ProfilePage() {
               />
             </div>
             <Button
-              className="rounded-full"
+              className="rounded-[4px]"
               disabled={pending}
               onClick={async () => {
                 setPending(true);
@@ -343,7 +343,7 @@ export default function ProfilePage() {
             </label>
             <div className="sm:col-span-2">
               <Button
-                className="rounded-full"
+                className="rounded-[4px]"
                 disabled={pending}
                 onClick={async () => {
                   setPending(true);
@@ -388,7 +388,7 @@ export default function ProfilePage() {
               <div className="pt-1">
                 <Button
                   variant="outline"
-                  className="rounded-full bg-transparent"
+                  className="rounded-[4px] bg-transparent"
                   onClick={() => setPasswordOpen(true)}
                 >
                   <KeyRound className="size-4" />
@@ -416,7 +416,7 @@ export default function ProfilePage() {
               />
               <Button
                 variant="outline"
-                className="rounded-full bg-transparent"
+                className="rounded-[4px] bg-transparent"
                 disabled={pending || request.trim().length < 10}
                 onClick={async () => {
                   setPending(true);
@@ -497,14 +497,14 @@ export default function ProfilePage() {
           <DialogFooter>
             <Button
               variant="ghost"
-              className="rounded-full"
+              className="rounded-[4px]"
               onClick={() => setPasswordOpen(false)}
               disabled={passwordSaving}
             >
               Cancel
             </Button>
             <Button
-              className="rounded-full"
+              className="rounded-[4px]"
               onClick={handleSavePassword}
               disabled={
                 passwordSaving ||

@@ -69,7 +69,7 @@ export default function QuotesPage() {
         title="Indicative terms, kept on file."
         description="Every quotation records the product version, answers, and calculation used. Quotations expire after 30 days."
         actions={
-          <Button asChild className="h-10 rounded-full px-5">
+          <Button asChild className="h-10 rounded-[4px] px-5">
             <Link to="/dashboard/catalogue">New quotation <ArrowUpRight className="size-4" /></Link>
           </Button>
         }
@@ -82,7 +82,7 @@ export default function QuotesPage() {
             title="No quotations yet"
             description="Choose a product, answer its questions, and the configured rating rules will calculate an indicative premium."
             action={
-              <Button asChild size="sm" className="rounded-full">
+              <Button asChild size="sm" className="rounded-[4px]">
                 <Link to="/dashboard/catalogue">Browse products</Link>
               </Button>
             }
@@ -136,7 +136,7 @@ export default function QuotesPage() {
                       {quotation.status === "quoted" ? (
                         <Button
                           size="sm"
-                          className="h-8 rounded-full px-3"
+                          className="h-8 rounded-[4px] px-3"
                           disabled={pendingId === quotation._id}
                           onClick={() => continueToApplication(quotation)}
                         >
@@ -231,12 +231,12 @@ export default function QuotesPage() {
                 </Callout>
 
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" className="rounded-full" onClick={() => setSelected(null)}>
+                  <Button variant="outline" className="rounded-[4px]" onClick={() => setSelected(null)}>
                     Close
                   </Button>
                   {selected.status === "quoted" && (
                     <Button
-                      className="rounded-full"
+                      className="rounded-[4px]"
                       disabled={pendingId === selected._id}
                       onClick={() => continueToApplication(selected)}
                     >

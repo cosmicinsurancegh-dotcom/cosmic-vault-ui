@@ -131,7 +131,7 @@ export function StatusPill({ status }: { status?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-[0.62rem] font-semibold",
+        "inline-flex shrink-0 items-center rounded-[4px] border px-2.5 py-0.5 text-[0.62rem] font-semibold",
         toneForStatus(status),
       )}
     >
@@ -154,7 +154,7 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
       {Icon && (
-        <span className="grid size-11 place-items-center rounded-full bg-ice text-primary">
+        <span className="grid size-11 place-items-center rounded-[4px] bg-ice text-primary">
           <Icon className="size-5" />
         </span>
       )}
@@ -258,7 +258,7 @@ export function Timeline({
     <ol className="space-y-4">
       {items.map((item, index) => (
         <li key={`${item.at}-${index}`} className="relative pl-5">
-          <span className="absolute left-0 top-1.5 size-1.5 rounded-full bg-primary" />
+          <span className="absolute left-0 top-1.5 size-1.5 rounded-[4px] bg-primary" />
           <p className="text-[0.65rem] font-medium uppercase tracking-[0.12em] text-muted-foreground">
             {formatDateTime(item.at)}
             {item.internal && " · internal"}
@@ -294,7 +294,7 @@ export function Pagination({
           type="button"
           disabled={page <= 1}
           onClick={() => onPage(page - 1)}
-          className="rounded-full border border-line px-3 py-1.5 font-medium transition-colors hover:border-primary/40 disabled:opacity-40"
+          className="rounded-[4px] border border-line px-3 py-1.5 font-medium transition-colors hover:border-primary/40 disabled:opacity-40"
         >
           Previous
         </button>
@@ -302,7 +302,7 @@ export function Pagination({
           type="button"
           disabled={page >= pages}
           onClick={() => onPage(page + 1)}
-          className="rounded-full border border-line px-3 py-1.5 font-medium transition-colors hover:border-primary/40 disabled:opacity-40"
+          className="rounded-[4px] border border-line px-3 py-1.5 font-medium transition-colors hover:border-primary/40 disabled:opacity-40"
         >
           Next
         </button>

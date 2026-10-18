@@ -211,7 +211,7 @@ export default function Dashboard() {
             <ThemeToggle className="size-9" />
             <Button
               size="sm"
-              className="h-9 rounded-full px-4"
+              className="h-9 rounded-[4px] px-4"
               onClick={() => openQuote()}
             >
               <Plus className="size-3.5" />
@@ -222,7 +222,7 @@ export default function Dashboard() {
                 <button
                   type="button"
                   aria-label="Open vault menu"
-                  className="grid size-9 place-items-center rounded-full border border-line text-ink"
+                  className="grid size-9 place-items-center rounded-[4px] border border-line text-ink"
                 >
                   <Menu className="size-4" />
                 </button>
@@ -266,7 +266,7 @@ export default function Dashboard() {
             <div>
               <p className="flex flex-wrap items-center gap-2 text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-muted-foreground">
                 Member vault
-                <span className="size-1 rounded-full bg-primary" />
+                <span className="size-1 rounded-[4px] bg-primary" />
                 {today}
               </p>
               <h1 className="mt-2.5 text-[clamp(1.8rem,3.5vw,2.6rem)] font-semibold leading-none tracking-[-0.045em] text-ink">
@@ -276,7 +276,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2.5 self-start sm:self-auto">
               <ThemeToggle />
               <Button
-                className="h-11 rounded-full px-5"
+                className="h-11 rounded-[4px] px-5"
                 onClick={() => openQuote()}
               >
                 <Plus className="size-4" />
@@ -358,7 +358,7 @@ function Overview({
     <div className="space-y-5">
       {/* Readiness */}
       <div className="starfield relative overflow-hidden rounded-[1.6rem] bg-[#071227] p-6 text-bone sm:p-8">
-        <span className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.35),transparent_65%)]" />
+        <span className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.35),transparent_65%)]" />
         <div className="relative grid gap-7 sm:grid-cols-[1fr_auto] sm:items-center">
           <div>
             <p className="text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-bone/45">
@@ -384,7 +384,7 @@ function Overview({
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Button
-                className="h-10 rounded-full bg-primary px-5 text-primary-foreground hover:bg-primary/90"
+                className="h-10 rounded-[4px] bg-primary px-5 text-primary-foreground hover:bg-primary/90"
                 onClick={() => onQuote()}
               >
                 {stats.list.length === 0 ? "Request your first quote" : "Add cover"}
@@ -392,7 +392,7 @@ function Overview({
               </Button>
               <Button
                 variant="ghost"
-                className="h-10 rounded-full px-4 text-bone/70 hover:bg-white/10 hover:text-bone"
+                className="h-10 rounded-[4px] px-4 text-bone/70 hover:bg-white/10 hover:text-bone"
                 onClick={onConcierge}
               >
                 <Headset className="size-4" />
@@ -530,7 +530,7 @@ function Overview({
                   STATUS_META[quote.status] ?? STATUS_META.in_review;
                 return (
                   <li key={quote._id} className="flex items-center gap-3 py-3.5">
-                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-ice text-primary">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-[4px] bg-ice text-primary">
                       <Icon className="size-4" />
                     </span>
                     <div className="min-w-0 flex-1">
@@ -547,7 +547,7 @@ function Overview({
                     </div>
                     <span
                       className={cn(
-                        "shrink-0 rounded-full border px-2.5 py-1 text-[0.6rem] font-semibold",
+                        "shrink-0 rounded-[4px] border px-2.5 py-1 text-[0.6rem] font-semibold",
                         status.className,
                       )}
                     >
@@ -589,7 +589,7 @@ function Overview({
                   onClick={() => onQuote(option.key)}
                   className="group flex w-full items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-left transition-colors hover:border-primary/30 hover:bg-primary/[0.03]"
                 >
-                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-ink/[0.04] text-ink/60 transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-[4px] bg-ink/[0.04] text-ink/60 transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                     <Icon className="size-3.5" />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -632,7 +632,7 @@ function QuotesView({
           </p>
         </div>
         <Button
-          className="h-9 rounded-full px-4"
+          className="h-9 rounded-[4px] px-4"
           size="sm"
           onClick={() => onQuote()}
         >
@@ -662,7 +662,7 @@ function QuotesView({
                 key={quote._id}
                 className="flex flex-col gap-3 px-5 py-5 transition-colors hover:bg-ink/[0.02] sm:flex-row sm:items-center sm:px-7"
               >
-                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-ice text-primary">
+                <span className="grid size-10 shrink-0 place-items-center rounded-[4px] bg-ice text-primary">
                   <Icon className="size-4.5" />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -672,7 +672,7 @@ function QuotesView({
                     </p>
                     <span
                       className={cn(
-                        "rounded-full border px-2.5 py-0.5 text-[0.58rem] font-semibold",
+                        "rounded-[4px] border px-2.5 py-0.5 text-[0.58rem] font-semibold",
                         status.className,
                       )}
                     >
@@ -764,7 +764,7 @@ function CoverageView({
               <div className="flex items-start justify-between">
                 <span
                   className={cn(
-                    "grid size-11 place-items-center rounded-full",
+                    "grid size-11 place-items-center rounded-[4px]",
                     isCovered
                       ? "bg-primary text-primary-foreground"
                       : "bg-ice text-primary",
@@ -773,7 +773,7 @@ function CoverageView({
                   <Icon className="size-4.5" />
                 </span>
                 {isCovered && (
-                  <span className="rounded-full border border-primary/20 bg-primary/[0.06] px-2.5 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-primary">
+                  <span className="rounded-[4px] border border-primary/20 bg-primary/[0.06] px-2.5 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-primary">
                     In your vault
                   </span>
                 )}
@@ -827,12 +827,12 @@ function ConciergeView({
   return (
     <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="starfield relative overflow-hidden rounded-[1.5rem] bg-[#071227] p-6 text-bone sm:p-7">
-        <span className="pointer-events-none absolute -right-10 bottom-10 size-40 rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.28),transparent_70%)]" />
+        <span className="pointer-events-none absolute -right-10 bottom-10 size-40 rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.28),transparent_70%)]" />
         <p className="text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-bone/45">
           Support
         </p>
         <div className="mt-5 flex items-center gap-4">
-          <span className="relative grid size-16 place-items-center rounded-full border border-white/15 text-electric-soft">
+          <span className="relative grid size-16 place-items-center rounded-[4px] border border-white/15 text-electric-soft">
             <Headset className="size-6" />
           </span>
           <div>
@@ -851,14 +851,14 @@ function ConciergeView({
         <div className="mt-6 flex flex-wrap gap-2.5">
           <Link
             to="/support/contact"
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-4 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex h-10 items-center gap-2 rounded-[4px] bg-primary px-4 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             <Headset className="size-3.5" />
             How support works
           </Link>
           <Link
             to="/help"
-            className="inline-flex h-10 items-center gap-2 rounded-full border border-white/15 px-4 text-xs font-medium text-bone/75 transition-colors hover:border-white/35 hover:text-bone"
+            className="inline-flex h-10 items-center gap-2 rounded-[4px] border border-white/15 px-4 text-xs font-medium text-bone/75 transition-colors hover:border-white/35 hover:text-bone"
           >
             <FileText className="size-3.5" />
             Help centre
@@ -884,7 +884,7 @@ function ConciergeView({
               to="/support/contact"
               className="group flex items-start gap-3 rounded-xl border border-line px-4 py-3.5 transition-colors hover:border-primary/30 hover:bg-primary/[0.03]"
             >
-              <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-ice text-primary">
+              <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-[4px] bg-ice text-primary">
                 <Icon className="size-3.5" />
               </span>
               <span className="min-w-0 flex-1">

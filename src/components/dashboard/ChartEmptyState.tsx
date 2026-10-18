@@ -75,13 +75,13 @@ export function ChartEmptyState({
 
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -right-12 -top-14 size-44 rounded-full border border-primary/10"
+        className="pointer-events-none absolute -right-12 -top-14 size-44 rounded-[4px] border border-primary/10"
       >
-        <span className="absolute inset-6 rounded-full border border-primary/10" />
-        <span className="absolute -left-1 top-1/2 size-1.5 rounded-full bg-primary/50" />
+        <span className="absolute inset-6 rounded-[4px] border border-primary/10" />
+        <span className="absolute -left-1 top-1/2 size-1.5 rounded-[4px] bg-primary/50" />
       </span>
 
-      <span className="relative grid size-11 place-items-center rounded-full border border-primary/15 bg-card text-primary shadow-[0_10px_30px_-18px_rgba(29,116,245,0.55)]">
+      <span className="relative grid size-11 place-items-center rounded-[4px] border border-primary/15 bg-card text-primary shadow-[0_10px_30px_-18px_rgba(29,116,245,0.55)]">
         <Icon className="size-5" strokeWidth={1.8} />
       </span>
       <p className="relative mt-4 text-sm font-semibold tracking-[-0.01em] text-ink">
@@ -93,7 +93,7 @@ export function ChartEmptyState({
       {actionLabel && onAction && (
         <Button
           size="sm"
-          className="relative mt-4 h-9 rounded-full px-4"
+          className="relative mt-4 h-9 rounded-[4px] px-4"
           onClick={onAction}
         >
           {actionLabel}
@@ -101,7 +101,7 @@ export function ChartEmptyState({
         </Button>
       )}
       <p className="relative mt-3.5 inline-flex items-center gap-1.5 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
-        <span className="size-1 rounded-full bg-primary/40" />
+        <span className="size-1 rounded-[4px] bg-primary/40" />
         {footnote}
       </p>
     </div>

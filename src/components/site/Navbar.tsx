@@ -135,7 +135,7 @@ function MegaPanel({
                 <p className="text-[0.56rem] font-semibold uppercase tracking-[0.24em] text-bone/80">
                   {section.feature.eyebrow}
                 </p>
-                <span className="grid size-7 place-items-center rounded-full border border-white/25 bg-white/10 text-bone backdrop-blur transition-transform duration-500 group-hover:rotate-45">
+                <span className="grid size-7 place-items-center rounded-[4px] border border-white/25 bg-white/10 text-bone backdrop-blur transition-transform duration-500 group-hover:rotate-45">
                   <ArrowUpRight className="size-3.5" />
                 </span>
               </div>
@@ -153,10 +153,10 @@ function MegaPanel({
                 <Link
                   to={section.feature.primary.href}
                   onClick={onClose}
-                  className="group/btn flex items-center justify-between gap-2 rounded-full bg-primary py-1.5 pl-4 pr-1.5 text-[0.78rem] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                  className="group/btn flex items-center justify-between gap-2 rounded-[4px] bg-primary py-1.5 pl-4 pr-1.5 text-[0.78rem] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                 >
                   {section.feature.primary.label}
-                  <span className="grid size-6 place-items-center rounded-full bg-primary-foreground/20">
+                  <span className="grid size-6 place-items-center rounded-[4px] bg-primary-foreground/20">
                     <ArrowUpRight className="size-3.5 transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
                   </span>
                 </Link>
@@ -164,7 +164,7 @@ function MegaPanel({
                   <Link
                     to={section.feature.secondary.href}
                     onClick={onClose}
-                    className="flex items-center justify-between gap-2 rounded-full border border-ink/12 px-4 py-2 text-[0.75rem] font-medium text-ink/70 transition-colors hover:border-ink/30 hover:text-ink"
+                    className="flex items-center justify-between gap-2 rounded-[4px] border border-ink/12 px-4 py-2 text-[0.75rem] font-medium text-ink/70 transition-colors hover:border-ink/30 hover:text-ink"
                   >
                     {section.feature.secondary.label}
                     <ArrowRight className="size-3.5 transition-transform duration-300 group-hover/btn:translate-x-0.5" />
@@ -311,7 +311,7 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
       >
         <div
           className={cn(
-            "relative flex items-center justify-between gap-3 rounded-full border border-ink/10 px-3 py-2 backdrop-blur-xl transition-[background-color,box-shadow] duration-300 sm:px-4",
+            "relative flex items-center justify-between gap-3 rounded-[4px] border border-ink/10 px-3 py-2 backdrop-blur-xl transition-[background-color,box-shadow] duration-300 sm:px-4",
             scrolled || overlay ? "bg-background/92" : "bg-background/72",
             overlay &&
               !scrolled &&
@@ -349,7 +349,7 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
                     if (event.pointerType === "mouse") scheduleClose();
                   }}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-full px-3 py-2 text-[0.82rem] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background xl:px-3.5",
+                    "inline-flex items-center gap-1 rounded-[4px] px-3 py-2 text-[0.82rem] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background xl:px-3.5",
                     isOpen || isActive
                       ? "bg-primary/10 text-primary"
                       : "text-ink/65 hover:bg-primary/8 hover:text-primary",
@@ -373,14 +373,14 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
             {isAuthenticated ? (
               <Link
                 to="/dashboard"
-                className="hidden rounded-full px-3 py-2 text-[0.82rem] font-medium text-ink/65 transition-colors hover:bg-primary/8 hover:text-primary lg:inline-flex"
+                className="hidden rounded-[4px] px-3 py-2 text-[0.82rem] font-medium text-ink/65 transition-colors hover:bg-primary/8 hover:text-primary lg:inline-flex"
               >
                 My vault
               </Link>
             ) : (
               <Link
                 to={signInHref}
-                className="hidden rounded-full px-3 py-2 text-[0.82rem] font-medium text-ink/65 transition-colors hover:bg-primary/8 hover:text-primary lg:inline-flex"
+                className="hidden rounded-[4px] px-3 py-2 text-[0.82rem] font-medium text-ink/65 transition-colors hover:bg-primary/8 hover:text-primary lg:inline-flex"
               >
                 Sign in
               </Link>
@@ -388,17 +388,17 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
 
             <Link
               to="/quote"
-              className="group hidden items-center gap-2 rounded-full bg-primary py-2 pl-4 pr-2 text-[0.82rem] font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex"
+              className="group hidden items-center gap-2 rounded-[4px] bg-primary py-2 pl-4 pr-2 text-[0.82rem] font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex"
             >
               Get a quote
-              <span className="grid size-6 place-items-center rounded-full bg-primary-foreground/20">
+              <span className="grid size-6 place-items-center rounded-[4px] bg-primary-foreground/20">
                 <ArrowUpRight className="size-3.5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
               </span>
             </Link>
 
             <Link
               to="/quote"
-              className="inline-flex h-10 items-center rounded-full bg-primary px-4 text-xs font-medium text-primary-foreground sm:hidden"
+              className="inline-flex h-10 items-center rounded-[4px] bg-primary px-4 text-xs font-medium text-primary-foreground sm:hidden"
             >
               Quote
             </Link>
@@ -409,7 +409,7 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
                   type="button"
                   aria-label={mobileOpen ? "Close menu" : "Open menu"}
                   aria-expanded={mobileOpen}
-                  className="grid size-10 place-items-center rounded-full border border-ink/12 text-ink transition-colors hover:bg-ink/[0.045] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:hidden"
+                  className="grid size-10 place-items-center rounded-[4px] border border-ink/12 text-ink transition-colors hover:bg-ink/[0.045] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:hidden"
                 >
                   {mobileOpen ? <X className="size-4" /> : <Menu className="size-4" />}
                 </button>
@@ -431,17 +431,17 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
                   <Link
                     to="/quote"
                     onClick={() => setMobileOpen(false)}
-                    className="flex h-11 w-full items-center justify-between rounded-full bg-primary pl-5 pr-2 text-sm font-medium text-primary-foreground"
+                    className="flex h-11 w-full items-center justify-between rounded-[4px] bg-primary pl-5 pr-2 text-sm font-medium text-primary-foreground"
                   >
                     Get a quote
-                    <span className="grid size-7 place-items-center rounded-full bg-primary-foreground/20">
+                    <span className="grid size-7 place-items-center rounded-[4px] bg-primary-foreground/20">
                       <ArrowUpRight className="size-3.5" />
                     </span>
                   </Link>
                   <Link
                     to={isAuthenticated ? "/dashboard" : signInHref}
                     onClick={() => setMobileOpen(false)}
-                    className="mt-2 flex h-11 w-full items-center justify-between rounded-full border border-line px-5 text-sm font-medium text-ink"
+                    className="mt-2 flex h-11 w-full items-center justify-between rounded-[4px] border border-line px-5 text-sm font-medium text-ink"
                   >
                     {isAuthenticated ? "Open my vault" : "Sign in to your vault"}
                     <ArrowRight className="size-3.5 text-ink/45" />
@@ -458,7 +458,7 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
                               ...(section.feature.image ?? IMAGES.workspaces),
                               alt: "",
                             }}
-                            className="size-9 shrink-0 rounded-full border border-line"
+                            className="size-9 shrink-0 rounded-[4px] border border-line"
                             imgClassName="grayscale-[35%] transition-all duration-500 group-hover:grayscale-0"
                           />
                           {section.label}

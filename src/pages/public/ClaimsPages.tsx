@@ -216,7 +216,7 @@ export function ClaimsOverview() {
       >
         <div className="grid gap-8 lg:grid-cols-2">
           <div className="rounded-[1.3rem] border border-line bg-card p-6">
-            <span className="grid size-10 place-items-center rounded-full bg-ice text-primary">
+            <span className="grid size-10 place-items-center rounded-[4px] bg-ice text-primary">
               <UserRound className="size-4" />
             </span>
             <p className="mt-5 text-[1rem] font-semibold text-ink">
@@ -238,7 +238,7 @@ export function ClaimsOverview() {
             </div>
           </div>
           <div className="rounded-[1.3rem] border border-line bg-card p-6">
-            <span className="grid size-10 place-items-center rounded-full bg-ice text-primary">
+            <span className="grid size-10 place-items-center rounded-[4px] bg-ice text-primary">
               <ShieldCheck className="size-4" />
             </span>
             <p className="mt-5 text-[1rem] font-semibold text-ink">

@@ -90,7 +90,7 @@ export default function Home() {
           title={`${greeting}, ${firstName}.`}
           description="Everything you're protecting, and every request in flight - reviewed by a person, never auto-approved."
           actions={
-            <Button asChild className="h-10 rounded-full px-5">
+            <Button asChild className="h-10 rounded-[4px] px-5">
               <Link to="/dashboard/catalogue">
                 Browse products <ArrowUpRight className="size-4" />
               </Link>
@@ -175,7 +175,7 @@ export default function Home() {
                 title="No policies yet"
                 description="Start with a quotation. An underwriter reviews every application personally before a policy is issued."
                 action={
-                  <Button asChild size="sm" className="rounded-full">
+                  <Button asChild size="sm" className="rounded-[4px]">
                     <Link to="/dashboard/catalogue">Browse products</Link>
                   </Button>
                 }
@@ -187,7 +187,7 @@ export default function Home() {
                     key={policy._id}
                     className="flex items-center gap-3 px-5 py-3.5"
                   >
-                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-ice text-primary">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-[4px] bg-ice text-primary">
                       <ShieldCheck className="size-4" />
                     </span>
                     <div className="min-w-0 flex-1">
@@ -298,7 +298,7 @@ export default function Home() {
                 title="No claims"
                 description="If something happens, submit a claim against an active policy. Submitting does not confirm cover."
                 action={
-                  <Button asChild size="sm" className="rounded-full">
+                  <Button asChild size="sm" className="rounded-[4px]">
                     <Link to="/dashboard/claims">Submit a claim</Link>
                   </Button>
                 }
@@ -345,7 +345,7 @@ export default function Home() {
             <Link
               key={to}
               to={to}
-              className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-4 py-2 text-xs font-medium text-ink transition-colors hover:border-primary/40"
+              className="inline-flex items-center gap-2 rounded-[4px] border border-line bg-card px-4 py-2 text-xs font-medium text-ink transition-colors hover:border-primary/40"
             >
               <Icon className="size-3.5 text-primary" /> {label}
             </Link>
@@ -471,7 +471,7 @@ export default function Home() {
               title="No applications yet"
               description="Start with a quotation for an assigned customer."
               action={
-                <Button asChild size="sm" className="rounded-full">
+                <Button asChild size="sm" className="rounded-[4px]">
                   <Link to="/dashboard/catalogue">Start a quotation</Link>
                 </Button>
               }

@@ -86,8 +86,8 @@ export function QuoteDialog({
               transition={{ duration: 0.35 }}
               className="px-6 py-9 text-center sm:px-10 sm:py-12"
             >
-              <div className="relative mx-auto grid size-16 place-items-center rounded-full bg-primary text-primary-foreground">
-                <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-primary/20" />
+              <div className="relative mx-auto grid size-16 place-items-center rounded-[4px] bg-primary text-primary-foreground">
+                <span className="absolute inset-0 -z-10 animate-ping rounded-[4px] bg-primary/20" />
                 <Check className="size-7" strokeWidth={2.4} />
               </div>
               <p className="mt-6 text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
@@ -105,14 +105,14 @@ export function QuoteDialog({
                 This is a request, not a binding quote. No price is fixed here and
                 nothing is charged until a policy is issued.
               </p>
-              <div className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full border border-dashed border-line bg-card px-5 py-2.5 text-sm font-semibold tracking-[0.14em] text-ink">
+              <div className="mx-auto mt-6 inline-flex items-center gap-2 rounded-[4px] border border-dashed border-line bg-card px-5 py-2.5 text-sm font-semibold tracking-[0.14em] text-ink">
                 <Hash className="size-3.5 text-electric" />
                 {reference}
               </div>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 {isAuthenticated ? (
                   <Button
-                    className="h-11 w-full rounded-full px-6 sm:w-auto"
+                    className="h-11 w-full rounded-[4px] px-6 sm:w-auto"
                     onClick={() => {
                       onOpenChange(false);
                       navigate("/dashboard");
@@ -123,7 +123,7 @@ export function QuoteDialog({
                   </Button>
                 ) : (
                   <Button
-                    className="h-11 w-full rounded-full px-6 sm:w-auto"
+                    className="h-11 w-full rounded-[4px] px-6 sm:w-auto"
                     onClick={() => {
                       onOpenChange(false);
                       navigate("/auth?returnTo=%2Fdashboard");
@@ -135,7 +135,7 @@ export function QuoteDialog({
                 )}
                 <Button
                   variant="ghost"
-                  className="h-11 w-full rounded-full px-6 text-muted-foreground sm:w-auto"
+                  className="h-11 w-full rounded-[4px] px-6 text-muted-foreground sm:w-auto"
                   onClick={() => onOpenChange(false)}
                 >
                   Done
@@ -190,7 +190,7 @@ export function QuoteDialog({
                         >
                           <span
                             className={cn(
-                              "grid size-7 shrink-0 place-items-center rounded-full transition-colors",
+                              "grid size-7 shrink-0 place-items-center rounded-[4px] transition-colors",
                               active
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-ink/[0.05] text-ink/60",
@@ -253,7 +253,7 @@ export function QuoteDialog({
                   <Button
                     type="submit"
                     disabled={pending}
-                    className="h-11 w-full rounded-full px-6 sm:w-auto"
+                    className="h-11 w-full rounded-[4px] px-6 sm:w-auto"
                   >
                     {pending ? (
                       <>

@@ -85,7 +85,7 @@ export function Footer() {
             <button
               type="button"
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="group inline-flex items-center gap-1.5 rounded-full border border-white/12 px-3 py-1.5 text-bone/60 transition-colors hover:text-bone"
+              className="group inline-flex items-center gap-1.5 rounded-[4px] border border-white/12 px-3 py-1.5 text-bone/60 transition-colors hover:text-bone"
             >
               Back to top
               <ArrowUp className="size-3 transition-transform group-hover:-translate-y-0.5" />

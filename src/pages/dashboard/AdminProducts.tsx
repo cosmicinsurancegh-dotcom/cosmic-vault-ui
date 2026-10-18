@@ -215,7 +215,7 @@ export default function AdminProductsPage() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              className="h-10 rounded-full bg-transparent"
+              className="h-10 rounded-[4px] bg-transparent"
               onClick={async () => {
                 try {
                   const result = await seed();
@@ -229,7 +229,7 @@ export default function AdminProductsPage() {
             >
               <PackagePlus className="size-4" /> Starter catalogue
             </Button>
-            <Button className="h-10 rounded-full px-5" onClick={startNew}>
+            <Button className="h-10 rounded-[4px] px-5" onClick={startNew}>
               <Plus className="size-4" /> New product
             </Button>
           </div>
@@ -282,7 +282,7 @@ export default function AdminProductsPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-8 rounded-full px-2.5"
+                        className="h-8 rounded-[4px] px-2.5"
                         onClick={() => {
                           setForm(toForm(product, product.status !== "draft"));
                           setOpen(true);
@@ -294,7 +294,7 @@ export default function AdminProductsPage() {
                       {product.status === "draft" && (
                         <Button
                           size="sm"
-                          className="h-8 rounded-full px-2.5"
+                          className="h-8 rounded-[4px] px-2.5"
                           onClick={async () => {
                             try {
                               await publish({ productId: product._id });
@@ -311,7 +311,7 @@ export default function AdminProductsPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-8 rounded-full px-2.5 text-muted-foreground"
+                          className="h-8 rounded-[4px] px-2.5 text-muted-foreground"
                           onClick={() => setArchiveTarget(product)}
                         >
                           <Archive className="size-3.5" /> Archive
@@ -435,8 +435,8 @@ export default function AdminProductsPage() {
                       }
                       className={
                         checked
-                          ? "rounded-full bg-primary px-3 py-1.5 text-[0.62rem] font-medium text-primary-foreground"
-                          : "rounded-full border border-line px-3 py-1.5 text-[0.62rem] font-medium text-muted-foreground"
+                          ? "rounded-[4px] bg-primary px-3 py-1.5 text-[0.62rem] font-medium text-primary-foreground"
+                          : "rounded-[4px] border border-line px-3 py-1.5 text-[0.62rem] font-medium text-muted-foreground"
                       }
                     >
                       {country.code}
@@ -480,8 +480,8 @@ export default function AdminProductsPage() {
             </div>
 
             <div className="flex justify-end gap-2 border-t border-line pt-4">
-              <Button variant="outline" className="rounded-full" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button className="rounded-full" disabled={pending} onClick={submit}>
+              <Button variant="outline" className="rounded-[4px]" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button className="rounded-[4px]" disabled={pending} onClick={submit}>
                 {pending && <Loader2 className="size-4 animate-spin" />} Save draft
               </Button>
             </div>
@@ -500,10 +500,10 @@ export default function AdminProductsPage() {
           </DialogHeader>
           <Textarea value={archiveReason} onChange={(event) => setArchiveReason(event.target.value)} className="rounded-xl bg-card" placeholder="Reason for archiving" />
           <div className="flex justify-end gap-2">
-            <Button variant="outline" className="rounded-full" onClick={() => setArchiveTarget(null)}>Cancel</Button>
+            <Button variant="outline" className="rounded-[4px]" onClick={() => setArchiveTarget(null)}>Cancel</Button>
             <Button
               variant="destructive"
-              className="rounded-full"
+              className="rounded-[4px]"
               disabled={archiveReason.trim().length < 3}
               onClick={async () => {
                 try {

@@ -156,7 +156,7 @@ export default function ContactSupport() {
               key={item.title}
               className="rounded-[1.3rem] border border-line bg-card p-6"
             >
-              <span className="grid size-10 place-items-center rounded-full bg-ice text-primary">
+              <span className="grid size-10 place-items-center rounded-[4px] bg-ice text-primary">
                 <UserRound className="size-4" />
               </span>
               <p className="mt-5 text-[0.98rem] font-semibold text-ink">

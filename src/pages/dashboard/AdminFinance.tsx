@@ -75,7 +75,7 @@ export function AdminPaymentsPage() {
                 setPage(1);
               }}
               placeholder="Reference, provider ref, or note"
-              className="h-9 rounded-full bg-card pl-9 text-xs"
+              className="h-9 rounded-[4px] bg-card pl-9 text-xs"
             />
           </div>
           <select
@@ -85,7 +85,7 @@ export function AdminPaymentsPage() {
               setStatus(event.target.value);
               setPage(1);
             }}
-            className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+            className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
           >
             {["all", "pending", "succeeded", "failed", "refunded", "disputed"].map((value) => (
               <option key={value} value={value}>
@@ -100,7 +100,7 @@ export function AdminPaymentsPage() {
               setType(event.target.value);
               setPage(1);
             }}
-            className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+            className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
           >
             {["all", "premium", "refund", "settlement", "adjustment"].map((value) => (
               <option key={value} value={value}>
@@ -143,7 +143,7 @@ export function AdminPaymentsPage() {
                     <Td>{formatDate(transaction.createdAt)}</Td>
                     <Td><StatusPill status={transaction.status} /></Td>
                     <Td className="text-right">
-                      <Button size="sm" variant="outline" className="h-8 rounded-full bg-transparent px-3" onClick={() => setSelectedId(transaction._id)}>
+                      <Button size="sm" variant="outline" className="h-8 rounded-[4px] bg-transparent px-3" onClick={() => setSelectedId(transaction._id)}>
                         Manage
                       </Button>
                     </Td>
@@ -247,7 +247,7 @@ function FinanceDialog({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 rounded-full border-destructive/40 bg-transparent text-destructive"
+                  className="h-8 rounded-[4px] border-destructive/40 bg-transparent text-destructive"
                   disabled={pending || reason.trim().length < 3}
                   onClick={async () => {
                     if (reason.trim().length < 3) {
@@ -270,7 +270,7 @@ function FinanceDialog({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 rounded-full bg-transparent"
+                  className="h-8 rounded-[4px] bg-transparent"
                   disabled={pending}
                   onClick={async () => {
                     setPending(true);
@@ -288,7 +288,7 @@ function FinanceDialog({
                 </Button>
                 <Button
                   size="sm"
-                  className="h-8 rounded-full"
+                  className="h-8 rounded-[4px]"
                   disabled={pending || providerRef.trim().length < 3}
                   onClick={async () => {
                     setPending(true);
@@ -335,7 +335,7 @@ function FinanceDialog({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 rounded-full border-destructive/40 bg-transparent text-destructive"
+                      className="h-8 rounded-[4px] border-destructive/40 bg-transparent text-destructive"
                       disabled={pending || !amount || reason.trim().length < 5}
                       onClick={async () => {
                         setPending(true);
@@ -368,7 +368,7 @@ function FinanceDialog({
           )}
 
           <div className="flex justify-end">
-            <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>Close</Button>
+            <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>Close</Button>
           </div>
         </div>
       </DialogContent>

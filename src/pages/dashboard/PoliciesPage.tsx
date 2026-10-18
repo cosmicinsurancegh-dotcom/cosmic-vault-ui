@@ -60,7 +60,7 @@ export default function PoliciesPage() {
             aria-label="Filter policies"
             value={status}
             onChange={(event) => setStatus(event.target.value)}
-            className="h-9 rounded-full border border-line bg-card px-3 text-xs text-ink"
+            className="h-9 rounded-[4px] border border-line bg-card px-3 text-xs text-ink"
           >
             {STATUS_FILTERS.map((value) => (
               <option key={value} value={value}>
@@ -78,7 +78,7 @@ export default function PoliciesPage() {
             title={status === "all" ? "No policies yet" : "No policies in this state"}
             description="A policy is issued after an application is approved and the premium is confirmed. Nothing becomes active automatically."
             action={
-              <Button asChild size="sm" className="rounded-full">
+              <Button asChild size="sm" className="rounded-[4px]">
                 <Link to="/dashboard/applications">View applications</Link>
               </Button>
             }
@@ -126,13 +126,13 @@ export default function PoliciesPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-9 flex-1 rounded-full bg-transparent"
+                  className="h-9 flex-1 rounded-[4px] bg-transparent"
                   onClick={() => setSelectedId(policy._id)}
                 >
                   Open policy
                 </Button>
                 {policy.status === "active" && (
-                  <Button asChild size="sm" className="h-9 flex-1 rounded-full">
+                  <Button asChild size="sm" className="h-9 flex-1 rounded-[4px]">
                     <Link to="/dashboard/claims">Make a claim</Link>
                   </Button>
                 )}
@@ -373,8 +373,8 @@ function PolicyDialog({
                       onClick={() => setKind(option)}
                       className={
                         kind === option
-                          ? "rounded-full bg-primary px-3 py-1.5 text-[0.65rem] font-medium text-primary-foreground"
-                          : "rounded-full border border-line px-3 py-1.5 text-[0.65rem] font-medium text-muted-foreground"
+                          ? "rounded-[4px] bg-primary px-3 py-1.5 text-[0.65rem] font-medium text-primary-foreground"
+                          : "rounded-[4px] border border-line px-3 py-1.5 text-[0.65rem] font-medium text-muted-foreground"
                       }
                     >
                       {option}
@@ -394,7 +394,7 @@ function PolicyDialog({
                 <div className="flex justify-end">
                   <Button
                     size="sm"
-                    className="rounded-full"
+                    className="rounded-[4px]"
                     disabled={pending || details.trim().length < 5}
                     onClick={async () => {
                       setPending(true);
@@ -430,7 +430,7 @@ function PolicyDialog({
           </section>
 
           <div className="flex justify-end">
-            <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" className="rounded-[4px]" onClick={() => onOpenChange(false)}>
               Close
             </Button>
           </div>

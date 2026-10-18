@@ -67,7 +67,7 @@ export function Story() {
                       <Media
                         key={face.src}
                         image={face}
-                        className="size-9 rounded-full border-2 border-background transition-transform duration-300 hover:-translate-y-1"
+                        className="size-9 rounded-[4px] border-2 border-background transition-transform duration-300 hover:-translate-y-1"
                         imgClassName="scale-105"
                       />
                     )).reverse()}

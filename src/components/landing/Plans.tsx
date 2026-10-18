@@ -68,7 +68,7 @@ export function Plans({ onQuote }: { onQuote: () => void }) {
             <Reveal key={title} delay={index * 0.07}>
               <article className="group flex h-full flex-col rounded-[1.6rem] border border-line bg-card p-6 transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-1 hover:border-primary/25 hover:shadow-[0_26px_54px_-44px_rgba(8,18,39,0.5)] sm:p-7">
                 <div className="flex items-start justify-between">
-                  <span className="grid size-11 place-items-center rounded-full bg-ice text-primary transition-colors duration-500 group-hover:bg-primary group-hover:text-primary-foreground">
+                  <span className="grid size-11 place-items-center rounded-[4px] bg-ice text-primary transition-colors duration-500 group-hover:bg-primary group-hover:text-primary-foreground">
                     <Icon className="size-4 transition-transform duration-500 group-hover:rotate-[8deg]" strokeWidth={1.8} />
                   </span>
                   <span className="text-[0.6rem] font-semibold tracking-[0.2em] text-ink/20">
@@ -91,9 +91,9 @@ export function Plans({ onQuote }: { onQuote: () => void }) {
             {notes.map((note) => (
               <div
                 key={note}
-                className="group flex items-center gap-2.5 rounded-full transition-colors"
+                className="group flex items-center gap-2.5 rounded-[4px] transition-colors"
               >
-                <span className="size-1.5 shrink-0 rounded-full bg-electric transition-transform duration-300 group-hover:scale-150" />
+                <span className="size-1.5 shrink-0 rounded-[4px] bg-electric transition-transform duration-300 group-hover:scale-150" />
                 <span className="text-[0.8rem] text-muted-foreground transition-colors group-hover:text-ink">
                   {note}
                 </span>
