@@ -16,6 +16,7 @@ import "./index.css";
 
 // Lazy load route components for better code splitting
 const Landing = lazy(() => import("./pages/Landing.tsx"));
+const HeroLab = lazy(() => import("./pages/HeroLab.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const DashboardLayout = lazy(
@@ -231,6 +232,8 @@ createRoot(document.getElementById("root")!).render(
               <CookieConsent />
               <Suspense fallback={<RouteLoading />}>
                 <Routes>
+                  {/* Design study: the three hero directions, presented full-bleed. */}
+                  <Route path="/hero-lab" element={<HeroLab />} />
                   {/* Public marketing site: one shared shell with mega-menu navigation */}
                   <Route element={<PublicLayout />}>
                     <Route index element={<Landing />} />

@@ -83,6 +83,12 @@ export function Footer() {
             >
               Regulatory information
             </Link>
+            <Link
+              to="/hero-lab"
+              className="link-slide transition-colors hover:text-bone"
+            >
+              Hero studies
+            </Link>
             <button
               type="button"
               onClick={requestCookieSettings}
