@@ -74,7 +74,7 @@ function MegaPanel({
       onPointerLeave={onPointerLeave}
       className="absolute inset-x-0 top-full z-50 pt-2"
     >
-      <div className="overflow-hidden rounded-[1.35rem] border border-line bg-popover/98 shadow-[0_28px_80px_-36px_rgba(8,18,39,0.5)] backdrop-blur-xl">
+      <div className="overflow-hidden rounded-[4px] border border-line bg-popover/98 shadow-[0_28px_80px_-36px_rgba(8,18,39,0.5)] backdrop-blur-xl">
         <div className="flex flex-col gap-8 p-5 sm:p-6 lg:flex-row">
           <div className="flex flex-1 flex-wrap gap-x-8 gap-y-7">
             {section.groups.map((group) => (
