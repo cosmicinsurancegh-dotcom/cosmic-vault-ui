@@ -116,7 +116,7 @@ export const create = mutation({
         userId: customerUserId,
         type: "support.updated",
         title: "Your broker prepared a quotation",
-        body: `${product.name} — ${breakdown.premium / 100} ${product.currency} per year. Review it in your dashboard before applying.`,
+        body: `${product.name} - ${breakdown.premium / 100} ${product.currency} per year. Review it in your dashboard before applying.`,
         href: "/dashboard/quotes",
         dedupeKey: `broker-quote:${id}`,
       });

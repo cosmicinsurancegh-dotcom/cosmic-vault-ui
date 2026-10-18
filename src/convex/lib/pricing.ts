@@ -48,7 +48,7 @@ export function validateAnswers(
   return clean;
 }
 
-/** Indicative premium — deliberately deterministic. Underwriting stays manual. */
+/** Indicative premium - deliberately deterministic. Underwriting stays manual. */
 export function priceProduct(
   product: Doc<"products">,
   answers: Record<string, AnswerValue>,

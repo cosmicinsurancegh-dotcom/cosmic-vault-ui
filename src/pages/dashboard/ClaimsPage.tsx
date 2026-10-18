@@ -121,7 +121,7 @@ export default function ClaimsPage() {
                   </p>
                   {claim.status === "additional_info_required" && (
                     <p className="mt-1 text-[0.68rem] font-medium text-amber-700 dark:text-amber-400">
-                      Evidence requested — open to respond.
+                      Evidence requested - open to respond.
                     </p>
                   )}
                 </div>

@@ -9,7 +9,7 @@ const steps = [
   {
     number: "01",
     title: "Get a free quote",
-    text: "Tell us what you're protecting. We'll come back within one business day with a clear, itemised quote — no calls you didn't ask for.",
+    text: "Tell us what you're protecting. We'll come back within one business day with a clear, itemised quote - no calls you didn't ask for.",
     image: IMAGES.hero,
   },
   {
@@ -31,7 +31,7 @@ export function Process({ onQuote }: { onQuote: () => void }) {
     <section id="process" className="mt-24 scroll-mt-24 sm:mt-32">
       <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
         <Reveal y={36}>
-          {/* Sized so the panel — heading, three steps and the CTA row —
+          {/* Sized so the panel - heading, three steps and the CTA row -
               fits a single laptop viewport instead of running past the fold. */}
           <div className="starfield relative overflow-hidden rounded-[2rem] bg-[#071227] px-6 py-12 text-bone sm:rounded-[2.5rem] sm:px-12">
             <Media

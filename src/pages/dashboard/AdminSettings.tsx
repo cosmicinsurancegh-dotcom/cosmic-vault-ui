@@ -695,7 +695,7 @@ function SupabasePanel() {
             <code className="font-mono text-[0.68rem]">VITE_SUPABASE_ANON_KEY</code> and{" "}
             <code className="font-mono text-[0.68rem]">SUPABASE_SERVICE_ROLE_KEY</code> in the
             project Keys tab (Supabase dashboard → Project Settings → API). Everything
-            else — data access and storage calls — is wired already.
+            else - data access and storage calls - is wired already.
           </Callout>
         </div>
       )}

@@ -46,8 +46,8 @@ export function Story() {
             <Reveal delay={0.18}>
               <p className="mt-6 max-w-xl text-[0.95rem] leading-7 text-muted-foreground">
                 Most insurers sell you a policy and disappear. We stay. Every
-                Cosmic Vault plan is built around your actual life — the home,
-                the health, the people, the plans you haven&apos;t made yet —
+                Cosmic Vault plan is built around your actual life - the home,
+                the health, the people, the plans you haven&apos;t made yet -
                 and looked after by a named advisor who answers their own phone.
               </p>
               <p className="mt-4 max-w-xl text-[0.95rem] leading-7 text-muted-foreground">

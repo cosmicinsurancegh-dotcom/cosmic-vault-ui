@@ -3,8 +3,8 @@
  *
  * The browser suite exercises routing and UI flows only, so no socket is
  * opened and no deployment or credentials are required. Queries return
- * `undefined` — the same "still loading" state the real client reports before
- * the first response — while `users.currentUser` returns the stubbed session
+ * `undefined` - the same "still loading" state the real client reports before
+ * the first response - while `users.currentUser` returns the stubbed session
  * so `useAuth()` can resolve.
  */
 import { useCallback, useMemo, useSyncExternalStore } from "react";

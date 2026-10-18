@@ -74,7 +74,7 @@ export default function CoverDetail({ slug }: { slug: string }) {
         tone="ice"
         eyebrow="Fit and readiness"
         title="Who it may suit, and what to have ready."
-        intro="Applications move fastest when the details are already to hand. Neither list is a guarantee of acceptance — underwriting decides."
+        intro="Applications move fastest when the details are already to hand. Neither list is a guarantee of acceptance - underwriting decides."
       >
         <div className="grid gap-10 lg:grid-cols-2">
           <div>

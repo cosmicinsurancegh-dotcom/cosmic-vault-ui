@@ -5,7 +5,7 @@ import { coverageValidator } from "./schema";
 
 /**
  * Record a quote request from the landing page or the member vault.
- * Works for signed-out visitors too — the lead is simply not linked to a
+ * Works for signed-out visitors too - the lead is simply not linked to a
  * member until they sign in and request a quote from their vault.
  */
 export const requestQuote = mutation({

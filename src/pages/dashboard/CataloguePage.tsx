@@ -67,7 +67,7 @@ export default function CataloguePage() {
       <PageHeader
         eyebrow="Product catalogue"
         title="Cover built for a life, not a spreadsheet."
-        description="Premiums are calculated from the configured product rules — never a fixed demo price. Every application is then reviewed by an underwriter."
+        description="Premiums are calculated from the configured product rules - never a fixed demo price. Every application is then reviewed by an underwriter."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <select

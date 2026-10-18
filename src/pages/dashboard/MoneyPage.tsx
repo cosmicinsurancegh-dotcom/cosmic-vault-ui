@@ -228,7 +228,7 @@ export function PaymentsPage() {
                 <Detail label="Account name">{publicInfo.bankAccountName ?? "Configure in settings"}</Detail>
                 <Detail label="IBAN">{publicInfo.bankIban ?? "Configure in settings"}</Detail>
                 <Detail label="Sort code / SWIFT">
-                  {[publicInfo.bankSortCode, publicInfo.bankSwift].filter(Boolean).join(" · ") || "—"}
+                  {[publicInfo.bankSortCode, publicInfo.bankSwift].filter(Boolean).join(" · ") || "-"}
                 </Detail>
               </>
             ) : (
@@ -349,7 +349,7 @@ function TransactionDialog({
               <div className="grid gap-3 sm:grid-cols-2">
                 <Detail label="Created">{formatDateTime(detail.transaction.createdAt)}</Detail>
                 <Detail label="Method">{detail.transaction.method.replace("_", " ")}</Detail>
-                <Detail label="Provider reference">{detail.transaction.providerRef ?? "—"}</Detail>
+                <Detail label="Provider reference">{detail.transaction.providerRef ?? "-"}</Detail>
                 <Detail label="Reconciled">
                   {detail.transaction.reconciled ? formatDateTime(detail.transaction.reconciledAt) : "Not yet"}
                 </Detail>

@@ -118,7 +118,7 @@ export default function QuotePage() {
             {
               title: "What the quote is based on",
               icon: FileSearch,
-              body: "Declared ratings factors such as mileage, property details, age band, or turnover — exactly what the published product rules use, nothing invented.",
+              body: "Declared ratings factors such as mileage, property details, age band, or turnover - exactly what the published product rules use, nothing invented.",
             },
             {
               title: "What happens after",
@@ -146,7 +146,7 @@ export default function QuotePage() {
                     {reference}
                   </span>
                   . An advisor will review it and reply to the email address you
-                  gave. Keep the reference — it is how the request is traced.
+                  gave. Keep the reference - it is how the request is traced.
                 </p>
                 <div className="mt-5 space-y-3 rounded-xl border border-dashed border-line px-4 py-3 text-[0.78rem] leading-6 text-muted-foreground">
                   <p>
@@ -299,7 +299,7 @@ export default function QuotePage() {
 
           <div className="space-y-5 lg:col-span-5">
             <Callout title="What we will do with it">
-              The request is recorded with a reference and reviewed by a person —
+              The request is recorded with a reference and reviewed by a person -
               not routed into a numbering queue. If you have questions before
               applying, ask them here rather than guessing at the terms.
             </Callout>
@@ -312,7 +312,7 @@ export default function QuotePage() {
                 <CheckList
                   items={[
                     "The cover line you are considering, and why.",
-                    "Rough figures — a rebuild estimate, mileage, turnover, or term length.",
+                    "Rough figures - a rebuild estimate, mileage, turnover, or term length.",
                     "Anything unusual an underwriter would need to know.",
                     "Whether you are applying for yourself, a family, or a business.",
                   ]}
@@ -358,7 +358,7 @@ export default function QuotePage() {
             items={[
               "Add your details to a marketing list you did not ask for.",
               "Share your enquiry with anyone outside the people who need to act on it.",
-              "Charge anything at the quotation stage — there is nothing to pay yet.",
+              "Charge anything at the quotation stage - there is nothing to pay yet.",
             ]}
           />
         </div>

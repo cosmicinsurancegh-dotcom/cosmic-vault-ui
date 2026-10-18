@@ -176,7 +176,7 @@ export default function AdminReportsPage() {
               {result.rows.map((row, index) => (
                 <tr key={index} className="transition-colors hover:bg-primary/[0.02]">
                   {result.columns.map((column) => (
-                    <Td key={column.key}>{String(row[column.key] ?? "—")}</Td>
+                    <Td key={column.key}>{String(row[column.key] ?? "-")}</Td>
                   ))}
                 </tr>
               ))}

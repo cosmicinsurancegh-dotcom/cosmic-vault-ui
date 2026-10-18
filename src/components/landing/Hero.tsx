@@ -43,7 +43,7 @@ const slides: Slide[] = [
     product: "Vault Home & Contents",
     title: "The roof above you.",
     emphasis: "The life inside it.",
-    body: "Buildings and contents written on the property you actually live in — not a postcode average — and reviewed by a person before any cover begins.",
+    body: "Buildings and contents written on the property you actually live in - not a postcode average - and reviewed by a person before any cover begins.",
     features: [
       "Buildings, contents, or both on one policy",
       "Rated on the rebuild value you declare",
@@ -85,7 +85,7 @@ const slides: Slide[] = [
     product: "Vault Private Health",
     title: "Care that doesn't",
     emphasis: "wait in a queue.",
-    body: "Consultant-led diagnostics, second opinions and mental-health support without needing a referral first — with pre-existing conditions assessed individually.",
+    body: "Consultant-led diagnostics, second opinions and mental-health support without needing a referral first - with pre-existing conditions assessed individually.",
     features: [
       "Consultant and diagnostic care",
       "Mental-health support without a referral",
@@ -255,7 +255,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
           onFocusCapture={(event) => {
-            /* Only a keyboard focus should stop the show — a click should not. */
+            /* Only a keyboard focus should stop the show - a click should not. */
             if ((event.target as HTMLElement).matches?.(":focus-visible")) {
               setKeyboardFocus(true);
             }
@@ -296,7 +296,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
             <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#04101f]/85 to-transparent sm:h-32" />
           </div>
 
-          {/* Slide copy — centred in the space between the floating navbar
+          {/* Slide copy - centred in the space between the floating navbar
               and the chapter rail (the top padding clears the navbar: ≈70px
               on mobile, ≈74px from sm up). */}
           <div className="relative z-10 mx-auto my-auto grid w-full max-w-[1180px] gap-8 px-5 pb-7 pt-20 sm:px-8 sm:pb-8 sm:pt-24 lg:grid-cols-12 lg:items-center lg:gap-10 lg:pb-10 lg:pt-24">

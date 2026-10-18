@@ -132,7 +132,7 @@ export default function AdminAuditPage() {
                         {entry.entityId}
                       </p>
                     </Td>
-                    <Td className="max-w-[180px] text-[0.65rem]">{entry.reason ?? "—"}</Td>
+                    <Td className="max-w-[180px] text-[0.65rem]">{entry.reason ?? "-"}</Td>
                     <Td>
                       <details>
                         <summary className="cursor-pointer text-[0.65rem] font-medium text-primary">

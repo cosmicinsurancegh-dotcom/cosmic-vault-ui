@@ -177,7 +177,7 @@ function MegaPanel({
 
         <div className="flex items-center justify-between gap-3 border-t border-line bg-card/50 px-5 py-2.5 sm:px-6">
           <p className="hidden text-[0.65rem] text-muted-foreground sm:block">
-            Indicative terms only — final cover depends on the policy wording.
+            Indicative terms only - final cover depends on the policy wording.
           </p>
           <Link
             to={section.href}
@@ -219,7 +219,7 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
   const openId = menuState.path === location.pathname ? menuState.id : null;
   const mobileOpen = sheetState.path === location.pathname && sheetState.open;
 
-  /** Stable setter — safe to use inside effects without re-subscribing. */
+  /** Stable setter - safe to use inside effects without re-subscribing. */
   const closeAllMenus = () =>
     setMenuState((current) =>
       current.id === null ? current : { ...current, id: null },

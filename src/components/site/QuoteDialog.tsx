@@ -99,7 +99,7 @@ export function QuoteDialog({
               </DialogTitle>
               <p className="mx-auto mt-4 max-w-sm text-sm leading-6 text-muted-foreground">
                 An advisor will review what you have sent and reply to your email
-                address. Keep this reference — it is how the request is traced.
+                address. Keep this reference - it is how the request is traced.
               </p>
               <p className="mx-auto mt-4 max-w-sm text-xs leading-5 text-muted-foreground">
                 This is a request, not a binding quote. No price is fixed here and

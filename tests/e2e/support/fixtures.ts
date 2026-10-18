@@ -7,7 +7,7 @@ export const NOT_FOUND_TITLE = "Page not found · Cosmic Vault";
 /**
  * Headline rendered by the designed 404 route. The catch-all route lives inside
  * the public shell, so a broken link still shows a styled page with a level-one
- * heading — the heading and the "Error 404" eyebrow are what tell the two apart.
+ * heading - the heading and the "Error 404" eyebrow are what tell the two apart.
  */
 export const NOT_FOUND_HEADING = "This page has drifted out of orbit.";
 

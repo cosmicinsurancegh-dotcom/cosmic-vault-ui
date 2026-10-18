@@ -51,7 +51,7 @@ export default function LegalPage({ slug }: { slug: string }) {
       <PageSection>
         <div className="grid gap-10 lg:grid-cols-12">
           <div className="lg:col-span-8">
-            <Callout tone="warning" title="Draft — requires legal approval">
+            <Callout tone="warning" title="Draft - requires legal approval">
               This document is published so the platform is transparent about its
               current position. It has not been through legal review, and no part
               of it should be treated as legally approved wording. Where a fact
@@ -109,7 +109,7 @@ export default function LegalPage({ slug }: { slug: string }) {
               <div className="mt-5 border-t border-line pt-5">
                 <p className="text-[0.78rem] leading-6 text-muted-foreground">
                   Questions about this document, or about how it applies to you?
-                  Ask support — we would rather explain it than have you guess.
+                  Ask support - we would rather explain it than have you guess.
                 </p>
                 <div className="mt-4">
                   <SiteButton to="/support/contact" variant="outline">

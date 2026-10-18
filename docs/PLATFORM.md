@@ -1,4 +1,4 @@
-# Cosmic Vault — Insurance Management Platform
+# Cosmic Vault - Insurance Management Platform
 
 Implementation notes for the insurance platform built on the existing Cosmic Vault
 site (Vite + React + TypeScript + Tailwind/shadcn, Convex backend, Convex Auth).
@@ -93,13 +93,13 @@ notification dedupe keys, audit by entity.
 
 ## 4. Workflows (all manual decisions)
 
-**Product publication** — `products.saveDraft` validates category, active
+**Product publication** - `products.saveDraft` validates category, active
 countries, allowed currency, wording and rating factors; `products.publish`
 re-checks coverage/premium/countries/wording and archives prior versions.
 Unpublished or archived products are rejected by both `products.quote` and
 `quotations.create`.
 
-**Quote → application → policy** — `quotations.create` prices from configured
+**Quote → application → policy** - `quotations.create` prices from configured
 rating factors (`lib/pricing`), snapshots the product version, then creates a
 draft application. `applications.submit` requires terms acceptance, required
 documents and (for brokers) recorded customer consent. Staff decide with
@@ -108,37 +108,37 @@ documents and (for brokers) recorded customer consent. Staff decide with
 transaction, and issues policy documents (schedule, certificate, wording) and
 notifications. A confirmation page alone never activates a policy.
 
-**Servicing and renewal** — customers/brokers raise `policyRequests`
+**Servicing and renewal** - customers/brokers raise `policyRequests`
 (endorsement, cancellation, renewal, suspension). Staff decide; approval patches
 the policy, appends an endorsement record and issues an endorsement document. A
 renewal creates a pending renewal premium rather than duplicating the policy.
 
-**Claims** — `claims.submit` validates policy ownership, active status, incident
+**Claims** - `claims.submit` validates policy ownership, active status, incident
 date inside the policy term, amount ≤ coverage limit and requires evidence.
 Staff assign, note, request information, decide (`claims.decide`) and record
 settlement separately (`payments.recordSettlement`). Decision and settlement are
 distinct states; `claims.close` only accepts paid or declined claims.
 
-**Payments** — `payments.initiatePremium` creates a pending transaction with an
+**Payments** - `payments.initiatePremium` creates a pending transaction with an
 idempotency key; `payments.confirm` is staff-only, records a provider reference and
 marks `providerVerified`. Refunds require `refunds.approve`, are idempotent per
 transaction, and cannot exceed the original amount. No card data is stored.
 
-**Brokers** — broker accounts are created/updated by staff; assignments are
+**Brokers** - broker accounts are created/updated by staff; assignments are
 explicit (`customers.assignBroker`) and revocable. Brokers see only assigned
 customers, their policies and their own activity report.
 
-**Notifications** — `lib/notify` writes an in-app notification with a dedupe key,
+**Notifications** - `lib/notify` writes an in-app notification with a dedupe key,
 then schedules `email.deliver`. Delivery results (`queued`, `sent`, `failed`,
 `skipped`) and errors are stored on the notification; staff can review and retry
 (`notifications.deliveryIssues`, `notifications.retryEmail`).
 
-**Audit** — `lib/audit.writeAudit` records actor, role, action, entity, before/after
+**Audit** - `lib/audit.writeAudit` records actor, role, action, entity, before/after
 values, reason and timestamp for application decisions, policy issuance and
 status changes, claim decisions and settlements, refunds, product changes,
 broker assignments, staff/permission changes and settings updates.
 
-**Cron** — `crons.ts` schedules maintenance: expiry/renewal reminders, overdue
+**Cron** - `crons.ts` schedules maintenance: expiry/renewal reminders, overdue
 premium marking and stale draft cleanup (`maintenance.ts`).
 
 ---
@@ -168,7 +168,7 @@ premium marking and stale draft cleanup (`maintenance.ts`).
 | `VITE_SUPABASE_ANON_KEY` | `src/lib/supabase.ts` | Public key for browser calls (RLS-bound) |
 | `SUPABASE_SERVICE_ROLE_KEY` | `convex/supabase.ts` | Server-only key for storage/admin calls |
 | `SUPABASE_URL` | `convex/supabase.ts` | Optional on the server; falls back to `VITE_SUPABASE_URL` |
-| `SUPABASE_PROJECT_REF` | Supabase CLI only | Optional; not read by app code — the ref is derived from the project URL |
+| `SUPABASE_PROJECT_REF` | Supabase CLI only | Optional; not read by app code - the ref is derived from the project URL |
 
 ### Supabase
 
@@ -176,10 +176,10 @@ Supabase is a second data plane (Postgres, Storage, Realtime). Convex remains th
 system of record and the identity provider, so the Supabase client is created
 without a session store and is not used for sign-in.
 
-- `src/lib/supabase.ts` — browser client (`getSupabase()`), `supabaseStorageUrl()`
+- `src/lib/supabase.ts` - browser client (`getSupabase()`), `supabaseStorageUrl()`
   for public buckets, and `checkSupabaseHealth()` which pings the public
   `/auth/v1/health` endpoint so key problems surface before any table exists.
-- `src/convex/supabase.ts` — `"use node"` actions. `supabase.status` reports which
+- `src/convex/supabase.ts` - `"use node"` actions. `supabase.status` reports which
   server keys are visible, whether the project answers and which buckets exist;
   `supabase.signedUrl` mints a short-lived URL for a private object. Both run
   through `internal.adminGate.staffGate`, which requires `settings.manage`.
@@ -237,7 +237,7 @@ administrator) created through the app's own mutations.
 | Audit trail | records product, application, policy, payment, claim, settlement, broker assignment events |
 | Support ticket create + staff queue | ticket `SUP-VAU7QHS52` visible to staff |
 | Email delivery state | attempts recorded as `failed` with provider reason (sandbox recipient), proving the adapter path |
-| `supabase.status` as staff before keys were added | `configured: false`, naming the missing variables — no crash, no blocked flow |
+| `supabase.status` as staff before keys were added | `configured: false`, naming the missing variables - no crash, no blocked flow |
 | `supabase.status` / `supabase.signedUrl` as a customer and anonymously | rejected: "This action is restricted to staff." |
 | `supabase.signedUrl` as staff with no keys | rejected: "Supabase is not configured on this deployment." |
 | Vite transforms for `src/lib/supabase.ts` and the settings page | 200, no transform errors |
@@ -281,6 +281,6 @@ verification codes are created by the seed.
   no dashboard screen lists them yet: the member vault's `/dashboard/quotes`
   shows catalogue quotations (`quotations.mine`), and staff have no lead inbox.
   Add a `quotes.myQuotes` panel or a staff lead list before running the funnel
-  for real — the data is already captured and scoped correctly.
+  for real - the data is already captured and scoped correctly.
 - `src/pages/Dashboard.tsx` is an orphaned earlier draft of the member vault
   (it still queries `quotes.myQuotes`); nothing routes to it.

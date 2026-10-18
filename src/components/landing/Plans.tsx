@@ -13,7 +13,7 @@ const steps = [
   {
     Icon: Sliders,
     title: "Your answers set the rating",
-    text: "Each product multiplies its configured base premium by the rating factors that apply to you — mileage, property type, age band, turnover, term length. Nothing about the calculation is hidden.",
+    text: "Each product multiplies its configured base premium by the rating factors that apply to you - mileage, property type, age band, turnover, term length. Nothing about the calculation is hidden.",
   },
   {
     Icon: ShieldCheck,

@@ -42,7 +42,7 @@ export const STATUS_LABELS: Record<string, string> = {
 };
 
 export function statusLabel(value?: string) {
-  if (!value) return "—";
+  if (!value) return "-";
   return STATUS_LABELS[value] ?? value.replace(/_/g, " ");
 }
 
@@ -88,7 +88,7 @@ export function formatMoney(
   currency = "GBP",
   locale = "en-GB",
 ) {
-  if (minorUnits === undefined || minorUnits === null) return "—";
+  if (minorUnits === undefined || minorUnits === null) return "-";
   try {
     return new Intl.NumberFormat(locale, {
       style: "currency",
@@ -115,7 +115,7 @@ export function formatDate(
   locale = "en-GB",
   timeZone?: string,
 ) {
-  if (value === undefined || value === null) return "—";
+  if (value === undefined || value === null) return "-";
   try {
     return new Intl.DateTimeFormat(locale, {
       day: "numeric",
@@ -133,7 +133,7 @@ export function formatDateTime(
   locale = "en-GB",
   timeZone?: string,
 ) {
-  if (value === undefined || value === null) return "—";
+  if (value === undefined || value === null) return "-";
   try {
     return new Intl.DateTimeFormat(locale, {
       day: "numeric",

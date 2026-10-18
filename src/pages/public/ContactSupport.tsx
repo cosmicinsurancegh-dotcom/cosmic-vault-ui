@@ -193,7 +193,7 @@ export default function ContactSupport() {
               {
                 question: "Do I need an account to get support?",
                 answer:
-                  "Support requests are held against an account so the conversation, the record and any decision stay together. If you do not have an account — for example you are a visitor asking a pre-sale question — reply to the email address you used for your quote request and we will answer there.",
+                  "Support requests are held against an account so the conversation, the record and any decision stay together. If you do not have an account - for example you are a visitor asking a pre-sale question - reply to the email address you used for your quote request and we will answer there.",
               },
               {
                 question: "Can I ask about cover before buying?",
@@ -203,7 +203,7 @@ export default function ContactSupport() {
               {
                 question: "How do I follow up?",
                 answer:
-                  "Reply on the same request. That keeps the whole thread — including anything a handler recorded — in one place rather than splitting it across messages.",
+                  "Reply on the same request. That keeps the whole thread - including anything a handler recorded - in one place rather than splitting it across messages.",
               },
               {
                 question: "Who can see my support request?",

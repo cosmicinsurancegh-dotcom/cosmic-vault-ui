@@ -348,8 +348,8 @@ export const assignments = query({
     return rows.map((row) => ({
       ...row,
       customerName: profileMap.get(row.customerUserId)?.fullName ?? "Customer",
-      customerReference: profileMap.get(row.customerUserId)?.reference ?? "—",
-      customerCountry: profileMap.get(row.customerUserId)?.country ?? "—",
+      customerReference: profileMap.get(row.customerUserId)?.reference ?? "-",
+      customerCountry: profileMap.get(row.customerUserId)?.country ?? "-",
     }));
   },
 });

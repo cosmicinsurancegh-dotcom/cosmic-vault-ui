@@ -188,7 +188,7 @@ Mode `sandbox-data-only`, zero blockers, hash `fnv1a-a981ae26`:
 | `bunx convex dev --once` (codegen) | passed |
 | `bunx tsc -b --noEmit` | passed |
 | `bun run build` | passed (Vite production build) |
-| Targeted tests (`bun run test`, 11 tests) | passed — preview, apply counts, idempotency, stale-hash/flag/role-conflict guards, non-demo preservation, cleanup (incl. auth-account refusal), deactivate |
+| Targeted tests (`bun run test`, 11 tests) | passed - preview, apply counts, idempotency, stale-hash/flag/role-conflict guards, non-demo preservation, cleanup (incl. auth-account refusal), deactivate |
 | ESLint on `demoSeed.ts` and `schema.ts` | passed |
 | `bun run lint` (repo-wide) | fails on **pre-existing** errors in untouched files (`ProfilePage.tsx`, `main.tsx`, UI components, `setup.ts`, `tickets.ts`); none in changed files |
 | First apply | 208 records created, 0 skipped |

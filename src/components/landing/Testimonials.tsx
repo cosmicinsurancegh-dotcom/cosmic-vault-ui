@@ -16,7 +16,7 @@ import { SectionLabel } from "./SectionLabel";
 const commitments = [
   {
     statement:
-      "Every decision carries a reason — and the name of the person accountable for it.",
+      "Every decision carries a reason - and the name of the person accountable for it.",
     detail:
       "Applications and claims record a status, a decision and the reasoning behind it. If something is declined, you are told why and what would change it.",
     label: "Commitment 01 · Decisions",
@@ -105,7 +105,7 @@ export function Testimonials() {
 
                 <div className="absolute inset-x-0 bottom-0 p-5">
                   <p className="max-w-[15rem] text-[0.72rem] leading-5 text-bone/70">
-                    Standards the platform is built to hold itself to — not
+                    Standards the platform is built to hold itself to - not
                     testimonials we cannot verify.
                   </p>
                 </div>

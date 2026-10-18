@@ -130,7 +130,7 @@ export const initiatePremium = mutation({
     await notifyStaff(ctx, {
       type: "payment.succeeded",
       title: "Premium payment pending confirmation",
-      body: `${label} — ${formatMoney(amount, currency)}.`,
+      body: `${label} - ${formatMoney(amount, currency)}.`,
       href: "/dashboard/admin/payments",
       relatedType: "transactions",
       relatedId: id,
@@ -187,7 +187,7 @@ export const initiatePolicyRenewal = mutation({
     await notifyStaff(ctx, {
       type: "payment.succeeded",
       title: "Renewal payment pending",
-      body: `${policy.policyNumber} — ${formatMoney(policy.premium, policy.currency)}.`,
+      body: `${policy.policyNumber} - ${formatMoney(policy.premium, policy.currency)}.`,
       href: "/dashboard/admin/payments",
       relatedType: "transactions",
       relatedId: id,
@@ -315,7 +315,7 @@ export const confirm = mutation({
     const label = transaction.note ?? transaction.reference;
     const receiptId = await ctx.db.insert("documents", {
       ownerUserId: transaction.customerUserId,
-      name: `${transaction.reference} — receipt`,
+      name: `${transaction.reference} - receipt`,
       category: "receipt",
       policyId: transaction.policyId,
       applicationId: transaction.applicationId,
@@ -459,7 +459,7 @@ export const refund = mutation({
     });
     await ctx.db.insert("documents", {
       ownerUserId: original.customerUserId,
-      name: `${reference("REF")} — refund confirmation`,
+      name: `${reference("REF")} - refund confirmation`,
       category: "receipt",
       policyId: original.policyId,
       applicationId: original.applicationId,

@@ -41,7 +41,7 @@ const CONFIRM_DEACTIVATE = `deactivate:${DEMO_SEED_BATCH}`;
 const ENV_FLAG = "DEMO_SEED_ENABLED";
 
 const DEMO_NOTICE =
-  "DEMONSTRATION RECORD — fictional data created for product testing. Not a real quote, policy, claim, payment or contract.";
+  "DEMONSTRATION RECORD - fictional data created for product testing. Not a real quote, policy, claim, payment or contract.";
 
 type StaffRole = "super_admin" | "admin" | "customer" | "broker";
 
@@ -1150,10 +1150,10 @@ export const preview = internalQuery({
         claims: DEMO_CLAIMS.map((item) => ({ reference: item.reference, status: item.status })),
       },
       sideEffects: {
-        email: "none — notifications are inserted with emailStatus=skipped and no scheduler call",
-        payments: "none — transactions are historical records only, no provider call",
+        email: "none - notifications are inserted with emailStatus=skipped and no scheduler call",
+        payments: "none - transactions are historical records only, no provider call",
         externalWebhooks: "none",
-        deletes: "none — preview is read-only",
+        deletes: "none - preview is read-only",
       },
       blockers,
       warnings: identity.warnings,
@@ -1385,7 +1385,7 @@ export const apply = internalMutation({
       const decidedAt = spec.decidedDaysAgo !== undefined ? now - spec.decidedDaysAgo * DAY : undefined;
       const documents = [
         {
-          name: `${product.requiredDocuments[0].label} — ${spec.reference}`,
+          name: `${product.requiredDocuments[0].label} - ${spec.reference}`,
           key: product.requiredDocuments[0].key,
           body: `${DEMO_NOTICE}\n\nFictional supporting document for ${spec.reference}.`,
           addedBy: customerId,
@@ -1530,7 +1530,7 @@ export const apply = internalMutation({
         paidAt,
         documents: [
           {
-            name: `Evidence — ${spec.reference}`,
+            name: `Evidence - ${spec.reference}`,
             key: "supporting_evidence",
             body: `${DEMO_NOTICE}\n\nFictional supporting evidence for ${spec.reference}.`,
             addedBy: customerId,
@@ -1676,9 +1676,9 @@ export const apply = internalMutation({
       const policy = await ctx.db.get(policyId);
       if (!policy) continue;
       const docs = [
-        { kind: "schedule", name: `${spec.policyNumber} — policy schedule`, body: `POLICY SCHEDULE\n\n${spec.policyNumber}\nInsured: ${policy.insuredName}\nProduct: ${policy.productName}\nTerm: ${new Date(policy.startDate).toISOString().slice(0, 10)} to ${new Date(policy.endDate).toISOString().slice(0, 10)}\nPremium: ${(policy.premium / 100).toFixed(2)} ${policy.currency}\n\n${DEMO_NOTICE}` },
-        { kind: "certificate", name: `${spec.policyNumber} — certificate of insurance`, body: `CERTIFICATE OF INSURANCE\n\n${spec.policyNumber}\n${policy.productName}\n\n${DEMO_NOTICE}` },
-        { kind: "wording", name: `${spec.policyNumber} — policy wording`, body: `POLICY WORDING\n\n${policy.productName}\n\n${DEMO_NOTICE}\n\nCover is subject to the exclusions and limits recorded in the schedule.` },
+        { kind: "schedule", name: `${spec.policyNumber} - policy schedule`, body: `POLICY SCHEDULE\n\n${spec.policyNumber}\nInsured: ${policy.insuredName}\nProduct: ${policy.productName}\nTerm: ${new Date(policy.startDate).toISOString().slice(0, 10)} to ${new Date(policy.endDate).toISOString().slice(0, 10)}\nPremium: ${(policy.premium / 100).toFixed(2)} ${policy.currency}\n\n${DEMO_NOTICE}` },
+        { kind: "certificate", name: `${spec.policyNumber} - certificate of insurance`, body: `CERTIFICATE OF INSURANCE\n\n${spec.policyNumber}\n${policy.productName}\n\n${DEMO_NOTICE}` },
+        { kind: "wording", name: `${spec.policyNumber} - policy wording`, body: `POLICY WORDING\n\n${policy.productName}\n\n${DEMO_NOTICE}\n\nCover is subject to the exclusions and limits recorded in the schedule.` },
       ];
       for (const doc of docs) {
         const documentKey = demoKey(`document:policy:${spec.policyNumber}:${doc.kind}`);
@@ -1716,7 +1716,7 @@ export const apply = internalMutation({
       }
       await ctx.db.insert("documents", {
         ownerUserId: policy.customerUserId,
-        name: `Receipt PAY-DEMO-${String(index + 1).padStart(4, "0")} — ${spec.policyNumber}`,
+        name: `Receipt PAY-DEMO-${String(index + 1).padStart(4, "0")} - ${spec.policyNumber}`,
         category: "receipt",
         policyId: policy._id,
         body: `PAYMENT RECEIPT\n\nReference: ${transaction.reference}\nPolicy: ${spec.policyNumber}\nAmount: ${(transaction.amount / 100).toFixed(2)} ${transaction.currency}\n\n${DEMO_NOTICE}`,
@@ -1743,7 +1743,7 @@ export const apply = internalMutation({
       const decidedAt = claim.decidedAt ?? now - 30 * DAY;
       await ctx.db.insert("documents", {
         ownerUserId: claim.customerUserId,
-        name: `Claim ${spec.reference} — decision letter`,
+        name: `Claim ${spec.reference} - decision letter`,
         category: "claim",
         claimId,
         body: `CLAIM DECISION\n\nClaim: ${spec.reference}\nStatus: ${claim.status}\nDecision: ${claim.decision ?? "pending"}\nApproved amount: ${((claim.approvedAmount ?? 0) / 100).toFixed(2)} ${claim.currency}\n\n${claim.decisionReason ?? ""}\n\n${DEMO_NOTICE}`,
@@ -1827,7 +1827,7 @@ export const apply = internalMutation({
       }
     }
 
-    /* 12. Notifications — inserted directly with email skipped; no scheduler call. */
+    /* 12. Notifications - inserted directly with email skipped; no scheduler call. */
     for (const spec of DEMO_NOTIFICATIONS) {
       const userId = userIds.get(spec.user)!;
       const key = demoKey(`notification:${spec.key}`);

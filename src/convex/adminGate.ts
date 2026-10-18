@@ -5,7 +5,7 @@ import { PERMISSIONS, requirePermission } from "./lib/authz";
  * Staff gate for Convex actions.
  *
  * Actions cannot read the database directly, and `"use node"` modules may only
- * define actions — so the permission check lives here and is called by actions
+ * define actions - so the permission check lives here and is called by actions
  * with `ctx.runQuery(internal.adminGate.staffGate, {})`.
  */
 export const staffGate = internalQuery({

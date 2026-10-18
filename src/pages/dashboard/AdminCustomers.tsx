@@ -240,7 +240,7 @@ function CustomerDialog({
               {profile && <StatusPill status={profile.verificationStatus} />}
             </DialogTitle>
             <DialogDescription>
-              {profile?.reference ?? "No profile"} · {profile?.email ?? user?.email ?? "—"} · joined{" "}
+              {profile?.reference ?? "No profile"} · {profile?.email ?? user?.email ?? "-"} · joined{" "}
               {formatDate(profile?.createdAt)}
             </DialogDescription>
           </DialogHeader>
@@ -254,16 +254,16 @@ function CustomerDialog({
           )}
 
           <section className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-            <Detail label="Country">{profile?.country ?? "—"}</Detail>
-            <Detail label="Currency">{profile?.currency ?? "—"}</Detail>
-            <Detail label="Phone">{profile?.phone ?? "—"}</Detail>
+            <Detail label="Country">{profile?.country ?? "-"}</Detail>
+            <Detail label="Currency">{profile?.currency ?? "-"}</Detail>
+            <Detail label="Phone">{profile?.phone ?? "-"}</Detail>
             <Detail label="Language / locale">
-              {profile?.preferredLanguage ?? "—"} / {profile?.locale ?? "—"}
+              {profile?.preferredLanguage ?? "-"} / {profile?.locale ?? "-"}
             </Detail>
             <Detail label="Address">
-              {[profile?.addressLine, profile?.city, profile?.postalCode].filter(Boolean).join(", ") || "—"}
+              {[profile?.addressLine, profile?.city, profile?.postalCode].filter(Boolean).join(", ") || "-"}
             </Detail>
-            <Detail label="Preferred timezone">{profile?.timezone ?? "—"}</Detail>
+            <Detail label="Preferred timezone">{profile?.timezone ?? "-"}</Detail>
             <Detail label="Broker">
               {assignments.length === 0
                 ? "Not assigned"

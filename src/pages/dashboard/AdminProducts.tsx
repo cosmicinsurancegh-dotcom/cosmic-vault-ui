@@ -238,7 +238,7 @@ export default function AdminProductsPage() {
 
       <Callout tone="info" title="Pricing is versioned and deliberate">
         Premiums are produced by the rating factors configured here. A published version cannot be
-        edited in place — create a new draft to change terms, then publish when approved.
+        edited in place - create a new draft to change terms, then publish when approved.
       </Callout>
 
       {products.length === 0 ? (

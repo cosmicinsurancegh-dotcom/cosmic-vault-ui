@@ -29,7 +29,7 @@ export const COVERAGE_OPTIONS: {
     label: "Health insurance",
     short: "Health",
     blurb:
-      "Private care, dental and mental-health support on one simple plan — no network paperwork.",
+      "Private care, dental and mental-health support on one simple plan - no network paperwork.",
     from: "Rated on your answers",
   },
   {

@@ -71,7 +71,7 @@ const HELP_TOPICS = [
   {
     Icon: Clock,
     title: "Question about billing",
-    text: "Payment dates, receipts, and plan changes — answered by a person, not a bot.",
+    text: "Payment dates, receipts, and plan changes - answered by a person, not a bot.",
   },
 ];
 
@@ -96,7 +96,7 @@ export default function Dashboard() {
     try {
       window.localStorage.setItem(SIDEBAR_STORAGE_KEY, collapsed ? "1" : "0");
     } catch {
-      // Storage can be unavailable in sandboxed previews — collapsing still works.
+      // Storage can be unavailable in sandboxed previews - collapsing still works.
     }
   }, [collapsed]);
 
@@ -119,7 +119,7 @@ export default function Dashboard() {
   const handleSignOut = async () => {
     await signOut();
     toast("Signed out of your vault.", {
-      description: "Come back any time — your cover stays put.",
+      description: "Come back any time - your cover stays put.",
     });
     navigate("/");
   };
@@ -380,7 +380,7 @@ function Overview({
             <p className="mt-3 max-w-md text-sm leading-6 text-bone/55">
               {stats.list.length === 0
                 ? "Request a quote and a named advisor will shape your cover within one business day. Every chart below fills in as your vault grows."
-                : `You're tracking ${stats.lines.size} of 4 cover lines. Your advisor reviews every request personally — nothing is auto-approved or sold on.`}
+                : `You're tracking ${stats.lines.size} of 4 cover lines. Your advisor reviews every request personally - nothing is auto-approved or sold on.`}
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Button
@@ -454,7 +454,7 @@ function Overview({
           },
           {
             label: "Estimated monthly",
-            value: stats.monthly > 0 ? formatGBP(stats.monthly) : "—",
+            value: stats.monthly > 0 ? formatGBP(stats.monthly) : "-",
             helper: "Based on selected plans",
             Icon: Wallet,
           },
@@ -627,7 +627,7 @@ function QuotesView({
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
             {quotes.length === 0
-              ? "Nothing here yet — your first quote starts below."
+              ? "Nothing here yet - your first quote starts below."
               : `${quotes.length} request${quotes.length === 1 ? "" : "s"} tracked in your vault.`}
           </p>
         </div>
@@ -646,7 +646,7 @@ function QuotesView({
           <ChartEmptyState
             icon={FileText}
             title="A blank page, in the best way"
-            description="Tell us what matters and we'll bring back a clear, itemised quote — usually within a day."
+            description="Tell us what matters and we'll bring back a clear, itemised quote - usually within a day."
             actionLabel="Request a quote"
             onAction={() => onQuote()}
             footnote="No obligation, no credit check"
@@ -866,7 +866,7 @@ function ConciergeView({
         </div>
         <div className="mt-6 flex items-center gap-2 border-t border-white/10 pt-4 text-[0.65rem] text-bone/40">
           <Clock className="size-3.5" />
-          No published response time — we answer rather than estimate
+          No published response time - we answer rather than estimate
         </div>
       </div>
 
@@ -875,7 +875,7 @@ function ConciergeView({
           What can we take off your mind?
         </h2>
         <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-          Pick a starting point — we&apos;ll route you to the right human.
+          Pick a starting point - we&apos;ll route you to the right human.
         </p>
         <div className="mt-5 space-y-2.5">
           {HELP_TOPICS.map(({ Icon, title, text }) => (

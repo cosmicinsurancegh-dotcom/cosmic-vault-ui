@@ -243,7 +243,7 @@ export function HelpCentre() {
             },
             {
               title: "Report a problem",
-              body: "Tell us about a broken page, a wrong record, or service that fell short — including what you expected.",
+              body: "Tell us about a broken page, a wrong record, or service that fell short - including what you expected.",
               to: "/support/report",
             },
             {
@@ -333,7 +333,7 @@ export function Faqs() {
       <PageHero
         eyebrow="Support · Frequently asked questions"
         title="Questions, answered properly."
-        intro={`${FAQS.length} answers covering the whole relationship — from what a quotation really is, to what happens when a payment fails or a claim is declined.`}
+        intro={`${FAQS.length} answers covering the whole relationship - from what a quotation really is, to what happens when a payment fails or a claim is declined.`}
         media={{ image: IMAGES.workspaces, caption: "Answers kept in one library" }}
         aside={{
           title: "If it is not here",
@@ -424,7 +424,7 @@ export function Faqs() {
               >
                 ask support
               </Link>{" "}
-              — we will answer it and add it to this library if it is missing.
+              - we will answer it and add it to this library if it is missing.
             </Callout>
           ) : (
             grouped.map(([group, items]) => (
@@ -447,7 +447,7 @@ export function Faqs() {
             <p className="text-[0.92rem] leading-7 text-muted-foreground">
               If a question is missing from this library, that is useful
               information. Ask it through support and we will answer it properly
-              — and add it here so the next person finds it.
+              - and add it here so the next person finds it.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <SiteButton to="/support/contact">Contact support</SiteButton>

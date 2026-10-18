@@ -25,7 +25,7 @@ export function Reveal({
 
   /* Safety net: an observer can miss a block while a smooth scroll is being
      redirected (anchor jump interrupted by a wheel scroll), which used to
-     leave entire sections invisible. Geometry is the source of truth — if
+     leave entire sections invisible. Geometry is the source of truth - if
      the block is on screen, it is shown. */
   useEffect(() => {
     if (shown) return;

@@ -107,7 +107,7 @@ export default function BrokerPartnerships() {
                 "See a customer who is not assigned to them, or any record belonging to one.",
                 "Continue to see a customer after an assignment is revoked.",
                 "Decide a claim, approve an application, or confirm a payment.",
-                "Change a policy directly — servicing goes through the same request and approval route as a customer's own request.",
+                "Change a policy directly - servicing goes through the same request and approval route as a customer's own request.",
                 "Access staff areas, reports, or settings beyond what their own role permits.",
               ]}
             />
@@ -145,7 +145,7 @@ export default function BrokerPartnerships() {
             },
             {
               title: "You work the allocation",
-              body: "Prepare quotations, build applications, upload documents, and track progress — all within the assignment.",
+              body: "Prepare quotations, build applications, upload documents, and track progress - all within the assignment.",
             },
             {
               title: "Access is reviewed",
@@ -167,7 +167,7 @@ export default function BrokerPartnerships() {
               {
                 question: "Can a broker see claims?",
                 answer:
-                  "Where the allocation permits it and the claim belongs to an assigned customer, yes — for supporting the customer. Claim decisions remain with authorised staff and cannot be influenced by the assigned broker.",
+                  "Where the allocation permits it and the claim belongs to an assigned customer, yes - for supporting the customer. Claim decisions remain with authorised staff and cannot be influenced by the assigned broker.",
               },
               {
                 question: "How is consent recorded?",

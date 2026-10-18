@@ -43,7 +43,7 @@ export function Solutions() {
           <Reveal delay={0.1} className="lg:col-span-5 lg:pb-2">
             <p className="max-w-sm text-[0.93rem] leading-7 text-ink/60">
               Four kinds of protection built on one quiet system. Start with
-              what keeps you up at night — add the rest as life unfolds.
+              what keeps you up at night - add the rest as life unfolds.
             </p>
             <Link
               to="/cover"

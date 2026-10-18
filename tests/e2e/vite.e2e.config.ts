@@ -23,7 +23,7 @@ export default defineConfig({
    * dev server owns that folder, and this config resolves different modules
    * (Convex is aliased to the test doubles). Sharing the cache rewrote the
    * preview's optimiser metadata and left the running preview serving 504
-   * "Outdated Optimize Dep" responses — a blank page.
+   * "Outdated Optimize Dep" responses - a blank page.
    */
   cacheDir: fileURLToPath(new URL("../../node_modules/.vite-e2e", import.meta.url)),
   plugins: [react(), tailwindcss()],

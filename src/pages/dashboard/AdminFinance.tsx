@@ -222,11 +222,11 @@ function FinanceDialog({
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <Detail label="Method">{transaction.method.replace("_", " ")}</Detail>
-            <Detail label="Provider reference">{transaction.providerRef ?? "—"}</Detail>
+            <Detail label="Provider reference">{transaction.providerRef ?? "-"}</Detail>
             <Detail label="Reconciled">
               {transaction.reconciled ? formatDateTime(transaction.reconciledAt) : "No"}
             </Detail>
-            <Detail label="Due date">{transaction.dueDate ? formatDate(transaction.dueDate) : "—"}</Detail>
+            <Detail label="Due date">{transaction.dueDate ? formatDate(transaction.dueDate) : "-"}</Detail>
             {policy && <Detail label="Policy">{policy.policyNumber}</Detail>}
             {application && <Detail label="Application">{application.reference}</Detail>}
             {claim && <Detail label="Claim">{claim.reference}</Detail>}

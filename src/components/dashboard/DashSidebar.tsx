@@ -213,7 +213,7 @@ export function DashSidebar({
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="right" sideOffset={10}>
-                    Concierge — 24/7
+                    Concierge - 24/7
                   </TooltipContent>
                 </Tooltip>
               </motion.div>

@@ -179,7 +179,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
               <FolderLock className="ml-auto size-4 text-electric-soft" />
             </div>
             <p className="mt-3 font-display text-lg italic leading-snug text-bone/80">
-              Quotes, decisions and documents stay on the same record — so
+              Quotes, decisions and documents stay on the same record - so
               nothing depends on remembering a phone call.
             </p>
           </div>

@@ -195,7 +195,7 @@ export const myRequests = query({
     const policyMap = new Map(policies.map((policy) => [policy._id, policy]));
     return requests.map((request) => ({
       ...request,
-      policyNumber: policyMap.get(request.policyId)?.policyNumber ?? "—",
+      policyNumber: policyMap.get(request.policyId)?.policyNumber ?? "-",
       productName: policyMap.get(request.policyId)?.productName ?? "Policy",
     }));
   },
@@ -218,7 +218,7 @@ export const requests = query({
       const policy = policyMap.get(row.policyId);
       return {
         ...row,
-        policyNumber: policy?.policyNumber ?? "—",
+        policyNumber: policy?.policyNumber ?? "-",
         productName: policy?.productName ?? "Policy",
         customerName: names.get(row.customerUserId) ?? "Customer",
         policy,
@@ -377,7 +377,7 @@ export const decideRequest = mutation({
 
       await ctx.db.insert("documents", {
         ownerUserId: policy.customerUserId,
-        name: `${policy.policyNumber} — ${request.kind} endorsement`,
+        name: `${policy.policyNumber} - ${request.kind} endorsement`,
         category: "endorsement",
         policyId: policy._id,
         body: `ENDORSEMENT\n\nPolicy: ${policy.policyNumber}\nRequest: ${request.kind}\nEffective: ${new Date(now).toISOString()}\n\n${request.details}\n\nApproved by staff. ${note}`,

@@ -69,7 +69,7 @@ export default function Home() {
         <PageHeader
           eyebrow={<>Member vault · {formatDate(Date.now())}</>}
           title={`${greeting}, ${firstName}.`}
-          description="Everything you're protecting, and every request in flight — reviewed by a person, never auto-approved."
+          description="Everything you're protecting, and every request in flight - reviewed by a person, never auto-approved."
           actions={
             <Button asChild className="h-10 rounded-full px-5">
               <Link to="/dashboard/catalogue">
@@ -423,21 +423,21 @@ export default function Home() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricTile
           label="Premium received"
-          value={<MoneyByCurrency values={overview.money.premiumReceived} empty="—" />}
+          value={<MoneyByCurrency values={overview.money.premiumReceived} empty="-" />}
           helper={`Confirmed in the last ${days} days · by currency`}
           icon={CircleDollarSign}
           to="/dashboard/admin/payments?status=succeeded"
         />
         <MetricTile
           label="Outstanding premiums"
-          value={<MoneyByCurrency values={overview.money.outstanding} empty="—" />}
+          value={<MoneyByCurrency values={overview.money.outstanding} empty="-" />}
           helper="Pending invoices, not receipts"
           icon={FileWarning}
           to="/dashboard/admin/payments?status=pending"
         />
         <MetricTile
           label="Claims settled"
-          value={<MoneyByCurrency values={overview.money.settlements} empty="—" />}
+          value={<MoneyByCurrency values={overview.money.settlements} empty="-" />}
           helper={`${overview.metrics.claimsPaid} paid in period`}
           icon={BadgeCheck}
           to="/dashboard/admin/claims?status=paid"
@@ -448,7 +448,7 @@ export default function Home() {
       {!canSeed ? null : overview.metrics.activePolicies === 0 ? (
         <Callout tone="info" title="Set up your catalogue">
           Products are configured and published by staff before customers can buy. Load the starter
-          catalogue to review, edit, and publish real product records — or create your own from
+          catalogue to review, edit, and publish real product records - or create your own from
           Products.
           <div className="mt-3 flex flex-wrap gap-2">
             <Button

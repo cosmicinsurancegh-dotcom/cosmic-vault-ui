@@ -717,7 +717,7 @@ export const issuePolicy = mutation({
     const money = (amount: number) =>
       `${(amount / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })} ${application.currency}`;
     const schedule = [
-      `POLICY SCHEDULE — ${policyNumber}`,
+      `POLICY SCHEDULE - ${policyNumber}`,
       "",
       `Product: ${product.name} (version ${product.version})`,
       `Policyholder: ${customer?.fullName ?? "Policyholder"}`,
@@ -738,7 +738,7 @@ export const issuePolicy = mutation({
       "This schedule must be read with the policy wording.",
     ].join("\n");
     const certificate = [
-      `CERTIFICATE OF INSURANCE — ${policyNumber}`,
+      `CERTIFICATE OF INSURANCE - ${policyNumber}`,
       "",
       `This certifies that ${customer?.fullName ?? "the policyholder"} is insured under ${product.name} from ${new Date(startDate).toISOString().slice(0, 10)} to ${new Date(endDate).toISOString().slice(0, 10)}.`,
       `Policy number: ${policyNumber}`,
@@ -749,9 +749,9 @@ export const issuePolicy = mutation({
     ].join("\n");
 
     for (const [name, body] of [
-      [`${policyNumber} — policy schedule`, schedule],
-      [`${policyNumber} — certificate`, certificate],
-      [`${policyNumber} — policy wording v${product.wordingVersion}`, `${product.wording}\n\n${product.disclosures}`],
+      [`${policyNumber} - policy schedule`, schedule],
+      [`${policyNumber} - certificate`, certificate],
+      [`${policyNumber} - policy wording v${product.wordingVersion}`, `${product.wording}\n\n${product.disclosures}`],
     ] as const) {
       await ctx.db.insert("documents", {
         ownerUserId: application.customerUserId,

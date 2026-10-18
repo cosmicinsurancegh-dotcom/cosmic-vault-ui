@@ -40,12 +40,12 @@ export const DEFAULT_TEMPLATES: EmailTemplate[] = [
   },
   {
     key: "payment.succeeded",
-    subject: "Payment received — {{reference}}",
+    subject: "Payment received - {{reference}}",
     body: "Hello {{name}},\n\nWe have confirmed your payment. {{body}}\n\nCosmic Vault",
   },
   {
     key: "payment.failed",
-    subject: "Payment could not be confirmed — {{reference}}",
+    subject: "Payment could not be confirmed - {{reference}}",
     body: "Hello {{name}},\n\n{{body}}\n\nPlease sign in to review the transaction.\n\nCosmic Vault",
   },
   {

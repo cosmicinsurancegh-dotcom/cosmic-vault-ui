@@ -65,7 +65,7 @@ export default function AdminClaimsPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Claims administration"
-        title="Assess, decide, settle — separately."
+        title="Assess, decide, settle - separately."
         description="A recorded decision is not a payment. Settlement is recorded only when the funds have been sent through an authorised financial workflow."
       />
 
@@ -221,7 +221,7 @@ function ClaimReviewDialog({
 
         <div className="space-y-5 px-5 py-5 sm:px-7">
           <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-            <Detail label="Customer">{customer?.fullName ?? "—"}</Detail>
+            <Detail label="Customer">{customer?.fullName ?? "-"}</Detail>
             <Detail label="Incident date">{formatDate(claim.incidentDate)}</Detail>
             <Detail label="Reported">{formatDateTime(claim.reportedAt)}</Detail>
             <Detail label="Location">{claim.location}</Detail>
@@ -229,7 +229,7 @@ function ClaimReviewDialog({
               {claim.assignedTo === user?._id ? "You" : claim.assignedTo ? "Another handler" : "Unassigned"}
             </Detail>
             <Detail label="Policy coverage">
-              {policy ? formatMoney(policy.coverageLimit, claim.currency) : "—"}
+              {policy ? formatMoney(policy.coverageLimit, claim.currency) : "-"}
             </Detail>
             <Detail label="Description" className="sm:col-span-2">{claim.description}</Detail>
             {claim.customerResponse && (

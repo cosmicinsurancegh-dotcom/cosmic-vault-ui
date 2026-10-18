@@ -234,7 +234,7 @@ export const queue = query({
       rows: rows.slice(start, start + pageSize).map((row) => ({
         ...row,
         customerName: names.get(row.customerUserId) ?? "Customer",
-        policyNumber: policyMap.get(row.policyId)?.policyNumber ?? "—",
+        policyNumber: policyMap.get(row.policyId)?.policyNumber ?? "-",
       })),
       total,
       page,
@@ -317,7 +317,7 @@ export const assign = mutation({
       userId: args.staffUserId,
       type: "support.updated",
       title: `Claim ${claim.reference} assigned to you`,
-      body: `${claim.productName} — review the evidence and record an assessment.`,
+      body: `${claim.productName} - review the evidence and record an assessment.`,
       href: "/dashboard/admin/claims",
       dedupeKey: `claim-assigned:${claim._id}:${args.staffUserId}`,
     });
@@ -560,7 +560,7 @@ export const decide = mutation({
       actorId: viewer.user._id,
       actorRole: viewer.role,
       kind: "decision",
-      message: `${args.decision.replace("_", " ")} — ${reason}`,
+      message: `${args.decision.replace("_", " ")} - ${reason}`,
       fromStatus: claim.status,
       toStatus: status,
       internal: false,
@@ -572,7 +572,7 @@ export const decide = mutation({
       title:
         args.decision === "declined"
           ? "Claim decision recorded"
-          : "Claim approved — settlement pending",
+          : "Claim approved - settlement pending",
       body:
         args.decision === "declined"
           ? `Claim ${claim.reference} was declined. Reason: ${reason}. You can raise a complaint from the claim page.`

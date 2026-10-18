@@ -74,17 +74,17 @@ export function BrokerCustomersPage() {
                       {row.profile?.fullName ?? "Customer"}
                     </p>
                     <p className="text-[0.62rem] text-muted-foreground">
-                      {row.profile?.reference ?? "—"} · {row.profile?.email ?? "—"}
+                      {row.profile?.reference ?? "-"} · {row.profile?.email ?? "-"}
                     </p>
                   </Td>
-                  <Td>{row.profile?.country ?? "—"}</Td>
+                  <Td>{row.profile?.country ?? "-"}</Td>
                   <Td>{row.activePolicies}</Td>
                   <Td>{row.openApplications}</Td>
                   <Td>{row.openClaims}</Td>
                   <Td>
                     {row.nextRenewal
                       ? `${formatDate(row.nextRenewal)} (${daysUntil(row.nextRenewal)}d)`
-                      : "—"}
+                      : "-"}
                   </Td>
                   <Td>
                     {row.commission !== null ? formatMoneyList(row.commission, "None") : "Disabled"}
@@ -213,7 +213,7 @@ export function BrokerReportsPage() {
                   <Td>{row.profile?.fullName ?? "Customer"}</Td>
                   <Td>{row.activePolicies}</Td>
                   <Td>{row.openApplications}</Td>
-                  <Td>{row.nextRenewal ? formatDate(row.nextRenewal) : "—"}</Td>
+                  <Td>{row.nextRenewal ? formatDate(row.nextRenewal) : "-"}</Td>
                   <Td>{row.commission !== null ? formatMoneyList(row.commission, "None") : "Disabled"}</Td>
                 </tr>
               ))}

@@ -4,7 +4,7 @@
  * It mirrors the shape of the real sign-in flow without a deployment:
  *
  *  1. `signIn("email-otp", email only)` resolves, so the app moves to the
- *     "Check your inbox" step — exactly like a real code being sent.
+ *     "Check your inbox" step - exactly like a real code being sent.
  *  2. `signIn("email-otp", email + code)` signs the visitor in when the code
  *     matches VALID_CODE and rejects otherwise, so the error path is covered.
  *  3. `signIn("anonymous")` signs in a guest immediately.

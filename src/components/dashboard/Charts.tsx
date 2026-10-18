@@ -260,7 +260,7 @@ export function PremiumByLineChart({
         <ChartEmptyState
           icon={Wallet}
           title="No premium to forecast"
-          description="Pick a plan and we'll chart your estimated monthly premium for each cover line — no surprises, no hidden fees."
+          description="Pick a plan and we'll chart your estimated monthly premium for each cover line - no surprises, no hidden fees."
           actionLabel="Choose a plan"
           onAction={onAction}
         />

@@ -30,7 +30,7 @@ export default function Contact() {
       <PageHero
         eyebrow="About · Contact us"
         title="How to reach us."
-        intro="Every route below reaches a monitored, recorded channel. There is no published telephone number or postal address on this page, and that is deliberate — see the note further down."
+        intro="Every route below reaches a monitored, recorded channel. There is no published telephone number or postal address on this page, and that is deliberate - see the note further down."
         media={{ image: IMAGES.support, caption: "Monitored, recorded, answered" }}
         aside={{
           title: "For account holders",
@@ -135,7 +135,7 @@ export default function Contact() {
             },
             {
               title: "Say what you need",
-              body: "An answer, a change, a correction, or a decision explained — name the outcome you want.",
+              body: "An answer, a change, a correction, or a decision explained - name the outcome you want.",
             },
             {
               title: "Keep it factual",

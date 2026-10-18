@@ -67,7 +67,7 @@ export const LEGAL_PAGES: Record<string, LegalPageConfig> = {
         heading: "4. Your responsibilities",
         bullets: [
           "Provide accurate, complete information when requesting a quotation or applying for cover.",
-          "Tell us promptly when anything material changes — a change of address, use, driver, business activity, or declared condition.",
+          "Tell us promptly when anything material changes - a change of address, use, driver, business activity, or declared condition.",
           "Keep your sign-in email secure and tell us if you believe someone else has access to it.",
           "Do not attempt to access records that are not yours, or to interfere with the platform's operation.",
         ],
@@ -230,7 +230,7 @@ export const LEGAL_PAGES: Record<string, LegalPageConfig> = {
       {
         heading: "Reporting a barrier",
         paragraphs: [
-          "If something prevents you from using the site — a control you cannot reach, text you cannot read, or a form you cannot complete — report it. Where a barrier cannot be removed quickly, we will find another way to give you the information or complete the task.",
+          "If something prevents you from using the site - a control you cannot reach, text you cannot read, or a form you cannot complete - report it. Where a barrier cannot be removed quickly, we will find another way to give you the information or complete the task.",
         ],
       },
     ],
@@ -252,7 +252,7 @@ export const LEGAL_PAGES: Record<string, LegalPageConfig> = {
           "Signed-in members can open a support request, choosing the complaint category so it is flagged as high priority from the start.",
           "Include the policy, claim, application, or payment reference the complaint concerns.",
           "Describe what happened, what you expected, and what outcome you are looking for.",
-          "Attach anything that supports it — correspondence, documents, or screenshots.",
+          "Attach anything that supports it - correspondence, documents, or screenshots.",
         ],
       },
       {

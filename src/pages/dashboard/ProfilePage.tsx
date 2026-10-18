@@ -90,13 +90,13 @@ export default function ProfilePage() {
           <PanelHeader title="Brokerage" description="Read-only commercial terms." />
           <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">
             <Detail label="Organisation">{brokerProfile?.profile?.orgName ?? "Not set up yet"}</Detail>
-            <Detail label="Broker reference">{brokerProfile?.profile?.reference ?? "—"}</Detail>
+            <Detail label="Broker reference">{brokerProfile?.profile?.reference ?? "-"}</Detail>
             <Detail label="Status">
-              {brokerProfile?.profile ? <StatusPill status={brokerProfile.profile.status} /> : "—"}
+              {brokerProfile?.profile ? <StatusPill status={brokerProfile.profile.status} /> : "-"}
             </Detail>
-            <Detail label="Agreement reference">{brokerProfile?.profile?.agreementRef ?? "—"}</Detail>
+            <Detail label="Agreement reference">{brokerProfile?.profile?.agreementRef ?? "-"}</Detail>
             <Detail label="Countries">
-              {brokerProfile?.profile?.countries.join(", ") || "—"}
+              {brokerProfile?.profile?.countries.join(", ") || "-"}
             </Detail>
             <Detail label="Commission">
               {brokerProfile?.commissionEnabled
@@ -161,7 +161,7 @@ export default function ProfilePage() {
         <Panel>
           <PanelHeader
             title="Personal details"
-            description={`Customer reference ${profile?.reference ?? "—"}`}
+            description={`Customer reference ${profile?.reference ?? "-"}`}
             action={profile ? <StatusPill status={profile.verificationStatus} /> : undefined}
           />
           <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">
@@ -254,7 +254,7 @@ export default function ProfilePage() {
                   .filter((currency) => currency.active)
                   .map((currency) => (
                     <option key={currency.code} value={currency.code}>
-                      {currency.code} — {currency.name}
+                      {currency.code} - {currency.name}
                     </option>
                   ))}
               </select>
@@ -351,7 +351,7 @@ export default function ProfilePage() {
               <Textarea
                 value={request}
                 onChange={(event) => setRequest(event.target.value)}
-                placeholder="Tell us what you need — for example, a copy of your data or an account closure request."
+                placeholder="Tell us what you need - for example, a copy of your data or an account closure request."
                 className="min-h-[90px] rounded-xl bg-card"
               />
               <Button

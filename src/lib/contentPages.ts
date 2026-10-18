@@ -90,7 +90,7 @@ export const CONTENT_PAGES: Record<string, ContentPageConfig> = {
     eyebrow: "Cover · Understanding coverage",
     title: "What your cover actually does.",
     intro:
-      "Insurance is a set of promises with conditions attached. Understanding four ideas — limit, excess, exclusion, and disclosure — explains most of what a policy does and what it does not.",
+      "Insurance is a set of promises with conditions attached. Understanding four ideas - limit, excess, exclusion, and disclosure - explains most of what a policy does and what it does not.",
     metaDescription:
       "A plain-language guide to how insurance coverage works: limits, excesses, exclusions, disclosure, and how to read a policy schedule and wording.",
     aside: {
@@ -131,7 +131,7 @@ export const CONTENT_PAGES: Record<string, ContentPageConfig> = {
           {
             title: "The condition",
             icon: ListChecks,
-            body: "Something you must do — or avoid doing — for cover to apply, such as keeping a security system in use or declaring a change of use.",
+            body: "Something you must do - or avoid doing - for cover to apply, such as keeping a security system in use or declaring a change of use.",
           },
           {
             title: "The endorsement",
@@ -236,7 +236,7 @@ export const CONTENT_PAGES: Record<string, ContentPageConfig> = {
           {
             title: "The conditions",
             icon: ListChecks,
-            body: "Steps you must take — declarations, safeguards, time limits for reporting — for a claim to be valid.",
+            body: "Steps you must take - declarations, safeguards, time limits for reporting - for a claim to be valid.",
           },
           {
             title: "Your own disclosures",
@@ -325,7 +325,7 @@ export const CONTENT_PAGES: Record<string, ContentPageConfig> = {
           },
           {
             title: "Receive an indicative premium",
-            body: "Calculated from the published rating rules for that product version. Indicative means exactly that — it is not a binding price.",
+            body: "Calculated from the published rating rules for that product version. Indicative means exactly that - it is not a binding price.",
           },
           {
             title: "Apply and upload documents",
@@ -591,7 +591,7 @@ export const CONTENT_PAGES: Record<string, ContentPageConfig> = {
         title: "A policy is only accurate if you tell us when things change",
         paragraphs: [
           "Moving house, adding a driver, changing business activity, starting a new medication, or renovating a property can all change what the policy covers. None of those are reasons for concern, but all of them belong on the record.",
-          "When you need something to change, request it against the policy. The change is reviewed, and only takes effect once it is recorded as approved — which means you will never be unsure whether cover was adjusted.",
+          "When you need something to change, request it against the policy. The change is reviewed, and only takes effect once it is recorded as approved - which means you will never be unsure whether cover was adjusted.",
         ],
       },
       {
@@ -624,7 +624,7 @@ export const CONTENT_PAGES: Record<string, ContentPageConfig> = {
       "How insurance renewals and policy changes work at Cosmic Vault: renewal notices, endorsements, cancellations, and what happens before cover changes.",
     aside: {
       title: "Types of change",
-      body: "Address, vehicle, cover level, named parties, cancellation, or a temporary suspension — each is a request reviewed by a person.",
+      body: "Address, vehicle, cover level, named parties, cancellation, or a temporary suspension - each is a request reviewed by a person.",
       items: [
         { label: "Understanding your policy", href: "/how-it-works/your-policy" },
         { label: "Payments and billing", href: "/claims/payments" },
@@ -670,7 +670,7 @@ export const CONTENT_PAGES: Record<string, ContentPageConfig> = {
           {
             title: "Endorsement",
             icon: RefreshCw,
-            body: "A change to the cover itself — a new address, an added driver, a different contents level — recorded against the policy.",
+            body: "A change to the cover itself - a new address, an added driver, a different contents level - recorded against the policy.",
           },
           {
             title: "Cancellation",
@@ -680,7 +680,7 @@ export const CONTENT_PAGES: Record<string, ContentPageConfig> = {
           {
             title: "Suspension",
             icon: Lock,
-            body: "For a period when the risk does not exist — an empty property, a laid-up vehicle — where the product allows it.",
+            body: "For a period when the risk does not exist - an empty property, a laid-up vehicle - where the product allows it.",
           },
           {
             title: "Renewal review",
@@ -771,7 +771,7 @@ export const CONTENT_PAGES: Record<string, ContentPageConfig> = {
       {
         kind: "callout",
         title: "If a payment fails",
-        body: "The transaction is marked failed with the reason recorded and a notification is raised. A policy that depends on an unpaid premium is not treated as active. Contact support if you are unsure which payment is outstanding — never send card details or security codes in a message.",
+        body: "The transaction is marked failed with the reason recorded and a notification is raised. A policy that depends on an unpaid premium is not treated as active. Contact support if you are unsure which payment is outstanding - never send card details or security codes in a message.",
       },
     ],
     cta: {
@@ -1073,7 +1073,7 @@ export const CONTENT_PAGES: Record<string, ContentPageConfig> = {
           {
             title: "Documents you can read",
             icon: FileText,
-            body: "Schedules and wording in plain language, held on your record and available whenever you need them — including after a policy ends.",
+            body: "Schedules and wording in plain language, held on your record and available whenever you need them - including after a policy ends.",
           },
           {
             title: "Decisions with reasons",

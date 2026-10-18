@@ -498,9 +498,9 @@ export const generate = query({
             product: app.productName,
             country: app.country,
             status: app.status,
-            decision: app.decision ?? "—",
-            submitted: app.submittedAt ? new Date(app.submittedAt).toISOString().slice(0, 10) : "—",
-            decided: app.decidedAt ? new Date(app.decidedAt).toISOString().slice(0, 10) : "—",
+            decision: app.decision ?? "-",
+            submitted: app.submittedAt ? new Date(app.submittedAt).toISOString().slice(0, 10) : "-",
+            decided: app.decidedAt ? new Date(app.decidedAt).toISOString().slice(0, 10) : "-",
           }));
         totals = {
           applications: rows.length,

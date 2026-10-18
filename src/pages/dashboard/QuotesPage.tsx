@@ -146,7 +146,7 @@ export default function QuotesPage() {
                           Apply
                         </Button>
                       ) : (
-                        <span className="text-[0.62rem] text-muted-foreground">—</span>
+                        <span className="text-[0.62rem] text-muted-foreground">-</span>
                       )}
                     </td>
                   </tr>
@@ -182,7 +182,7 @@ export default function QuotesPage() {
                       {selected.status === "quoted"
                         ? `Valid until ${formatDate(selected.expiresAt)}`
                         : selected.status === "expired"
-                          ? "Expired — request a new quotation"
+                          ? "Expired - request a new quotation"
                           : "Converted to an application"}
                     </p>
                   </div>

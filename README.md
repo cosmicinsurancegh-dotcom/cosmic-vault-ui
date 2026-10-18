@@ -11,7 +11,7 @@ This project uses the following tech stack:
 - Convex (for backend & database)
 - Convex Auth (for authentication)
 - Supabase (for Postgres, Storage and Realtime as a second data plane)
-  - `@supabase/supabase-js` v2 — browser client in `src/lib/supabase.ts` (anon key, no session store)
+  - `@supabase/supabase-js` v2 - browser client in `src/lib/supabase.ts` (anon key, no session store)
   - Server-side access only through the `"use node"` Convex actions in `src/convex/supabase.ts` (service role key)
   - Identity stays with Convex Auth; Supabase is not a second login provider
 - Framer Motion (for animations)
@@ -35,14 +35,14 @@ This project is set up already and running on a cloud environment, as well as a 
 
 ## Testing
 
-- `bun run test` — Vitest unit tests for the Convex functions (`tests/*.test.ts`).
-- `bun run test:e2e` — Playwright browser suite (`tests/e2e`). It starts Vite on
+- `bun run test` - Vitest unit tests for the Convex functions (`tests/*.test.ts`).
+- `bun run test:e2e` - Playwright browser suite (`tests/e2e`). It starts Vite on
   port 4174 with `tests/e2e/vite.e2e.config.ts`, which aliases `convex/react`,
   `@convex-dev/auth/react` and the generated api to the doubles in
   `tests/e2e/stubs`, so no deployment, credentials or network are needed. The
   suite clicks every mega-menu link, every footer link, and drives the sign-in
   redirect flow (protected link → `/auth?returnTo=…` → destination).
-- `bun run test:e2e:types` — type-checks the browser suite and its stubs.
+- `bun run test:e2e:types` - type-checks the browser suite and its stubs.
 
 Install the browser once with `bunx playwright install chromium` if it is not
 already present on the machine.
@@ -59,9 +59,9 @@ Supabase is wired as a second data plane (Postgres, Storage, Realtime) alongside
 Convex, which stays the app's primary backend and identity provider. Add these in
 the project Keys tab (Supabase dashboard → Project Settings → API):
 
-- `VITE_SUPABASE_URL` — project URL, read by the browser client in `src/lib/supabase.ts`.
-- `VITE_SUPABASE_ANON_KEY` — anon/public key, browser only, protected by row-level security.
-- `SUPABASE_SERVICE_ROLE_KEY` — service role key, used only inside the Convex
+- `VITE_SUPABASE_URL` - project URL, read by the browser client in `src/lib/supabase.ts`.
+- `VITE_SUPABASE_ANON_KEY` - anon/public key, browser only, protected by row-level security.
+- `SUPABASE_SERVICE_ROLE_KEY` - service role key, used only inside the Convex
   Node actions in `src/convex/supabase.ts`. Never expose it to the browser.
 
 Sign in as staff (`settings.manage`) and open **Dashboard → Settings → Supabase**
@@ -99,7 +99,7 @@ const { isLoading, isAuthenticated, user, signIn, signOut } = useAuth();
 
 The starter `/dashboard` route is protected with `RequireAuth`. Extend that page
 for the product's authenticated experience, and reuse `RequireAuth` when adding
-another protected route — do NOT hand-roll a redirect to `/auth`, since landing
+another protected route - do NOT hand-roll a redirect to `/auth`, since landing
 on a bare sign-in form with no explanation of what was blocked is confusing.
 
 `RequireAuth` states the block on the page the visitor asked for and sends them

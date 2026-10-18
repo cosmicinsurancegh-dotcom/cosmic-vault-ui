@@ -9,8 +9,8 @@ import { action } from "./_generated/server";
  * Server-side Supabase access.
  *
  * Runs in the Convex Node runtime so the service role key never reaches the
- * browser. The key is read from the deployment environment — the same place
- * `VLY_INTEGRATION_KEY` comes from — so it is added through the project's Keys
+ * browser. The key is read from the deployment environment - the same place
+ * `VLY_INTEGRATION_KEY` comes from - so it is added through the project's Keys
  * tab rather than committed anywhere.
  *
  * If the service role key is absent the module stays inert: nothing throws and

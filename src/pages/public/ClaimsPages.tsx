@@ -122,7 +122,7 @@ export function ClaimsOverview() {
             },
             {
               title: "The handler assesses it",
-              body: "The claim is checked against the policy terms — cover, limits, excess, exclusions and conditions.",
+              body: "The claim is checked against the policy terms - cover, limits, excess, exclusions and conditions.",
             },
             {
               title: "You answer any request",
@@ -130,7 +130,7 @@ export function ClaimsOverview() {
             },
             {
               title: "A decision is recorded",
-              body: "Approved, partially approved, or declined — always with the reason and the person who decided.",
+              body: "Approved, partially approved, or declined - always with the reason and the person who decided.",
             },
             {
               title: "Settlement is tracked",
@@ -148,7 +148,7 @@ export function ClaimsOverview() {
           <div className="lg:col-span-7">
             <CheckList
               items={[
-                "Report it as soon as you reasonably can — most policies set a limit on how long you have.",
+                "Report it as soon as you reasonably can - most policies set a limit on how long you have.",
                 "Describe what happened plainly, in the order it happened, without deciding for us whether it is covered.",
                 "Keep evidence: photographs before repairs, receipts, reports, and correspondence with third parties.",
                 "Tell us about anything that has changed since the policy started, even if it feels minor.",
@@ -341,7 +341,7 @@ export function MakeClaim() {
             items={[
               "Photographs or video, ideally taken before any repair or clean-up.",
               "Receipts, invoices or valuations for damaged items.",
-              "Any report — police, fire, medical, or a recovery service.",
+              "Any report - police, fire, medical, or a recovery service.",
               "Correspondence with anyone else involved, including their insurer.",
             ]}
           />
@@ -431,14 +431,14 @@ export function MakeClaim() {
           <FaqList
             items={[
               {
-                question: "I can't sign in — how do I claim?",
+                question: "I can't sign in - how do I claim?",
                 answer:
                   "Contact support and explain that you need access. Claims are held against an account so that documents and decisions have an owner, so access has to be restored before a claim can be raised.",
               },
               {
                 question: "Can I claim for something that happened before the policy started?",
                 answer:
-                  "Cover applies to incidents during the policy period. If an event happened before cover started, tell us anyway — a handler will explain the position rather than leaving you guessing.",
+                  "Cover applies to incidents during the policy period. If an event happened before cover started, tell us anyway - a handler will explain the position rather than leaving you guessing.",
               },
               {
                 question: "What if I disagree with the outcome?",

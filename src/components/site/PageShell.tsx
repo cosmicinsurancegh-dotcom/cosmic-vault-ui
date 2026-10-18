@@ -538,7 +538,7 @@ export function RelatedLinks({
 
 export function LegalReviewNote({ children }: { children?: ReactNode }) {
   return (
-    <Callout tone="warning" title="Draft — requires legal approval">
+    <Callout tone="warning" title="Draft - requires legal approval">
       {children ??
         "This document is a working draft prepared for the Cosmic Vault product. It has not been reviewed or approved by a qualified legal adviser and must not be relied on as a legally binding policy."}
     </Callout>

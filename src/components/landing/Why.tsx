@@ -27,7 +27,7 @@ const pillars: { title: string; text: string; image: VaultImage; caption: string
   },
   {
     title: "Support that stays with the record",
-    text: "Storm damage, a diagnosis, a fender bender abroad — your request is held against the policy or claim it concerns, so you never explain yourself twice.",
+    text: "Storm damage, a diagnosis, a fender bender abroad - your request is held against the policy or claim it concerns, so you never explain yourself twice.",
     image: IMAGES.support,
     caption: "Support that stays on the record",
   },

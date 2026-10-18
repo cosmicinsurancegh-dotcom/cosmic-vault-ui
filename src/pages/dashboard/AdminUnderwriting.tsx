@@ -222,8 +222,8 @@ function ReviewDialog({
 
         <div className="space-y-6 px-5 py-5 sm:px-7">
           <section className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-            <Detail label="Customer">{customer?.fullName ?? "—"}</Detail>
-            <Detail label="Customer reference">{customer?.reference ?? "—"}</Detail>
+            <Detail label="Customer">{customer?.fullName ?? "-"}</Detail>
+            <Detail label="Customer reference">{customer?.reference ?? "-"}</Detail>
             <Detail label="Submitted">
               {application.submittedAt ? formatDateTime(application.submittedAt) : "Not submitted"}
             </Detail>
@@ -243,7 +243,7 @@ function ReviewDialog({
                 <div key={question.key} className="flex flex-col gap-1 px-4 py-2.5 sm:flex-row sm:justify-between sm:gap-4">
                   <dt className="text-[0.68rem] text-muted-foreground">{question.label}</dt>
                   <dd className="text-xs text-ink sm:max-w-[60%] sm:text-right">
-                    {String((application.answers as Record<string, string | number>)?.[question.key] ?? "—")}
+                    {String((application.answers as Record<string, string | number>)?.[question.key] ?? "-")}
                   </dd>
                 </div>
               ))}

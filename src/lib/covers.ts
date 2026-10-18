@@ -3,7 +3,7 @@
  *
  * Every entry maps to a real, configured product category (see
  * `convex/setup.ts` → CATEGORIES / SEED_PRODUCTS). Coverage areas and
- * limitations below are editorial summaries of those product configurations —
+ * limitations below are editorial summaries of those product configurations -
  * they are intentionally qualitative. Limits, excesses and optional benefits
  * live in the product schedule and policy wording, never on a marketing page.
  */
@@ -35,7 +35,7 @@ export const COVERS: CoverPage[] = [
     eyebrow: "Cover · Home and property",
     headline: "Protection for the place you've made your own.",
     intro:
-      "Buildings and contents cover for owners and long-term renters, with the questions we ask designed to reflect the property you actually live in — not an average one.",
+      "Buildings and contents cover for owners and long-term renters, with the questions we ask designed to reflect the property you actually live in - not an average one.",
     metaDescription:
       "Home and contents insurance from Cosmic Vault: what buildings and contents cover does, who it may suit, what underwriters ask for, and how to start an application.",
     summary:
@@ -78,7 +78,7 @@ export const COVERS: CoverPage[] = [
       "Any recent claims, and whether you or the property have experienced flooding",
     ],
     pricing:
-      "Your indicative premium is calculated from the published rating rules for the product — property type, declared contents level, and flood risk — then reviewed by an underwriter before any cover begins.",
+      "Your indicative premium is calculated from the published rating rules for the product - property type, declared contents level, and flood risk - then reviewed by an underwriter before any cover begins.",
     faqs: [
       {
         question: "Is buildings cover included automatically?",
@@ -163,7 +163,7 @@ export const COVERS: CoverPage[] = [
       {
         question: "What happens after an accident?",
         answer:
-          "Report the claim in your vault, upload what you have, and a named handler takes it from there. You can follow every update on the claim itself — see how claims work.",
+          "Report the claim in your vault, upload what you have, and a named handler takes it from there. You can follow every update on the claim itself - see how claims work.",
       },
     ],
   },
@@ -189,7 +189,7 @@ export const COVERS: CoverPage[] = [
     coverageAreas: [
       {
         title: "Emergency medical treatment",
-        body: "Emergency treatment abroad and, where medically necessary, repatriation home — the core reason travel cover exists.",
+        body: "Emergency treatment abroad and, where medically necessary, repatriation home - the core reason travel cover exists.",
       },
       {
         title: "Cancellation and curtailment",
@@ -208,7 +208,7 @@ export const COVERS: CoverPage[] = [
       "Travel against medical advice is not covered.",
       "Extreme and winter sports are excluded unless the relevant option is added to the policy.",
       "Events known about before the trip was booked, such as announced strikes, are not insurable.",
-      "Destinations must be within the regional scope you selected — worldwide cover excluding the USA is a different product scope from worldwide including it.",
+      "Destinations must be within the regional scope you selected - worldwide cover excluding the USA is a different product scope from worldwide including it.",
     ],
     beforeYouApply: [
       "Who is travelling, and their ages",
@@ -245,7 +245,7 @@ export const COVERS: CoverPage[] = [
     eyebrow: "Cover · Health",
     headline: "Private healthcare, without the maze.",
     intro:
-      "Private medical cover with consultant access, mental-health support, and optional dental — arranged so you know what is covered before you need it.",
+      "Private medical cover with consultant access, mental-health support, and optional dental - arranged so you know what is covered before you need it.",
     metaDescription:
       "Private health insurance from Cosmic Vault: consultant diagnostics, mental-health support, dental options, exclusions, and how to start an application.",
     summary:
@@ -278,14 +278,14 @@ export const COVERS: CoverPage[] = [
       "Pre-existing conditions are excluded unless they are declared and specifically accepted.",
       "Cosmetic treatment is not covered.",
       "Treatment outside the territories listed in the policy is not covered.",
-      "Cover levels differ, and the schedule — not the marketing description — states what is included.",
+      "Cover levels differ, and the schedule - not the marketing description - states what is included.",
     ],
     beforeYouApply: [
       "The age band of everyone to be covered",
       "Whether the policy is for one person, a couple, or a family",
       "The cover level you are considering",
       "An honest summary of pre-existing conditions and current medication",
-      "Photo identification — a medical history summary helps but is optional",
+      "Photo identification - a medical history summary helps but is optional",
     ],
     pricing:
       "Indicative pricing reflects age band, chosen cover level, and who is covered. Declared conditions are reviewed by an underwriter rather than priced automatically.",
@@ -345,7 +345,7 @@ export const COVERS: CoverPage[] = [
       },
     ],
     limitations: [
-      "Non-disclosure of material facts — including health and lifestyle information — can affect whether a claim is paid.",
+      "Non-disclosure of material facts - including health and lifestyle information - can affect whether a claim is paid.",
       "A claim from a non-accidental cause within the initial exclusion period stated in the policy is not covered.",
       "War and illegal activity exclusions apply.",
       "The sum assured is not investment-linked; it does not grow with the market or with inflation unless a specific option is selected.",

@@ -97,7 +97,7 @@ export default function ApplicationsPage() {
                   </p>
                   {application.status === "additional_info_required" && (
                     <p className="mt-1.5 text-[0.68rem] font-medium text-amber-700 dark:text-amber-400">
-                      Information requested — open to respond.
+                      Information requested - open to respond.
                     </p>
                   )}
                 </div>
@@ -301,7 +301,7 @@ function ApplicationDialog({
               Application details
             </h3>
             <div className="mt-2 grid gap-x-6 gap-y-3 sm:grid-cols-2">
-              <Detail label="Policyholder">{customer?.fullName ?? "—"}</Detail>
+              <Detail label="Policyholder">{customer?.fullName ?? "-"}</Detail>
               <Detail label="Country">{application.country}</Detail>
               <Detail label="Submitted">
                 {application.submittedAt ? formatDateTime(application.submittedAt) : "Not submitted"}
@@ -316,7 +316,7 @@ function ApplicationDialog({
                   <dt className="text-[0.68rem] text-muted-foreground">{question.label}</dt>
                   <dd className="text-xs text-ink sm:text-right">
                     {String(
-                      (application.answers as Record<string, string | number>)?.[question.key] ?? "—",
+                      (application.answers as Record<string, string | number>)?.[question.key] ?? "-",
                     )}
                   </dd>
                 </div>
@@ -491,7 +491,7 @@ function ApplicationDialog({
               ) : pendingPayment ? (
                 <p className="mt-2 text-xs text-ink">
                   Awaiting confirmation for{" "}
-                  <span className="font-semibold">{pendingPayment.reference}</span> —{" "}
+                  <span className="font-semibold">{pendingPayment.reference}</span> -{" "}
                   {formatMoney(pendingPayment.amount, pendingPayment.currency)}.
                 </p>
               ) : (

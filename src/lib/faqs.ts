@@ -44,7 +44,7 @@ export const FAQS: Faq[] = [
     category: "Quotes and applications",
     question: "What information will I be asked for?",
     answer:
-      "Each product has its own question set. In practice you will be asked about the thing being insured — a property, a vehicle, travellers, a business — plus anything that materially changes the risk, such as previous claims or declared conditions. Answer honestly: undisclosed facts affect claims later.",
+      "Each product has its own question set. In practice you will be asked about the thing being insured - a property, a vehicle, travellers, a business - plus anything that materially changes the risk, such as previous claims or declared conditions. Answer honestly: undisclosed facts affect claims later.",
   },
   {
     category: "Quotes and applications",
@@ -164,7 +164,7 @@ export const FAQS: Faq[] = [
     category: "Renewals and changes",
     question: "Can I change my policy mid-term?",
     answer:
-      "You can request a change — an endorsement — from the policy in your vault. Requests are reviewed by a person, and the policy only changes once the request is approved and the change is recorded.",
+      "You can request a change - an endorsement - from the policy in your vault. Requests are reviewed by a person, and the policy only changes once the request is approved and the change is recorded.",
   },
   {
     category: "Renewals and changes",

@@ -26,7 +26,7 @@ import {
 export default function AllCover() {
   usePageMeta(
     "All insurance products",
-    "Browse every cover line available from Cosmic Vault — home, motor, travel, health, life and business — and see what each is designed to protect.",
+    "Browse every cover line available from Cosmic Vault - home, motor, travel, health, life and business - and see what each is designed to protect.",
   );
 
   return (
@@ -34,7 +34,7 @@ export default function AllCover() {
       <PageHero
         eyebrow="Cover · All products"
         title="Every cover line, in one place."
-        intro="Six products are configured in the platform today. Each has its own questions, rating rules, limits and exclusions — so the terms you are quoted are the terms that apply."
+        intro="Six products are configured in the platform today. Each has its own questions, rating rules, limits and exclusions - so the terms you are quoted are the terms that apply."
         media={{ image: IMAGES.homeInterior, caption: "The things worth protecting" }}
         aside={{
           title: "Only what exists",
@@ -155,7 +155,7 @@ export default function AllCover() {
         <div className="grid gap-8 lg:grid-cols-2">
           <CheckList
             items={[
-              "Read the guidance on limits and exclusions — it is shorter than the policy and covers the decisive points.",
+              "Read the guidance on limits and exclusions - it is shorter than the policy and covers the decisive points.",
               "Check that the cover you are considering responds to the most likely thing to go wrong, not the most dramatic.",
               "Gather the documents the product lists, so an information request does not stall your application.",
             ]}
@@ -166,7 +166,7 @@ export default function AllCover() {
             </p>
             <p className="mt-2 text-[0.82rem] leading-6 text-muted-foreground">
               Send us a request describing what you want to protect. An advisor
-              will tell you which cover line fits and which does not — including
+              will tell you which cover line fits and which does not - including
               when the answer is that you need less than you thought.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
