@@ -255,7 +255,13 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
   };
 
   return (
-    <section id="top" className="relative overflow-hidden">
+    /* The hero owns one full fold: the panel grows to fill the viewport and
+       stops at 56rem on very tall displays, so the composition never becomes
+       a banner on a 4K screen or a clipped rail on a 768px laptop. */
+    <section
+      id="top"
+      className="relative flex min-h-[min(100svh,56rem)] flex-col overflow-hidden"
+    >
       {/* Ambient light */}
       <div
         aria-hidden="true"
@@ -266,7 +272,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
         className="pointer-events-none absolute left-[-14%] top-[46%] size-[24rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.55),transparent_70%)] blur-2xl"
       />
 
-      <div className="relative">
+      <div className="relative flex flex-1 flex-col">
         <div
           role="region"
           aria-roledescription="carousel"
@@ -294,7 +300,7 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
               setKeyboardFocus(false);
             }
           }}
-          className="group/hero relative isolate flex w-full touch-pan-y flex-col overflow-hidden bg-[#071227] text-bone outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="group/hero relative isolate flex w-full flex-1 touch-pan-y flex-col overflow-hidden bg-[#071227] text-bone outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           {/* The vault surface: one acid-tile field behind every cover line,
               lit from either side and dimmed at the foot so the copy holds. */}
@@ -325,14 +331,17 @@ export function Hero({ onQuote }: { onQuote: () => void }) {
 
           {/* Slide copy — the top padding clears the floating navbar
               (≈70px on mobile, ≈74px from sm up). */}
-          <div className="relative z-10 mx-auto mt-auto grid w-full max-w-[1180px] gap-8 px-5 pb-6 pt-[5.25rem] sm:px-8 sm:pb-8 sm:pt-24 lg:grid-cols-12 lg:items-end lg:gap-10 lg:pb-9 lg:pt-28">
+          <div className="relative z-10 mx-auto mt-auto grid w-full max-w-[1180px] gap-8 px-5 pb-7 pt-[5.25rem] sm:px-8 sm:pb-8 sm:pt-24 lg:grid-cols-12 lg:items-end lg:gap-10 lg:pb-10 lg:pt-24">
             <div className="lg:col-span-7">
+              {/* Height is reserved for the tallest cover line in each range
+                  (measured to the widest wrap), so autoplay never nudges the
+                  CTA row or the chapter rail. */}
               <div
                 role="tabpanel"
                 id="hero-slide-panel"
                 aria-labelledby={`hero-tab-${slide.slug}`}
                 aria-live="off"
-                className="min-h-[15.5rem] sm:min-h-[17rem]"
+                className="min-h-[19rem] min-[360px]:min-h-[15.5rem] lg:min-h-[17rem]"
               >
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
