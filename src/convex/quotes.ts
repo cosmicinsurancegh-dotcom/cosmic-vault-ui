@@ -1,6 +1,8 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
+import { cleanText, isValidEmail, requiredText } from "./lib/refs";
 import { coverageValidator } from "./schema";
 
 /**
@@ -19,14 +21,48 @@ export const requestQuote = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
-    const name = args.name.trim();
-    const email = args.email.trim().toLowerCase();
 
+    // This mutation is reachable by signed-out visitors, so every field is
+    // bounded on the server before anything is written. A landing-page form is
+    // the easiest write path to abuse, which is why the caps and the rate
+    // limits live here rather than in the React dialog.
+    const name = requiredText(args.name, "Full name", 120);
+    const email = requiredText(args.email, "Email address", 254).toLowerCase();
     if (name.length < 2) {
       throw new Error("Please add your full name.");
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!isValidEmail(email)) {
       throw new Error("Please add a valid email address.");
+    }
+    const plan = args.plan ? cleanText(args.plan, "Plan", 80) || undefined : undefined;
+    const message = args.message
+      ? cleanText(args.message, "Message", 2000) || undefined
+      : undefined;
+    if (
+      args.monthlyEstimate !== undefined &&
+      (!Number.isFinite(args.monthlyEstimate) ||
+        args.monthlyEstimate < 0 ||
+        args.monthlyEstimate > 100_000_000)
+    ) {
+      throw new Error("That monthly estimate looks invalid.");
+    }
+
+    await enforceRateLimit(ctx, {
+      scope: "quote.global",
+      identifier: "all",
+      ...RATE_LIMITS.quoteGlobal,
+    });
+    await enforceRateLimit(ctx, {
+      scope: "quote.email",
+      identifier: email,
+      ...RATE_LIMITS.quotePerEmail,
+    });
+    if (userId) {
+      await enforceRateLimit(ctx, {
+        scope: "quote.user",
+        identifier: userId,
+        ...RATE_LIMITS.quotePerUser,
+      });
     }
 
     const reference = `CV-${Date.now().toString(36).toUpperCase().slice(-5)}${Math.random()
@@ -40,8 +76,8 @@ export const requestQuote = mutation({
       name,
       email,
       coverage: args.coverage,
-      plan: args.plan,
-      message: args.message?.trim() || undefined,
+      plan,
+      message,
       status: "in_review",
       monthlyEstimate: args.monthlyEstimate,
     });

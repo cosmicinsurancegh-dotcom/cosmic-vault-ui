@@ -43,6 +43,16 @@ This project is set up already and running on a cloud environment, as well as a 
   suite clicks every mega-menu link, every footer link, and drives the sign-in
   redirect flow (protected link → `/auth?returnTo=…` → destination).
 - `bun run test:e2e:types` - type-checks the browser suite and its stubs.
+- `bun run test` also runs `tests/security.test.ts`, which covers server-side
+  authorisation, the public lead form's validation and rate limits, the
+  founding-admin check, and cross-member transaction references.
+- `bun run test:load` / `bun run test:load:abuse` - k6 load and abuse profiles.
+  They are opt-in, require `CONVEX_URL`, and must be pointed at staging; see
+  [`loadtest/README.md`](loadtest/README.md).
+
+Production-readiness findings, the capacity assessment, operational runbook
+and outstanding risks are in
+[`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md).
 
 Install the browser once with `bunx playwright install chromium` if it is not
 already present on the machine.

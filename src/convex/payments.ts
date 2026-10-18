@@ -275,8 +275,11 @@ export const mineByReference = query({
       .withIndex("by_reference", (q) => q.eq("reference", args.reference.trim().toUpperCase()))
       .first();
     if (!row) return null;
+    // Return the same `null` as an unknown reference: distinguishing "not
+    // yours" from "does not exist" would turn this lookup into an oracle for
+    // other members' payment references.
     if (row.customerUserId !== viewer.user._id && !isStaffRole(viewer.role)) {
-      throw new Error("You do not have access to this transaction.");
+      return null;
     }
     return row;
   },

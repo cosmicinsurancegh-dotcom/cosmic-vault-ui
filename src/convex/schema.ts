@@ -161,7 +161,12 @@ const schema = defineSchema(
       suspendedReason: v.optional(v.string()),
       lastRoleChangeAt: v.optional(v.number()),
       ...demoFields,
-    }).index("email", ["email"]), // index for the email. do not remove or modify
+    })
+      .index("email", ["email"]) // index for the email. do not remove or modify
+      // Super admin lookups must not depend on scanning a prefix of the table:
+      // `setup.status` / `setup.bootstrap` decide whether the founding claim is
+      // still open, so they read this index instead of `users.take(n)`.
+      .index("by_role", ["role"]),
 
     // Quote requests created from the landing page or the member vault.
     quotes: defineTable({
@@ -177,6 +182,20 @@ const schema = defineSchema(
     })
       .index("by_user", ["userId"])
       .index("by_email", ["email"]),
+
+    /**
+     * Fixed-window rate limit counters for public and abuse-prone operations.
+     * Convex mutations are serialisable transactions, so the read-modify-write
+     * in `lib/rateLimit` is enforced across every server instance. Rows are
+     * pruned by the daily maintenance cron once their window is long past.
+     */
+    rateLimits: defineTable({
+      key: v.string(), // `${scope}:${identifier}`
+      windowStart: v.number(),
+      count: v.number(),
+    })
+      .index("by_key", ["key"])
+      .index("by_windowStart", ["windowStart"]),
 
     /** Reference data ------------------------------------------------------ */
     countries: defineTable({

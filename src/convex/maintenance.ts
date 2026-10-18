@@ -15,8 +15,14 @@ export const daily = internalMutation({
     let expired = 0;
     let reminders = 0;
     let overdue = 0;
+    let rateLimitsPruned = 0;
 
-    const policies = await ctx.db.query("policies").take(1000);
+    // Only active policies can expire or need a renewal reminder, so read the
+    // status index instead of scanning every policy ever issued.
+    const policies = await ctx.db
+      .query("policies")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .take(1000);
     for (const policy of policies) {
       if (policy.status === "active" && policy.endDate < now) {
         await ctx.db.patch(policy._id, {
@@ -79,6 +85,19 @@ export const daily = internalMutation({
       }
     }
 
-    return { expired, reminders, overdue };
+    // Rate-limit rows are tiny but permanent unless pruned. Anything whose
+    // window closed a week ago can never be consulted again.
+    const staleLimits = await ctx.db
+      .query("rateLimits")
+      .withIndex("by_windowStart", (q) =>
+        q.lt("windowStart", now - 7 * DAY),
+      )
+      .take(500);
+    for (const row of staleLimits) {
+      await ctx.db.delete(row._id);
+      rateLimitsPruned += 1;
+    }
+
+    return { expired, reminders, overdue, rateLimitsPruned };
   },
 });

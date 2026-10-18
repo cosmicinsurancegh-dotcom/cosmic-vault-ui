@@ -1,4 +1,3 @@
-import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
@@ -525,8 +524,13 @@ export const status = query({
   args: {},
   handler: async (ctx) => {
     const viewer = await requireViewer(ctx, { allowSuspended: true });
-    const staff = await ctx.db.query("users").take(200);
-    const hasSuperAdmin = staff.some((user) => user.role === "super_admin");
+    // Indexed lookup, not `users.take(200)`: once the table is larger than the
+    // scan window a super admin outside it must still close the founding claim.
+    const superAdmin = await ctx.db
+      .query("users")
+      .withIndex("by_role", (q) => q.eq("role", "super_admin"))
+      .first();
+    const hasSuperAdmin = superAdmin !== null;
     const products = await ctx.db
       .query("products")
       .withIndex("by_status", (q) => q.eq("status", "published"))
@@ -564,10 +568,23 @@ export const bootstrap = mutation({
   args: {},
   handler: async (ctx) => {
     const viewer = await requireViewer(ctx, { allowSuspended: true });
+    // A guest session is disposable: anyone who opens the site could otherwise
+    // claim the founding admin seat before the operator signs in. Require a
+    // real email identity, which also makes the action auditable.
+    if (viewer.user.isAnonymous) {
+      throw new Error(
+        "Sign in with your email address to claim founding access.",
+      );
+    }
     await ensureReferenceData(ctx);
 
-    const users = await ctx.db.query("users").take(200);
-    const existingSuper = users.find((user) => user.role === "super_admin");
+    // The founding claim must never depend on how many users exist: a partial
+    // table scan would let a later visitor promote themselves once the real
+    // super admin sits beyond the scan window.
+    const existingSuper = await ctx.db
+      .query("users")
+      .withIndex("by_role", (q) => q.eq("role", "super_admin"))
+      .first();
     if (existingSuper) {
       return { promoted: false, hasSuperAdmin: true };
     }

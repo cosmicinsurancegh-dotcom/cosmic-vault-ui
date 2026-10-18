@@ -7,6 +7,7 @@ import {
   requireViewer,
 } from "./lib/authz";
 import { validateUpload } from "./lib/files";
+import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 import { requiredText } from "./lib/refs";
 
 const categoryValidator = v.union(
@@ -68,7 +69,15 @@ export const get = query({
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    await requireViewer(ctx);
+    const viewer = await requireViewer(ctx);
+    // Convex storage only charges for files that are attached to a record, but
+    // minting URLs still costs a function call and an unauthenticated script
+    // cannot do it at all. Signed-in members get a generous hourly cap.
+    await enforceRateLimit(ctx, {
+      scope: "upload.url",
+      identifier: viewer.user._id,
+      ...RATE_LIMITS.uploadUrlPerUser,
+    });
     return await ctx.storage.generateUploadUrl();
   },
 });

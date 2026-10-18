@@ -29,6 +29,7 @@ import type * as lib_files from "../lib/files.js";
 import type * as lib_notify from "../lib/notify.js";
 import type * as lib_people from "../lib/people.js";
 import type * as lib_pricing from "../lib/pricing.js";
+import type * as lib_rateLimit from "../lib/rateLimit.js";
 import type * as lib_refs from "../lib/refs.js";
 import type * as lib_settings from "../lib/settings.js";
 import type * as lib_vly from "../lib/vly.js";
@@ -75,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   "lib/notify": typeof lib_notify;
   "lib/people": typeof lib_people;
   "lib/pricing": typeof lib_pricing;
+  "lib/rateLimit": typeof lib_rateLimit;
   "lib/refs": typeof lib_refs;
   "lib/settings": typeof lib_settings;
   "lib/vly": typeof lib_vly;

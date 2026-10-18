@@ -27,10 +27,17 @@ const codeSettings = {
     token: string;
   }) {
     try {
+      // The gateway is an external dependency inside the sign-in mutation:
+      // without a timeout a stalled call would hold the request until the
+      // platform kills it. Fail fast and let the user retry instead.
       await axios.post(
         freebuffEmailOtpUrl(),
         { to: email, otp: token },
-        { headers: freebuffEmailOtpHeaders() },
+        {
+          headers: freebuffEmailOtpHeaders(),
+          timeout: 10_000,
+          maxRedirects: 0,
+        },
       );
     } catch (error) {
       throw freebuffEmailOtpError(error);
