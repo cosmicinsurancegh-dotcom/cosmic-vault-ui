@@ -20,6 +20,8 @@ export const PERMISSIONS = {
   AUDIT_VIEW: "audit.view",
   SETTINGS_MANAGE: "settings.manage",
   STAFF_MANAGE: "staff.manage",
+  VAULT_MANAGE: "vault.manage",
+  VAULT_SHIP: "vault.ship",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -38,6 +40,8 @@ export const DEFAULT_ADMIN_PERMISSIONS: string[] = [
   PERMISSIONS.PAYMENTS_VIEW,
   PERMISSIONS.BROKERS_MANAGE,
   PERMISSIONS.REPORTS_VIEW,
+  PERMISSIONS.VAULT_MANAGE,
+  PERMISSIONS.VAULT_SHIP,
 ];
 
 export type NormalizedRole = "super_admin" | "admin" | "customer" | "broker";

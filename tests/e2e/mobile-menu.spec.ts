@@ -23,14 +23,14 @@ test.describe("mobile navigation", () => {
       ).toBeVisible();
     }
 
-    await drawer.getByRole("button", { name: "Cover", exact: true }).click();
+    await drawer.getByRole("button", { name: "The vault", exact: true }).click();
     await expect(
-      drawer.getByRole("link", { name: /All insurance products/ }),
+      drawer.getByRole("link", { name: /What we store/ }),
     ).toBeVisible();
 
-    await drawer.getByRole("link", { name: /Motor insurance/ }).click();
+    await drawer.getByRole("link", { name: /Frequently asked questions/ }).click();
 
-    await expect.poll(() => new URL(page.url()).pathname).toBe("/cover/motor");
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/faqs");
     await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();
     await expect(drawer).toHaveCount(0);
   });

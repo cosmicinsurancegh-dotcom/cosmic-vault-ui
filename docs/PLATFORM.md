@@ -133,6 +133,25 @@ then schedules `email.deliver`. Delivery results (`queued`, `sent`, `failed`,
 `skipped`) and errors are stored on the notification; staff can review and retry
 (`notifications.deliveryIssues`, `notifications.retryEmail`).
 
+**Shipment emails** - every change of a consignment's tracking status emails the
+member through `shipmentEmailDelivery.sendUpdate`. The message is rendered once
+by `vault/shipmentEmail.ts` (the same module the dashboard preview uses), and the
+attempt is recorded in `shipmentEmails` with the provider result, so failures are
+visible instead of silent.
+
+- The template follows the reference tracking page: a warm canvas, forest-green
+  header and footer bands, a cream hero and a five-step rail showing completed,
+  current, skipped and expected stages with their timestamps.
+- Delivery is gated on `vault.ship` (`shipmentEmails.sendGate`), rate-limited per
+  operator, and the action never trusts a browser-supplied URL: links come from
+  `SITE_URL`, only http(s) is allowed, and every interpolated value is escaped.
+- The demo operations toggle is an anonymous preview, so it publishes the status
+  and renders the email but does not deliver it. Sign in as staff to send.
+- The provider sandbox rejects placeholder recipients, so demo owners
+  (`@example.com`) can be previewed in full but not delivered; use a real inbox to
+  see `sent`. Missing `VLY_INTEGRATION_KEY` is recorded as `skipped` with the
+  variable named, matching `email.deliver`.
+
 **Audit** - `lib/audit.writeAudit` records actor, role, action, entity, before/after
 values, reason and timestamp for application decisions, policy issuance and
 status changes, claim decisions and settlements, refunds, product changes,

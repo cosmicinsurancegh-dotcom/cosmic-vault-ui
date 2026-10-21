@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1100" role="img" aria-label="Stacked silver bullion bars on a dark studio surface">
+  <defs>
+    <radialGradient id="bg" cx="52%" cy="38%" r="78%">
+      <stop offset="0" stop-color="#243142"/>
+      <stop offset=".5" stop-color="#0d1622"/>
+      <stop offset="1" stop-color="#050a12"/>
+    </radialGradient>
+    <radialGradient id="spot" cx="50%" cy="44%" r="48%">
+      <stop offset="0" stop-color="#dbe8f6" stop-opacity=".26"/>
+      <stop offset=".55" stop-color="#8da6c0" stop-opacity=".07"/>
+      <stop offset="1" stop-color="#0b1220" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="top" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2f7fc"/>
+      <stop offset=".22" stop-color="#aebdcb"/>
+      <stop offset=".48" stop-color="#e6eef6"/>
+      <stop offset=".74" stop-color="#8697a7"/>
+      <stop offset="1" stop-color="#d7e3ee"/>
+    </linearGradient>
+    <linearGradient id="front" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#99a9b8"/>
+      <stop offset=".45" stop-color="#5b6b7b"/>
+      <stop offset="1" stop-color="#303d4b"/>
+    </linearGradient>
+    <linearGradient id="side" x1="0" y1="0" x2="1" y2=".3">
+      <stop offset="0" stop-color="#4d5c6c"/>
+      <stop offset=".6" stop-color="#768797"/>
+      <stop offset="1" stop-color="#dce7f2"/>
+    </linearGradient>
+    <linearGradient id="shelf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#364453"/>
+      <stop offset="1" stop-color="#0a111b"/>
+    </linearGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="26"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope=".055"/></feComponentTransfer>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1600" height="1100" fill="url(#bg)"/>
+  <ellipse cx="800" cy="470" rx="640" ry="430" fill="url(#spot)"/>
+  <g fill="#e9f2fb" opacity=".5">
+    <circle cx="210" cy="180" r="1.6"/><circle cx="330" cy="118" r="1"/><circle cx="1290" cy="160" r="1.4"/>
+    <circle cx="1430" cy="330" r="1"/><circle cx="158" cy="520" r="1.1"/><circle cx="1420" cy="700" r="1.7"/>
+    <circle cx="260" cy="760" r=".9"/><circle cx="1120" cy="108" r=".9"/>
+  </g>
+  <ellipse cx="810" cy="905" rx="500" ry="86" fill="#000" opacity=".62" filter="url(#soft)"/>
+  <path d="M260 830H1350L1500 1010H120Z" fill="url(#shelf)" opacity=".85"/>
+  <g transform="translate(20 40)">
+    <!-- back bar -->
+    <g opacity=".9">
+      <path d="M685 350 1180 300 1385 420 890 470Z" fill="url(#top)"/>
+      <path d="M890 470 1385 420 1385 555 890 605Z" fill="url(#front)"/>
+      <path d="M685 350 890 470 890 605 685 485Z" fill="url(#side)"/>
+      <path d="M900 438 1330 396" stroke="#f6fbff" stroke-opacity=".65" stroke-width="3"/>
+      <path d="M940 482 1280 448" stroke="#1e2a37" stroke-opacity=".5" stroke-width="2"/>
+      <text x="1040" y="530" fill="#2d3947" font-family="Georgia, serif" font-size="27" letter-spacing="7" opacity=".72">999.0</text>
+    </g>
+    <!-- middle bar -->
+    <g>
+      <path d="M470 470 1000 416 1210 548 680 604Z" fill="url(#top)"/>
+      <path d="M680 604 1210 548 1210 700 680 756Z" fill="url(#front)"/>
+      <path d="M470 470 680 604 680 756 470 622Z" fill="url(#side)"/>
+      <path d="M705 558 1150 512" stroke="#f6fbff" stroke-opacity=".8" stroke-width="4"/>
+      <path d="M730 606 1100 570" stroke="#1e2a37" stroke-opacity=".42" stroke-width="2"/>
+      <text x="760" y="682" fill="#2c3845" font-family="Georgia, serif" font-size="32" letter-spacing="9" opacity=".78">FINE SILVER</text>
+      <text x="760" y="720" fill="#2c3845" font-family="Georgia, serif" font-size="21" letter-spacing="6" opacity=".55">10 OZ · CV</text>
+    </g>
+    <!-- front bar -->
+    <g>
+      <path d="M290 680 820 624 1045 766 510 824Z" fill="url(#top)"/>
+      <path d="M510 824 1045 766 1045 915 510 972Z" fill="url(#front)"/>
+      <path d="M290 680 510 824 510 972 290 828Z" fill="url(#side)"/>
+      <path d="M540 780 985 732" stroke="#f7fbff" stroke-opacity=".9" stroke-width="4"/>
+      <path d="M555 826 940 786" stroke="#1b2632" stroke-opacity=".4" stroke-width="2"/>
+      <text x="588" y="893" fill="#2a3541" font-family="Georgia, serif" font-size="30" letter-spacing="10" opacity=".8">SILVER</text>
+      <text x="588" y="929" fill="#2a3541" font-family="Georgia, serif" font-size="18" letter-spacing="5" opacity=".5">CV-AG-311</text>
+    </g>
+  </g>
+  <rect width="1600" height="1100" filter="url(#grain)" opacity=".55"/>
+  <rect x=".5" y=".5" width="1599" height="1099" fill="none" stroke="#fff" stroke-opacity=".08"/>
+</svg>

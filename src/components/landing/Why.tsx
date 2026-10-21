@@ -1,6 +1,6 @@
 import { Media } from "@/components/site/Media";
 import { Reveal } from "@/components/site/Reveal";
-import { IMAGES, type VaultImage } from "@/lib/imagery";
+import { MINERAL_IMAGES, type VaultImage } from "@/lib/imagery";
 import { AnimatePresence, motion } from "framer-motion";
 import { Minus, Plus } from "lucide-react";
 import { useState } from "react";
@@ -8,28 +8,28 @@ import { cn } from "@/lib/utils";
 
 const pillars: { title: string; text: string; image: VaultImage; caption: string }[] = [
   {
-    title: "Personal service",
-    text: "Every plan is drawn up with a named advisor who knows your household, your history, and the details that actually matter. You'll never explain yourself twice.",
-    image: IMAGES.advisor,
-    caption: "A named advisor, not a queue",
+    title: "Dual-control access",
+    text: "No drawer opens for one person. Two authorised custodians, separate credentials, and a log entry that names both — whether the visit is a deposit, an appraisal or a release.",
+    image: MINERAL_IMAGES.bullionDetail,
+    caption: "Two custodians on every opening",
   },
   {
-    title: "Fair, legible pricing",
-    text: "One price, shown in full, before you decide. No teaser rates that double in year two and no commission buried in the fine print.",
-    image: IMAGES.workspaces,
-    caption: "One price, written in full",
+    title: "Condition, not just security",
+    text: "Bullion, gems and reactive specimens do not want the same air. Each class is held in monitored conditions, checked on a schedule, and any change in condition is recorded against the object.",
+    image: MINERAL_IMAGES.diamonds,
+    caption: "Monitored, class by class",
   },
   {
-    title: "Claims decided by a person",
-    text: "Your claim is assessed against the policy by an authorised handler and the decision is recorded with its reasons. We do not publish settlement promises we cannot keep.",
-    image: IMAGES.claimReview,
-    caption: "Every decision carries its reason",
+    title: "A chain of evidence",
+    text: "Deposit photographs, seal numbers, assay cards, appraisals and every movement are attached to one record. It is the same file used to settle a claim, which is why nothing has to be reconstructed later.",
+    image: MINERAL_IMAGES.rareEarth,
+    caption: "One file from deposit to claim",
   },
   {
-    title: "Support that stays with the record",
-    text: "Storm damage, a diagnosis, a fender bender abroad - your request is held against the policy or claim it concerns, so you never explain yourself twice.",
-    image: IMAGES.support,
-    caption: "Support that stays on the record",
+    title: "A custodian with a name",
+    text: "Every record has a custodian accountable for it. Requests reference that person, not a queue, and a handover is recorded rather than implied.",
+    image: MINERAL_IMAGES.platinum,
+    caption: "Accountability, by name",
   },
 ];
 
@@ -44,18 +44,19 @@ export function Why() {
   };
 
   return (
-    <section className="relative mt-24 sm:mt-32">
+    <section id="standards" className="relative mt-24 scroll-mt-24 sm:mt-32">
       <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
         <Reveal className="mx-auto max-w-2xl text-center">
           <p className="text-[0.66rem] font-semibold uppercase tracking-[0.30em] text-ink/65">
-            How we work
+            Vault standards
           </p>
           <h2 className="mt-4 text-balance text-[clamp(2.1rem,4.6vw,3.7rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
-            Why we do it <span className="text-electric">this way.</span>
+            The questions worth{" "}
+            <span className="text-electric">asking.</span>
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-[0.92rem] leading-6 text-muted-foreground">
-            Four decisions shape how Cosmic Vault behaves when a claim, a change
-            or a difficult question lands on someone&apos;s desk.
+            Anyone can show you a door. These are the four operating decisions
+            that make the insurance behind it credible.
           </p>
         </Reveal>
 
@@ -81,7 +82,7 @@ export function Why() {
                         className={cn(
                           "mt-0.5 grid size-9 shrink-0 place-items-center rounded-[4px] text-[0.68rem] font-semibold transition-all duration-300",
                           isOpen
-                            ? "bg-electric text-white"
+                            ? "bg-primary text-primary-foreground"
                             : "bg-ink/[0.05] text-ink/55 group-hover:bg-ink/10",
                         )}
                       >
@@ -130,8 +131,6 @@ export function Why() {
           </div>
 
           <Reveal y={30} delay={0.1} className="lg:col-span-5">
-            {/* Fills the height of the commitment list beside it, so the two
-                columns end on the same line now the floating badge is gone. */}
             <div className="sticky top-28 flex h-full flex-col">
               <div className="relative min-h-[22rem] flex-1 overflow-hidden rounded-[4px] border border-ink/10">
                 <AnimatePresence initial={false}>
@@ -143,11 +142,7 @@ export function Why() {
                     transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                     className="absolute inset-0"
                   >
-                    <Media
-                      image={shown.image}
-                      overlay="floor"
-                      className="size-full"
-                    />
+                    <Media image={shown.image} overlay="floor" className="size-full" />
                   </motion.div>
                 </AnimatePresence>
 
@@ -165,7 +160,7 @@ export function Why() {
                       </p>
                       <div className="mt-2 flex items-center gap-3">
                         <p className="text-[0.65rem] uppercase tracking-[0.2em] text-bone/60">
-                          How we work
+                          Vault standards
                         </p>
                         <span className="h-px flex-1 bg-white/25" />
                         <p className="text-[0.65rem] uppercase tracking-[0.2em] text-bone/45">

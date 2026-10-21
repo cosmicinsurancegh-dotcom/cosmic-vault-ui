@@ -15,7 +15,10 @@ import {
   StatusPill,
 } from "@/components/dashboard/PlatformUI";
 import { Button } from "@/components/ui/button";
+import { OperationsOverview } from "@/components/vault/OperationsOverview";
+import { VaultHomeBand } from "@/components/vault/VaultHomeBand";
 import { useAuth } from "@/hooks/use-auth";
+import { useVaultActor } from "@/lib/vault/useVault";
 import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useMemo, useState } from "react";
@@ -38,8 +41,14 @@ import {
 
 export default function Home() {
   const { user } = useAuth();
+  const { actor: vaultActor } = useVaultActor();
   const role = normalizeRole(user?.role);
   const staff = isStaff(role);
+  /* A guest can preview the vault from the operations side. Its home belongs to
+     the vault, not to the insurance-wide Command Centre, which remains for
+     signed-in staff with real permissions. */
+  const demoOperations = Boolean(user?.isAnonymous) && vaultActor.role === "admin";
+  const skipCustomerOverview = staff || demoOperations;
   const ensureBasics = useMutation(api.setup.ensureBasics);
   const [days] = useState(30);
   const [months, setMonths] = useState(6);
@@ -54,9 +63,14 @@ export default function Home() {
     () => new Date().getTime() - days * 24 * 60 * 60 * 1000,
     [days],
   );
-  const overview = useQuery(api.reports.overview, staff ? "skip" : { from });
+  const overview = useQuery(
+    api.reports.overview,
+    skipCustomerOverview ? "skip" : { from },
+  );
   // One snapshot serves both ranges, so 6M/12M switches without a refetch.
   const board = useQuery(api.reports.board, staff ? { months: 12 } : "skip");
+
+  if (demoOperations) return <OperationsOverview />;
 
   if (staff) {
     if (board === undefined) return <CommandCentreSkeleton />;
@@ -91,12 +105,14 @@ export default function Home() {
           description="Everything you're protecting, and every request in flight - reviewed by a person, never auto-approved."
           actions={
             <Button asChild className="h-10 rounded-[4px] px-5">
-              <Link to="/dashboard/catalogue">
-                Browse products <ArrowUpRight className="size-4" />
+              <Link to="/dashboard/vault">
+                Open my vault <ArrowUpRight className="size-4" />
               </Link>
             </Button>
           }
         />
+
+        <VaultHomeBand />
 
         {overview.infoRequests.length > 0 && (
           <Callout tone="warning" title="We need something from you">

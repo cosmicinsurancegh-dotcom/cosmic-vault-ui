@@ -3,14 +3,11 @@ import { NAV_SECTIONS } from "../../src/lib/navigation";
 import { expect, expectRoute, test } from "./support/fixtures";
 
 /**
- * Destinations that require a session. The public link is really a redirect
- * into the sign-in flow, which is covered in `auth-redirect.spec.ts`; here we
- * only confirm the menu points at the right destination.
+ * Member destinations render the application shell, which has no marketing
+ * footer and no canonical metadata of its own. The navigation test confirms
+ * the URL rather than running the public-page assertions against them.
  */
-const PROTECTED: Record<string, string> = {
-  "/claims/track": "/dashboard/claims",
-  "/claims/policy-documents": "/dashboard/documents",
-};
+const MEMBER_PREFIX = "/dashboard";
 
 const primaryNav = (page: Page) =>
   page.getByRole("navigation", { name: "Primary" });
@@ -30,12 +27,10 @@ async function openMenu(trigger: Locator) {
 test.describe("mega-menu", () => {
   test("the landing page renders the public shell", async ({ page }) => {
     await page.goto("/");
-    /* The hero headline rotates through one cover per slide, so match any of
-       the configured titles rather than a single fixed line. */
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: /the roof above you|for every mile|cover that travels|care that doesn't|a promise that|built by you/i,
+        name: /stored in the vault/i,
       }),
     ).toBeVisible();
     await expect(page.getByRole("banner")).toBeVisible();
@@ -47,10 +42,10 @@ test.describe("mega-menu", () => {
   }) => {
     await page.goto("/");
     const trigger = primaryNav(page).getByRole("button", {
-      name: "Cover",
+      name: "The vault",
       exact: true,
     });
-    const panel = page.getByRole("region", { name: "Cover menu" });
+    const panel = page.getByRole("region", { name: "The vault menu" });
 
     await trigger.hover();
     await expect(panel).toBeVisible();
@@ -102,7 +97,8 @@ test.describe("mega-menu", () => {
           `${section.label} link ${index} (${label}) needs an internal href`,
         ).toMatch(/^\/[^/]/);
 
-        const protectedDestination = href ? PROTECTED[href] : undefined;
+        const destination = href?.split("#")[0] || "/";
+        const hash = href?.includes("#") ? `#${href.split("#")[1]}` : null;
 
         // The panel closes on pointer movement and on route change, and the
         // click is the last pointer action of the loop, so re-open and retry if
@@ -114,19 +110,19 @@ test.describe("mega-menu", () => {
           timeout: 30_000,
         });
 
-        if (protectedDestination) {
+        if (destination.startsWith(MEMBER_PREFIX)) {
           await expect
             .poll(() => new URL(page.url()).pathname, {
-              message: `${label} should hand off to sign-in`,
+              message: `${label} should open the member application`,
             })
-            .toBe("/auth");
-          expect(new URL(page.url()).searchParams.get("returnTo")).toBe(
-            protectedDestination,
-          );
-          // /auth sits outside the public shell, so return to it explicitly.
+            .toBe(destination);
+          // The application shell has no public navigation to continue from.
           await page.goto("/");
-        } else if (href) {
-          await expectRoute(page, href);
+        } else {
+          await expectRoute(page, destination);
+          if (hash) {
+            expect(new URL(page.url()).hash, `${label} should keep its anchor`).toBe(hash);
+          }
         }
 
         await expect(

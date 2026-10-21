@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1100" role="img" aria-label="Close detail of a brilliant-cut diamond">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="80%">
+      <stop offset="0" stop-color="#1a2638"/>
+      <stop offset=".48" stop-color="#090f1a"/>
+      <stop offset="1" stop-color="#03060b"/>
+    </radialGradient>
+    <radialGradient id="halo" cx="50%" cy="44%" r="46%">
+      <stop offset="0" stop-color="#ddeaff" stop-opacity=".28"/>
+      <stop offset=".5" stop-color="#6c8cb8" stop-opacity=".07"/>
+      <stop offset="1" stop-color="#05080f" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="f1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".35" stop-color="#c9dcf4"/>
+      <stop offset=".7" stop-color="#7088a6"/>
+      <stop offset="1" stop-color="#f4f9ff"/>
+    </linearGradient>
+    <linearGradient id="f2" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4f9ff"/>
+      <stop offset=".45" stop-color="#9db5d1"/>
+      <stop offset="1" stop-color="#42566d"/>
+    </linearGradient>
+    <linearGradient id="f3" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#647c98"/>
+      <stop offset=".5" stop-color="#f7fbff"/>
+      <stop offset="1" stop-color="#9cb3cd"/>
+    </linearGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="34"/></filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope=".05"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="1600" height="1100" fill="url(#bg)"/>
+  <ellipse cx="800" cy="500" rx="560" ry="430" fill="url(#halo)"/>
+  <g fill="#eaf2ff" opacity=".5">
+    <circle cx="250" cy="200" r="1.2"/><circle cx="1330" cy="230" r="1.4"/><circle cx="1420" cy="650" r="1"/>
+    <circle cx="190" cy="730" r="1.5"/><circle cx="1140" cy="120" r=".8"/>
+  </g>
+  <ellipse cx="800" cy="855" rx="300" ry="60" fill="#000" opacity=".68" filter="url(#soft)"/>
+  <g transform="translate(800 470)" filter="url(#glow)" opacity=".8">
+    <path d="M0-330 210-230 300 0 210 230 0 330-210 230-300 0-210-230Z" fill="#9dc4ff" opacity=".16"/>
+  </g>
+  <g transform="translate(800 470)">
+    <path d="M-330-80 0-300 330-80 200 230 0 330-200 230Z" fill="url(#f1)" stroke="#ffffff" stroke-opacity=".55" stroke-width="2"/>
+    <path d="M0-300 140-100 0-20-140-100Z" fill="url(#f2)"/>
+    <path d="M-330-80-140-100 0-20-200 230Z" fill="url(#f3)" opacity=".9"/>
+    <path d="M330-80 140-100 0-20 200 230Z" fill="url(#f2)" opacity=".9"/>
+    <path d="M-200 230 0-20 200 230 0 330Z" fill="url(#f1)" opacity=".92"/>
+    <g fill="none" stroke="#ffffff" stroke-opacity=".35" stroke-width="1.6">
+      <path d="M-330-80 0-300 330-80 200 230 0 330-200 230Z"/>
+      <path d="M-330-80-140-100 0-20 140-100 330-80M0-300V-20M0-20V330M-140-100-200 230M140-100 200 230"/>
+      <path d="M-260-130-140-100M260-130 140-100M-230 120-140-100M230 120 140-100M-90 270-0-20M90 270 0-20"/>
+    </g>
+    <path d="M-330-80-140-100 0-300 140-100 330-80 190-190 0-260-190-190Z" fill="#ffffff" opacity=".14"/>
+    <path d="M-140-100 0-20 140-100 60-220 0-300-60-220Z" fill="#ffffff" opacity=".2"/>
+    <path d="M-200 230 0-20 0 330Z" fill="#ffffff" opacity=".1"/>
+  </g>
+  <g opacity=".55">
+    <path d="M1170 890 1430 890" stroke="#dce9ff" stroke-opacity=".22"/>
+    <text x="1170" y="930" fill="#e8f1ff" font-family="Georgia, serif" font-size="18" letter-spacing="7" opacity=".6">GIA 6221849031 · D FL</text>
+  </g>
+  <rect width="1600" height="1100" filter="url(#grain)" opacity=".5"/>
+  <rect x=".5" y=".5" width="1599" height="1099" fill="none" stroke="#fff" stroke-opacity=".07"/>
+</svg>

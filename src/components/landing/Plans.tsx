@@ -1,116 +1,175 @@
 import { CtaButton } from "@/components/site/Cta";
 import { Reveal } from "@/components/site/Reveal";
-import { ShieldCheck, Sliders, Timer } from "lucide-react";
-import { Link } from "react-router";
 import { SectionLabel } from "./SectionLabel";
+import {
+  FileCheck2,
+  Fingerprint,
+  ShieldCheck,
+  Sliders,
+  Truck,
+} from "lucide-react";
 
-/**
- * Cosmic Vault does not publish a price list, because a premium depends on the
- * published rating rules of the product and the answers given. This section
- * explains that instead of inventing plan tiers, prices or service promises.
- */
-const steps = [
+const principles = [
   {
     Icon: Sliders,
-    title: "Your answers set the rating",
-    text: "Each product multiplies its configured base premium by the rating factors that apply to you - mileage, property type, age band, turnover, term length. Nothing about the calculation is hidden.",
+    title: "The appraisal sets the limit",
+    body: "Cover is written against the documented value of that object — the assay for bullion, the stone-by-stone appraisal for gems — not a household contents estimate.",
   },
   {
     Icon: ShieldCheck,
-    title: "A person reviews the risk",
-    text: "An underwriter reads the application, may ask a specific question, and records a decision with reasons. No automatic approval and no automatic decline.",
+    title: "One policy, named perils",
+    body: "Theft, physical damage, water and fire, and loss in transit are stated on the schedule. Anything excluded is written down, not buried.",
   },
   {
-    Icon: Timer,
-    title: "A figure becomes real at issue",
-    text: "Cover begins when the application is approved, the premium clears, and a policy is issued with a start date, a schedule and wording you can read.",
+    Icon: Truck,
+    title: "Cover follows the object",
+    body: "When the drawer closes behind a release, the same policy is in force on the road, in the air and at the destination until signature.",
   },
 ];
 
-const notes = [
-  "Every premium is labelled indicative until it is issued",
-  "No teaser rate that doubles later",
-  "No price shown before we know the risk",
-  "No promise we cannot keep",
+const perils = ["Theft", "Damage", "Fire & flood", "Transit loss", "Natural disaster"];
+const policyRows = [
+  ["Policy", "Cosmic All-Risk · CV-P-8842"],
+  ["Insured object", "Sovereign 1 kg Gold Bar · CV-A-1042"],
+  ["Coverage", "£786,400 · agreed value"],
+  ["Premium", "£3,045 per year · monthly available"],
+  ["Deductible", "£7,850 per claim"],
+  ["Term", "10 Sep 2026 → 10 Sep 2027"],
 ];
 
-export function Plans({ onQuote }: { onQuote: () => void }) {
+export function Plans({ onReview }: { onReview: () => void }) {
   return (
-    <section id="pricing" className="mt-24 scroll-mt-24 sm:mt-32">
+    <section id="cover" className="mt-24 scroll-mt-24 sm:mt-32">
       <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
         <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
           <Reveal className="lg:col-span-7">
-            <SectionLabel className="text-ink/65">
-              Pricing
-            </SectionLabel>
+            <SectionLabel className="text-ink/65">Object insurance</SectionLabel>
             <h2 className="mt-4 max-w-xl text-balance text-[clamp(2.1rem,4.5vw,3.6rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
-              Priced on the risk,{" "}
-              <span className="text-electric">not on a headline.</span>
+              Every object gets its own{" "}
+              <span className="text-electric">policy number.</span>
             </h2>
           </Reveal>
           <Reveal delay={0.1} className="lg:col-span-5 lg:pb-2">
             <p className="max-w-md text-[0.92rem] leading-7 text-muted-foreground">
-              You will not find a price list here, because a premium depends on
-              your answers and the product version in force. Here is how the
-              number is actually built.
+              A blanket contents policy is a promise about a shelf. This is a
+              promise about a specific bar, stone or specimen — with its weight,
+              its certificate and its drawer written into the schedule.
             </p>
-            <Link
-              to="/how-it-works"
+            <a
+              href="#tracking"
               className="link-slide mt-4 inline-flex w-fit pb-0.5 text-sm font-medium text-electric"
             >
-              See the whole process
-            </Link>
+              See how a release stays covered
+            </a>
           </Reveal>
         </div>
 
-        <div className="mt-12 grid gap-4 sm:gap-5 lg:grid-cols-3">
-          {steps.map(({ Icon, title, text }, index) => (
-            <Reveal key={title} delay={index * 0.07}>
-              <article className="group flex h-full flex-col rounded-[4px] border border-line bg-card p-6 transition-[transform,border-color,box-shadow] duration-500 hover:-translate-y-1 hover:border-primary/25 hover:shadow-[0_26px_54px_-44px_rgba(8,18,39,0.5)] sm:p-7">
-                <div className="flex items-start justify-between">
-                  <span className="grid size-11 place-items-center rounded-[4px] bg-ice text-primary transition-colors duration-500 group-hover:bg-primary group-hover:text-primary-foreground">
-                    <Icon className="size-4 transition-transform duration-500 group-hover:rotate-[8deg]" strokeWidth={1.8} />
-                  </span>
-                  <span className="text-[0.6rem] font-semibold tracking-[0.2em] text-ink/20">
-                    0{index + 1}
-                  </span>
+        <div className="mt-12 grid gap-5 lg:grid-cols-[0.92fr_1.08fr] lg:gap-8">
+          <Reveal y={28}>
+            <figure className="relative h-full overflow-hidden rounded-[4px] border border-line bg-card shadow-[0_28px_60px_-46px_rgba(8,18,39,0.55)]">
+              <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
+                <div>
+                  <p className="text-[0.55rem] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                    Certificate of insurance
+                  </p>
+                  <p className="mt-1 text-[0.95rem] font-semibold tracking-[-0.02em] text-ink">
+                    Cosmic All-Risk
+                  </p>
                 </div>
-                <h3 className="mt-6 text-[1.12rem] font-semibold tracking-[-0.025em] text-ink">
-                  {title}
-                </h3>
-                <p className="mt-2.5 flex-1 text-[0.85rem] leading-6 text-muted-foreground">
-                  {text}
-                </p>
-              </article>
-            </Reveal>
-          ))}
-        </div>
-
-        <Reveal delay={0.1}>
-          <div className="mt-10 grid gap-4 border-t border-line pt-7 sm:grid-cols-2 lg:grid-cols-4">
-            {notes.map((note) => (
-              <div
-                key={note}
-                className="group flex items-center gap-2.5 rounded-[4px] transition-colors"
-              >
-                <span className="size-1.5 shrink-0 rounded-[4px] bg-electric transition-transform duration-300 group-hover:scale-150" />
-                <span className="text-[0.8rem] text-muted-foreground transition-colors group-hover:text-ink">
-                  {note}
+                <span className="inline-flex items-center gap-1.5 rounded-[4px] border border-emerald-500/25 bg-emerald-500/10 px-2 py-1 text-[0.52rem] font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                  <span className="size-1.5 rounded-full bg-emerald-500" />
+                  In force
                 </span>
               </div>
-            ))}
-          </div>
-        </Reveal>
 
-        <Reveal delay={0.14}>
-          <div className="mt-8 flex flex-wrap items-center gap-4">
-            <CtaButton onClick={onQuote}>Get a quote</CtaButton>
-            <p className="flex items-center gap-2 text-xs text-muted-foreground">
-              <ShieldCheck className="size-3.5 text-electric" />
-              No obligation, and nothing is charged at the quotation stage.
-            </p>
+              <dl className="divide-y divide-line px-5 sm:px-6">
+                {policyRows.map(([label, value]) => (
+                  <div key={label} className="flex items-start justify-between gap-6 py-3">
+                    <dt className="text-[0.62rem] uppercase tracking-[0.14em] text-muted-foreground">
+                      {label}
+                    </dt>
+                    <dd className="max-w-[62%] text-right text-[0.76rem] font-medium leading-5 text-ink">
+                      {value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+
+              <div className="border-t border-line px-5 py-4 sm:px-6">
+                <p className="text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Insured perils
+                </p>
+                <ul className="mt-2.5 flex flex-wrap gap-1.5">
+                  {perils.map((peril) => (
+                    <li
+                      key={peril}
+                      className="rounded-[4px] border border-line bg-ice/60 px-2 py-1 text-[0.62rem] font-medium text-ink/75"
+                    >
+                      {peril}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-line bg-ice/30 px-5 py-3.5 sm:px-6">
+                <p className="inline-flex items-center gap-2 text-[0.62rem] text-muted-foreground">
+                  <FileCheck2 className="size-3.5 text-primary" />
+                  Schedule, wording and appraisal attached
+                </p>
+                <span className="inline-flex items-center gap-1.5 text-[0.62rem] font-semibold text-primary">
+                  <Fingerprint className="size-3.5" />
+                  Dual-signed
+                </span>
+              </div>
+              <figcaption className="border-t border-line px-5 py-2.5 text-[0.56rem] text-muted-foreground sm:px-6">
+                Example schedule from the demonstration ledger. Actual terms
+                follow the appraisal and the policy wording in force.
+              </figcaption>
+            </figure>
+          </Reveal>
+
+          <div className="flex flex-col justify-between gap-6">
+            {principles.map(({ Icon, title, body }, index) => (
+              <Reveal key={title} delay={0.08 + index * 0.06}>
+                <article className="flex gap-4 border-t border-line pt-5 first:border-t-0 first:pt-0 sm:gap-5">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-[4px] bg-ice text-primary">
+                    <Icon className="size-4" strokeWidth={1.8} />
+                  </span>
+                  <div>
+                    <h3 className="text-[1.02rem] font-semibold tracking-[-0.02em] text-ink">
+                      {title}
+                    </h3>
+                    <p className="mt-1.5 max-w-md text-[0.84rem] leading-6 text-muted-foreground">
+                      {body}
+                    </p>
+                  </div>
+                </article>
+              </Reveal>
+            ))}
+
+            <Reveal delay={0.24}>
+              <div className="rounded-[4px] border border-line bg-ice/40 px-5 py-4">
+                <p className="text-[0.82rem] font-semibold text-ink">
+                  Arrived without cover?
+                </p>
+                <p className="mt-1 text-[0.78rem] leading-6 text-muted-foreground">
+                  We bind a policy at the deposit table. Until it is signed, the
+                  record says <span className="font-medium text-ink">Not insured</span> — never
+                  quietly assumed to be covered.
+                </p>
+              </div>
+            </Reveal>
+
+            <Reveal delay={0.28}>
+              <div className="flex flex-wrap items-center gap-4">
+                <CtaButton onClick={onReview}>Ask for a policy schedule</CtaButton>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Indicative terms only · no charge until issue
+                </p>
+              </div>
+            </Reveal>
           </div>
-        </Reveal>
+        </div>
       </div>
     </section>
   );

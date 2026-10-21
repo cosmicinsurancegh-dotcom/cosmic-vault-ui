@@ -16,7 +16,7 @@ const shell: Record<Variant, string> = {
 const chip: Record<Variant, string> = {
   primary: "bg-primary-foreground text-primary",
   light: "bg-foreground text-background",
-  outline: "bg-foreground text-background",
+  outline: "bg-ink/[0.07] text-ink group-hover:bg-ink/[0.11]",
 };
 
 function Content({

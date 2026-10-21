@@ -121,7 +121,7 @@ export function HeroKeepsake({ onQuote }: HeroVariantProps) {
   return (
     <section
       id="top"
-      className="relative isolate overflow-hidden bg-background text-ink lg:min-h-svh"
+      className="relative isolate overflow-hidden bg-background text-ink"
     >
       {/* Paper wash, a faint tooth, and two soft panels stacked behind the type. */}
       <div
@@ -135,14 +135,13 @@ export function HeroKeepsake({ onQuote }: HeroVariantProps) {
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -left-24 top-[18%] hidden size-[24rem] rotate-[16deg] rounded-[4px] border border-ink/[0.04] bg-card/60 shadow-[0_60px_120px_-90px_rgba(8,18,39,0.6)] sm:block" />
         <div className="absolute -left-10 top-[34%] hidden size-[15rem] -rotate-6 rounded-[4px] border border-ink/[0.04] bg-card/50 sm:block" />
-        <div className="absolute right-[42%] top-0 size-[26rem] rounded-full bg-primary/[0.05] blur-3xl" />
-        <div className="absolute bottom-0 left-0 size-[22rem] rounded-full bg-halo/[0.12] blur-3xl" />
+        <div className="absolute bottom-0 left-0 size-[22rem] rounded-full bg-ink/[0.06] blur-3xl" />
       </div>
 
-      <div className="relative z-10 flex flex-col pt-24 sm:pt-28 lg:min-h-svh lg:flex-row lg:items-center lg:pt-0">
+      <div className="relative z-10 flex flex-col pt-24 sm:pt-28 lg:min-h-[clamp(36rem,40vw,42rem)] lg:flex-row lg:items-center lg:pt-0">
         <div className="w-full px-5 pb-10 sm:px-8 sm:pb-12 lg:px-10 lg:pb-0">
           <div className="mx-auto w-full max-w-[1320px]">
-            <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:gap-10 lg:py-24">
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:gap-10 lg:pb-16 lg:pt-28">
               {/* Margin rail: the reference's vertical pair of arrows. */}
               <div className="hidden shrink-0 flex-col gap-3 lg:flex">
                 <SlideControl direction="previous" onClick={() => go(-1)} />

@@ -311,11 +311,10 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
       >
         <div
           className={cn(
-            "relative flex items-center justify-between gap-3 rounded-[4px] border border-ink/10 px-3 py-2 backdrop-blur-xl transition-[background-color,box-shadow] duration-300 sm:px-4",
-            scrolled || overlay ? "bg-background/92" : "bg-background/72",
-            overlay &&
-              !scrolled &&
-              "shadow-[0_22px_54px_-30px_rgba(4,16,31,0.7)]",
+            "relative flex items-center justify-between gap-3 rounded-[4px] border border-ink/10 px-3 py-2 backdrop-blur-xl transition-[background-color,border-color,box-shadow] duration-300 sm:px-4",
+            scrolled
+              ? "bg-background/92 shadow-[0_18px_44px_-34px_rgba(10,18,36,0.35)]"
+              : "bg-background/72",
           )}
         >
           <Brand compact className="pl-1.5 text-ink" />
@@ -368,7 +367,9 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
           </nav>
 
           <div className="flex items-center gap-1.5">
-            <ThemeToggle className="hidden size-9 border-transparent hover:border-line lg:grid" />
+            <ThemeToggle
+              className="hidden size-9 border-transparent hover:border-line lg:grid"
+            />
 
             {isAuthenticated ? (
               <Link
@@ -387,20 +388,20 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
             )}
 
             <Link
-              to="/quote"
+              to="/#review"
               className="group hidden items-center gap-2 rounded-[4px] bg-primary py-2 pl-4 pr-2 text-[0.82rem] font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex"
             >
-              Get a quote
+              Request a review
               <span className="grid size-6 place-items-center rounded-[4px] bg-primary-foreground/20">
                 <ArrowUpRight className="size-3.5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
               </span>
             </Link>
 
             <Link
-              to="/quote"
+              to="/#review"
               className="inline-flex h-10 items-center rounded-[4px] bg-primary px-4 text-xs font-medium text-primary-foreground sm:hidden"
             >
-              Quote
+              Review
             </Link>
 
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -422,18 +423,18 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
                 <SheetHeader className="border-b border-line px-5 pb-4 pt-5 text-left">
                   <SheetTitle className="sr-only">Cosmic Vault navigation</SheetTitle>
                   <SheetDescription className="sr-only">
-                    Browse cover, how it works, claims and support, and contact options.
+                    Browse the vault, member services, the company and contact options.
                   </SheetDescription>
                   <Brand compact className="text-ink" />
                 </SheetHeader>
 
                 <div className="border-b border-line px-5 py-4">
                   <Link
-                    to="/quote"
+                    to="/#review"
                     onClick={() => setMobileOpen(false)}
                     className="flex h-11 w-full items-center justify-between rounded-[4px] bg-primary pl-5 pr-2 text-sm font-medium text-primary-foreground"
                   >
-                    Get a quote
+                    Request a vault review
                     <span className="grid size-7 place-items-center rounded-[4px] bg-primary-foreground/20">
                       <ArrowUpRight className="size-3.5" />
                     </span>
@@ -505,7 +506,7 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
                 <div className="mt-2 flex items-center justify-between gap-3 border-t border-line px-5 py-4">
                   <p className="flex items-center gap-2 text-[0.68rem] leading-4 text-muted-foreground">
                     <ShieldCheck className="size-3.5 text-electric" />
-                    Insured for the long horizon
+                    Custody and cover on one record
                   </p>
                   <ThemeToggle className="size-9" />
                 </div>

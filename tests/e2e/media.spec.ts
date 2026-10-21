@@ -66,9 +66,9 @@ test("cover cards zoom their photograph on hover", async ({ page }) => {
 test("the mega menu feature card shows a photograph", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Cover", exact: true }).hover();
+  await page.getByRole("button", { name: "The vault", exact: true }).hover();
 
-  const panel = page.getByRole("region", { name: "Cover menu" });
+  const panel = page.getByRole("region", { name: "The vault menu" });
   await expect(panel).toBeVisible();
   await expect
     .poll(() =>

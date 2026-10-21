@@ -1,20 +1,25 @@
-import { Car, HeartHandshake, HeartPulse, House } from "lucide-react";
+import { Atom, Crown, Diamond, Gem } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+/**
+ * The four custody classes. The storage keys are the platform's original
+ * coverage identifiers and are kept stable for the Convex schema; everything a
+ * person reads - labels, icons, copy - describes minerals, not households.
+ */
 export type CoverageKey = "health" | "home" | "auto" | "life";
 
 export const COVERAGE_LABELS: Record<CoverageKey, string> = {
-  health: "Health insurance",
-  home: "Home insurance",
-  auto: "Auto insurance",
-  life: "Life insurance",
+  health: "Rare earths & critical metals",
+  home: "Bullion & bars",
+  auto: "Collections & heirlooms",
+  life: "Diamonds & gemstones",
 };
 
 export const COVERAGE_ICONS: Record<CoverageKey, LucideIcon> = {
-  health: HeartPulse,
-  home: House,
-  auto: Car,
-  life: HeartHandshake,
+  health: Atom,
+  home: Gem,
+  auto: Crown,
+  life: Diamond,
 };
 
 export const COVERAGE_OPTIONS: {
@@ -25,36 +30,36 @@ export const COVERAGE_OPTIONS: {
   from: string;
 }[] = [
   {
-    key: "health",
-    label: "Health insurance",
-    short: "Health",
-    blurb:
-      "Private care, dental and mental-health support on one simple plan - no network paperwork.",
-    from: "Rated on your answers",
-  },
-  {
     key: "home",
-    label: "Home insurance",
-    short: "Home",
+    label: "Bullion & bars",
+    short: "Bullion",
     blurb:
-      "Buildings and contents cover that protects the place you've made your own, wherever you are.",
-    from: "Rated on your answers",
-  },
-  {
-    key: "auto",
-    label: "Auto insurance",
-    short: "Auto",
-    blurb:
-      "Comprehensive cover for the cars you actually drive, with fair premiums and fast repairs.",
-    from: "Rated on your answers",
+      "Gold, silver and platinum bars or coins, held in sealed drawers with the assay card and the policy in the same record.",
+    from: "Insured to the assayed gram",
   },
   {
     key: "life",
-    label: "Life insurance",
-    short: "Life",
+    label: "Diamonds & gemstones",
+    short: "Gemstones",
     blurb:
-      "Long-horizon protection for the people who rely on you, written in plain language.",
-    from: "Rated on your answers",
+      "Loose stones, finished pieces and full parcels, appraised stone by stone and covered on their own schedule.",
+    from: "Insured to the appraisal",
+  },
+  {
+    key: "health",
+    label: "Rare earths & critical metals",
+    short: "Rare earths",
+    blurb:
+      "Specimens, oxides and reference samples for laboratories, funds and collections that need custody with a chain of evidence.",
+    from: "Insured to the certificate",
+  },
+  {
+    key: "auto",
+    label: "Collections & heirlooms",
+    short: "Collections",
+    blurb:
+      "A whole collection under one custody agreement, with every object keeping its own policy, photographs and release history.",
+    from: "Insured piece by piece",
   },
 ];
 

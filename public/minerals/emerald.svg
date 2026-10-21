@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1100" role="img" aria-label="An emerald-cut green gemstone under studio light">
+  
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="72%">
+      <stop offset="0" stop-color="hsl(158 29% 17%)"/>
+      <stop offset="0.55" stop-color="hsl(158 23.2% 8%)"/>
+      <stop offset="1" stop-color="hsl(158 17.4% 3%)"/>
+    </radialGradient>
+    <radialGradient id="key" cx="34%" cy="18%" r="62%">
+      <stop offset="0" stop-color="hsl(158 78% 74%)" stop-opacity="0.42"/>
+      <stop offset="0.6" stop-color="hsl(158 78% 74%)" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="hsl(158 78% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="50%" cy="46%" r="68%">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.6"/>
+    </radialGradient>
+    <radialGradient id="caustic" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="hsl(158 72% 52%)" stop-opacity="0.34"/>
+      <stop offset="0.6" stop-color="hsl(158 58% 26%)" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="hsl(158 58% 12%)" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="34"/>
+    </filter>
+    <filter id="bloom" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.055"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="1600" height="1100" fill="url(#bg)"/>
+  <rect width="1600" height="1100" fill="url(#key)"/>
+  <rect width="1600" height="1100" fill="url(#vignette)"/>
+  <rect width="1600" height="1100" filter="url(#grain)" opacity="0.65"/>
+  <rect x="0.5" y="0.5" width="1599" height="1099" fill="none" stroke="#fff" stroke-opacity="0.06"/>
+  <defs>
+    <clipPath id="table-clip"><path d="M1004.1 610L918.8 680.1L681.8 680.7L594.9 610.7L594.8 418.3L680.8 347.7L917.8 348.3L1004.1 417Z"/></clipPath>
+    <radialGradient id="tablelight" cx="42%" cy="38%" r="72%">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.34"/>
+      <stop offset="0.45" stop-color="#fff" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- contact shadow and the light the stone throws onto the surface -->
+  <ellipse cx="815" cy="884" rx="300" ry="46" fill="#000" opacity="0.7" filter="url(#soft)"/>
+  <ellipse cx="800" cy="848" rx="250" ry="70" fill="url(#caustic)" filter="url(#bloom)"/>
+
+  <g>
+    <path d="M1130 675.4L991.4 788L608.6 788L470 675.4L470 364.6L608.6 252L991.4 252L1130 364.6Z" fill="hsl(158 54% 14%)"/>
+    <path d="M1130 675.4L991.4 788L918.8 680.1Z" fill="hsl(152 54% 18.6%)"/><path d="M1130 675.4L918.8 680.1L1004.1 610Z" fill="hsl(152.3 54% 18.9%)"/><path d="M991.4 788L608.6 788L681.8 680.7Z" fill="hsl(154.2 54% 20.5%)"/><path d="M991.4 788L681.8 680.7L918.8 680.1Z" fill="hsl(152.5 54% 16.5%)"/><path d="M608.6 788L470 675.4L594.9 610.7Z" fill="hsl(158.6 54% 40.3%)"/><path d="M608.6 788L594.9 610.7L681.8 680.7Z" fill="hsl(157.5 54% 36.6%)"/><path d="M470 675.4L470 364.6L594.8 418.3Z" fill="hsl(162.4 54% 47.5%)"/><path d="M470 675.4L594.8 418.3L594.9 610.7Z" fill="hsl(161 54% 41.8%)"/><path d="M470 364.6L608.6 252L680.8 347.7Z" fill="hsl(164 54% 61.6%)"/><path d="M470 364.6L680.8 347.7L594.8 418.3Z" fill="hsl(163.8 54% 60.8%)"/><path d="M608.6 252L991.4 252L917.8 348.3Z" fill="hsl(161.8 54% 46.4%)"/><path d="M608.6 252L917.8 348.3L680.8 347.7Z" fill="hsl(163.5 54% 53.1%)"/><path d="M991.4 252L1130 364.6L1004.1 417Z" fill="hsl(157.5 54% 34.5%)"/><path d="M991.4 252L1004.1 417L917.8 348.3Z" fill="hsl(158.6 54% 38.4%)"/><path d="M1130 364.6L1130 675.4L1004.1 610Z" fill="hsl(153.6 54% 21.7%)"/><path d="M1130 364.6L1004.1 610L1004.1 417Z" fill="hsl(155.2 54% 26%)"/>
+    <path d="M1130 675.4L991.4 788L949.3 725.4Z" fill="hsl(152 54% 17.7%)"/><path d="M1130 675.4L949.3 725.4L1057 637.5Z" fill="hsl(152.2 54% 17.8%)"/><path d="M991.4 788L608.6 788L651 725.8Z" fill="hsl(154.3 54% 18.4%)"/><path d="M991.4 788L651 725.8L949.3 725.4Z" fill="hsl(152.6 54% 14.9%)"/><path d="M608.6 788L470 675.4L542.5 637.9Z" fill="hsl(158.6 54% 37.5%)"/><path d="M608.6 788L542.5 637.9L651 725.8Z" fill="hsl(157.6 54% 33.8%)"/><path d="M470 675.4L470 364.6L542.4 395.7Z" fill="hsl(162.5 54% 49.8%)"/><path d="M470 675.4L542.4 395.7L542.5 637.9Z" fill="hsl(161.1 54% 43.7%)"/><path d="M470 364.6L608.6 252L650.5 307.5Z" fill="hsl(164 54% 54.8%)"/><path d="M470 364.6L650.5 307.5L542.4 395.7Z" fill="hsl(163.8 54% 54%)"/><path d="M608.6 252L991.4 252L948.7 307.8Z" fill="hsl(161.7 54% 50%)"/><path d="M608.6 252L948.7 307.8L650.5 307.5Z" fill="hsl(163.4 54% 57.7%)"/><path d="M991.4 252L1130 364.6L1057 395Z" fill="hsl(157.4 54% 28.8%)"/><path d="M991.4 252L1057 395L948.7 307.8Z" fill="hsl(158.5 54% 32.6%)"/><path d="M1130 364.6L1130 675.4L1057 637.5Z" fill="hsl(153.5 54% 18.1%)"/><path d="M1130 364.6L1057 637.5L1057 395Z" fill="hsl(155 54% 21.6%)"/>
+    <path d="M1004.1 610L918.8 680.1L681.8 680.7L594.9 610.7L594.8 418.3L680.8 347.7L917.8 348.3L1004.1 417Z" fill="hsl(158 60% 29%)"/>
+    <path d="M1004.1 610L918.8 680.1L806 557.8Z" fill="hsl(166 58% 22.6%)"/><path d="M918.8 680.1L681.8 680.7L806 557.8Z" fill="hsl(166 58% 27.9%)"/><path d="M681.8 680.7L594.9 610.7L806 557.8Z" fill="hsl(166 58% 33.6%)"/><path d="M594.9 610.7L594.8 418.3L806 557.8Z" fill="hsl(166 58% 41.9%)"/><path d="M594.8 418.3L680.8 347.7L806 557.8Z" fill="hsl(166 58% 50.6%)"/><path d="M680.8 347.7L917.8 348.3L806 557.8Z" fill="hsl(166 58% 45%)"/><path d="M917.8 348.3L1004.1 417L806 557.8Z" fill="hsl(166 58% 32.1%)"/><path d="M1004.1 417L1004.1 610L806 557.8Z" fill="hsl(166 58% 28.1%)"/>
+    <g clip-path="url(#table-clip)">
+      <rect x="420" y="200" width="760" height="680" fill="url(#tablelight)"/>
+      <path d="M1069.4 638.8L956.8 731.3L643.9 732.1L529.3 639.7L529.2 385.8L642.7 292.6L955.5 293.3L1069.4 384Z" fill="none" stroke="hsl(158 54% 64%)" stroke-opacity="0.26" stroke-width="1.4"/><path d="M1032.7 622.6L935.4 702.5L665.2 703.2L566.2 623.4L566.1 404.1L664.1 323.6L934.3 324.2L1032.7 402.6Z" fill="none" stroke="hsl(158 54% 64%)" stroke-opacity="0.26" stroke-width="1.4"/>
+      <path d="M681.8 680.7L686.5 674.3L718.3 631.1Z" fill="#fff" opacity="0.5"/><path d="M594.9 610.7L603.1 607.1L658.2 582.7Z" fill="#fff" opacity="0.3"/><path d="M594.8 418.3L603 422.4L658.2 449.7Z" fill="#fff" opacity="0.4"/>
+    </g>
+    <path d="M608.6 788L651 725.8L692.7 668.1Z" fill="#fff" opacity="0.4"/><path d="M470 675.4L542.5 637.9L614.6 604.9Z" fill="#fff" opacity="0.2"/><path d="M470 364.6L542.4 395.7L614.5 430.5Z" fill="#fff" opacity="0.3"/>
+    <path d="M1004.1 610L918.8 680.1L681.8 680.7L594.9 610.7L594.8 418.3L680.8 347.7L917.8 348.3L1004.1 417Z" fill="none" stroke="hsl(158 54% 72%)" stroke-opacity="0.4" stroke-width="1.6"/>
+    <path d="M1130 675.4L991.4 788L608.6 788L470 675.4L470 364.6L608.6 252L991.4 252L1130 364.6Z" fill="none" stroke="#fff" stroke-opacity="0.3" stroke-width="2"/>
+    <path d="M608.6 252L991.4 252"
+      fill="none" stroke="#fff" stroke-opacity="0.6" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <rect width="1600" height="1100" fill="url(#vignette)" opacity="0.32"/>
+  
+  <g opacity="0.85">
+    <path d="M1150 918 1450 918" stroke="hsl(158 58% 78%)" stroke-opacity="0.4"/>
+    <text x="1150" y="952" fill="hsl(158 20.3% 94%)" font-family="Georgia, serif"
+      font-size="17" letter-spacing="6" opacity="0.8">MUZO · 3.10 CT</text>
+  </g>
+</svg>

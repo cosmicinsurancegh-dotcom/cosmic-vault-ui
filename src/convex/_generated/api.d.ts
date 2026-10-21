@@ -43,10 +43,13 @@ import type * as quotes from "../quotes.js";
 import type * as reports from "../reports.js";
 import type * as settings from "../settings.js";
 import type * as setup from "../setup.js";
+import type * as shipmentEmailDelivery from "../shipmentEmailDelivery.js";
+import type * as shipmentEmails from "../shipmentEmails.js";
 import type * as staff from "../staff.js";
 import type * as supabase from "../supabase.js";
 import type * as tickets from "../tickets.js";
 import type * as users from "../users.js";
+import type * as vault_shipmentEmail from "../vault/shipmentEmail.js";
 
 import type {
   ApiFromModules,
@@ -90,10 +93,13 @@ declare const fullApi: ApiFromModules<{
   reports: typeof reports;
   settings: typeof settings;
   setup: typeof setup;
+  shipmentEmailDelivery: typeof shipmentEmailDelivery;
+  shipmentEmails: typeof shipmentEmails;
   staff: typeof staff;
   supabase: typeof supabase;
   tickets: typeof tickets;
   users: typeof users;
+  "vault/shipmentEmail": typeof vault_shipmentEmail;
 }>;
 
 /**

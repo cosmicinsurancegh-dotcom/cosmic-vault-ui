@@ -1,20 +1,27 @@
 import { FinalCta } from "@/components/landing/FinalCta";
-import { HeroKeepsake } from "@/components/landing/heroes/HeroKeepsake";
+import { HeroVaultRecord } from "@/components/landing/HeroVaultRecord";
 import { Plans } from "@/components/landing/Plans";
 import { Process } from "@/components/landing/Process";
+import { ReleaseTracking } from "@/components/landing/ReleaseTracking";
 import { Solutions } from "@/components/landing/Solutions";
 import { Story } from "@/components/landing/Story";
 import { Testimonials } from "@/components/landing/Testimonials";
+import { VaultReviewDialog } from "@/components/landing/VaultReviewDialog";
 import { Why } from "@/components/landing/Why";
-import { QuoteDialog } from "@/components/site/QuoteDialog";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import type { CoverageKey } from "@/lib/vault";
 import { motion, useScroll, useSpring } from "framer-motion";
 import { useState } from "react";
 
 export default function Landing() {
-  const [quoteOpen, setQuoteOpen] = useState(false);
-  const [quoteSession, setQuoteSession] = useState(0);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewSession, setReviewSession] = useState(0);
   const [coverage, setCoverage] = useState<CoverageKey>("home");
+
+  usePageMeta(
+    "Vault custody and object insurance for precious minerals",
+    "Cosmic Vault stores gold, diamonds, gemstones and critical minerals under dual control, with a named insurance policy on every object and a five-stage tracked release.",
+  );
 
   const { scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, {
@@ -23,10 +30,10 @@ export default function Landing() {
     restDelta: 0.001,
   });
 
-  const openQuote = (options?: { coverage?: CoverageKey }) => {
+  const openReview = (options?: { coverage?: CoverageKey }) => {
     setCoverage(options?.coverage ?? "home");
-    setQuoteSession((session) => session + 1);
-    setQuoteOpen(true);
+    setReviewSession((session) => session + 1);
+    setReviewOpen(true);
   };
 
   return (
@@ -37,19 +44,20 @@ export default function Landing() {
         className="fixed inset-x-0 top-0 z-50 h-[2px] origin-left bg-electric"
       />
 
-      <HeroKeepsake onQuote={() => openQuote()} />
+      <HeroVaultRecord onReview={() => openReview()} />
       <Story />
+      <Solutions onReview={(key) => openReview({ coverage: key })} />
+      <Plans onReview={() => openReview()} />
+      <ReleaseTracking />
+      <Process onReview={() => openReview()} />
       <Why />
-      <Solutions />
-      <Process onQuote={() => openQuote()} />
-      <Plans onQuote={() => openQuote()} />
       <Testimonials />
-      <FinalCta onQuote={() => openQuote()} />
+      <FinalCta onReview={() => openReview()} />
 
-      <QuoteDialog
-        key={quoteSession}
-        open={quoteOpen}
-        onOpenChange={setQuoteOpen}
+      <VaultReviewDialog
+        key={reviewSession}
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
         defaultCoverage={coverage}
       />
     </div>

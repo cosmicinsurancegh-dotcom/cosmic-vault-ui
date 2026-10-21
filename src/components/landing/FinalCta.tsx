@@ -1,79 +1,94 @@
 import { CtaButton } from "@/components/site/Cta";
 import { Media } from "@/components/site/Media";
 import { Reveal } from "@/components/site/Reveal";
-import { IMAGES } from "@/lib/imagery";
-import { CircleCheck, MessageCircle } from "lucide-react";
+import { MINERAL_IMAGES } from "@/lib/imagery";
+import { ArrowUpRight, CircleCheck, ShieldCheck } from "lucide-react";
 import { Link } from "react-router";
 import { SectionLabel } from "./SectionLabel";
 
-export function FinalCta({ onQuote }: { onQuote: () => void }) {
+export function FinalCta({ onReview }: { onReview: () => void }) {
   return (
-    <section id="contact" className="mt-24 scroll-mt-24 sm:mt-32">
+    <section id="review" className="mt-24 scroll-mt-24 sm:mt-32">
       <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
         <Reveal y={30}>
-          <div className="starfield relative overflow-hidden rounded-[4px] border border-white/10 bg-[#071227] px-6 py-12 text-bone sm:px-12 sm:py-16 lg:px-16">
-            <Media
-              image={IMAGES.auth}
-              parallax={30}
-              className="absolute inset-0"
-              imgClassName="object-cover"
-            />
-            <span
-              aria-hidden="true"
-              className="absolute inset-0 bg-gradient-to-r from-[#04101f]/94 via-[#04101f]/78 to-[#04101f]/35"
-            />
-            <span
-              aria-hidden="true"
-              className="absolute inset-0 bg-[radial-gradient(circle_at_88%_18%,rgba(76,125,255,0.24),transparent_55%)]"
-            />
-
+          <div className="group relative overflow-hidden rounded-[4px] border border-line bg-card shadow-[0_30px_70px_-52px_rgba(10,18,36,0.4)]">
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute -right-24 -top-24 size-[26rem] rounded-[4px] border border-white/10"
-            >
-              <span className="absolute inset-10 rounded-[4px] border border-white/[0.07]" />
-              <span className="absolute inset-24 rounded-[4px] border border-white/[0.05]" />
-              <span className="absolute bottom-8 left-6 size-2 animate-[float-soft_7s_ease-in-out_infinite] rounded-[4px] bg-electric-soft" />
-              <span className="absolute right-10 top-1/3 size-1.5 rounded-[4px] bg-halo" />
-            </div>
+              className="vault-grid pointer-events-none absolute inset-0 opacity-45 [mask-image:radial-gradient(ellipse_at_18%_30%,black,transparent_70%)]"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -left-24 -top-32 size-[26rem] rounded-full bg-[radial-gradient(circle_at_center,rgba(10,18,36,0.05),transparent_66%)]"
+            />
 
-            <div className="relative grid gap-10 lg:grid-cols-[1.25fr_1fr] lg:items-center">
-              <div>
-                <SectionLabel className="text-bone/55">
-                  Your next chapter
+            <div className="relative grid lg:grid-cols-[1.12fr_0.88fr]">
+              <div className="px-6 py-12 sm:px-10 sm:py-14 lg:px-12 lg:py-16">
+                <SectionLabel className="text-ink/45">
+                  Your next deposit
                 </SectionLabel>
-                <h2 className="mt-5 max-w-xl text-balance text-[clamp(2.2rem,4.6vw,3.7rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-bone">
-                  Let&apos;s secure your{" "}
-                  <span className="text-electric-soft">universe.</span>
+                <h2 className="mt-5 max-w-xl text-balance text-[clamp(2.2rem,4.2vw,3.5rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
+                  Bring us something <span className="text-primary">rare.</span>
                 </h2>
-                <p className="mt-4 max-w-md text-[0.93rem] leading-7 text-bone/65">
-                  A quiet conversation and a clear quote, with no price promise
-                  before underwriting and no fabricated certainty. Ask us
-                  anything, including whether you need cover at all.
+                <p className="mt-4 max-w-md text-[0.93rem] leading-7 text-ink/60">
+                  Tell us what you hold and what it is worth to you. A vault
+                  specialist confirms the class, arranges the appraisal and
+                  quotes custody and cover together — with nothing charged until
+                  a policy is issued.
                 </p>
+
+                <div className="mt-8 flex flex-col items-start gap-5">
+                  <CtaButton
+                    onClick={onReview}
+                    className="w-full justify-between shadow-[0_20px_44px_-26px_rgba(29,74,214,0.65)] sm:w-auto sm:justify-center"
+                  >
+                    Request a vault review
+                  </CtaButton>
+
+                  <Link
+                    to="/auth?returnTo=%2Fdashboard"
+                    className="group/link inline-flex items-center gap-2 text-sm font-medium text-ink/70 transition-colors hover:text-primary"
+                  >
+                    <span className="link-slide">Open the member vault</span>
+                    <ArrowUpRight className="size-4 transition-transform duration-300 group-hover/link:-translate-y-0.5 group-hover/link:translate-x-0.5" />
+                  </Link>
+
+                  <ul className="flex w-full max-w-sm flex-col gap-2.5 border-t border-line pt-4 text-xs">
+                    <li className="flex items-center gap-1.5 text-ink/60">
+                      <CircleCheck className="size-3.5 shrink-0 text-primary" />
+                      No obligation, no charge before issue
+                    </li>
+                    <li className="flex items-center gap-1.5 text-ink/45">
+                      <ShieldCheck className="size-3.5 shrink-0" />
+                      Appraisal and custody quoted together
+                    </li>
+                  </ul>
+                </div>
               </div>
 
-              <div className="flex flex-col items-start gap-5 lg:items-end">
-                <CtaButton
-                  onClick={onQuote}
-                  className="w-full justify-between shadow-[0_18px_40px_-24px_rgba(0,0,0,0.8)] sm:w-auto sm:justify-center"
-                >
-                  Get a free quote
-                </CtaButton>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:flex-col lg:items-end">
-                  <Link
-                    to="/support/contact"
-                    className="group inline-flex items-center gap-2.5 text-sm font-medium text-bone/70 transition-colors hover:text-bone"
-                  >
-                    <span className="grid size-8 place-items-center rounded-[4px] border border-white/20 transition-colors group-hover:border-white/45 group-hover:bg-white/10">
-                      <MessageCircle className="size-3.5" />
-                    </span>
-                    <span className="link-slide">Prefer to ask first? Contact support</span>
-                  </Link>
-                  <p className="flex items-center gap-1.5 text-xs text-bone/55 lg:pr-1">
-                    <CircleCheck className="size-3.5 text-electric-soft" />
-                    No obligation, no pressure, no jargon
+              {/* Photograph only: the object supplies the colour, not the layout. */}
+              <div className="relative min-h-[13rem] border-t border-line lg:border-l lg:border-t-0">
+                <Media
+                  image={MINERAL_IMAGES.diamonds}
+                  parallax={24}
+                  overlay="soft"
+                  className="absolute inset-0"
+                  imgClassName="object-cover [object-position:58%_50%]"
+                />
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 left-0 hidden w-12 bg-gradient-to-r from-card via-card/70 to-transparent lg:block"
+                />
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-card/70 to-transparent lg:hidden"
+                />
+                <div className="absolute inset-x-5 bottom-5 flex items-end justify-between gap-3">
+                  <p className="text-[0.55rem] font-semibold uppercase tracking-[0.24em] text-bone/75">
+                    Parcel · 12 stones
                   </p>
+                  <span className="rounded-[4px] border border-white/20 bg-black/35 px-2 py-1 text-[0.5rem] font-semibold uppercase tracking-[0.16em] text-bone/85 backdrop-blur">
+                    Insured
+                  </span>
                 </div>
               </div>
             </div>

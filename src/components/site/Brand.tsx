@@ -97,7 +97,7 @@ export function Brand({
                 : "text-[0.5rem] tracking-[0.32em]",
             )}
           >
-          Insurance Ghana
+          Mineral Vault
         </span>
       </span>
     </>
@@ -113,7 +113,7 @@ export function Brand({
   }
 
   return (
-    <Link to={href} className={classes} aria-label="Cosmic Insurance Ghana home">
+    <Link to={href} className={classes} aria-label="Cosmic Vault home">
       {content}
     </Link>
   );

@@ -3,7 +3,7 @@ import { expect, expectRoute, test } from "./support/fixtures";
 
 /** Footer links that are not part of a column (quick links, legal bar, notes). */
 const STANDALONE_DESTINATIONS = [
-  "/quote",
+  "/#review",
   "/support/contact",
   "/legal/terms",
   "/legal/privacy",
@@ -60,9 +60,22 @@ test.describe("footer", () => {
       const href = hrefs[index];
       const label = (await link.innerText()).replace(/\s+/g, " ").trim();
 
-      await link.click();
-      await expectRoute(page, href);
-      await expect.poll(() => page.getByRole("contentinfo").count()).toBe(1);
+      if (href.includes("#")) {
+        // In-page anchors keep the marketing shell mounted.
+        await link.click();
+        await expect.poll(() => new URL(page.url()).pathname).toBe("/");
+        expect(new URL(page.url()).hash).toBe(`#${href.split("#")[1]}`);
+      } else if (href.startsWith("/dashboard")) {
+        // Member routes render the application shell without this footer.
+        await link.click();
+        await expect.poll(() => new URL(page.url()).pathname).toBe(href);
+        await page.goto("/");
+      } else {
+        await link.click();
+        await expectRoute(page, href);
+        await expect.poll(() => page.getByRole("contentinfo").count()).toBe(1);
+      }
+
       expect(label, `footer link ${index} should have a text label`).not.toBe(
         "",
       );

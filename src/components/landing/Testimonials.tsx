@@ -1,6 +1,6 @@
 import { Media } from "@/components/site/Media";
 import { Reveal } from "@/components/site/Reveal";
-import { IMAGES } from "@/lib/imagery";
+import { MINERAL_IMAGES } from "@/lib/imagery";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, ArrowUpRight } from "lucide-react";
@@ -8,40 +8,34 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { SectionLabel } from "./SectionLabel";
 
-/**
- * The platform has no verified customer testimonials, so this section states
- * commitments that are evidenced by how the product actually behaves instead of
- * inventing members, ratings or review counts.
- */
 const commitments = [
   {
     statement:
-      "Every decision carries a reason - and the name of the person accountable for it.",
+      "The value on the policy is a number we can defend, not a number we round up.",
     detail:
-      "Applications and claims record a status, a decision and the reasoning behind it. If something is declined, you are told why and what would change it.",
-    label: "Commitment 01 · Decisions",
+      "Agreed value comes from the assay or the independent appraisal, and it is written into the schedule. If the object changes — a stone is reset, bars are split — the record is re-appraised before the cover moves.",
+    label: "Evidence 01 · Valuation",
+    href: "#cover",
+    linkLabel: "How the policy is built",
+    image: MINERAL_IMAGES.bullionDetail,
+  },
+  {
+    statement: "A status only moves forwards with a reason attached to it.",
+    detail:
+      "Releases use five fixed states and nothing else. Only vault operations can change one, and each change stores the time, the note and the person responsible — the same history the member sees.",
+    label: "Evidence 02 · Movement",
+    href: "#tracking",
+    linkLabel: "See the release record",
+    image: MINERAL_IMAGES.diamonds,
+  },
+  {
+    statement: "The record outlives the relationship, whichever way it ends.",
+    detail:
+      "Certificates, appraisals, schedules and the full movement log stay exportable after a release or a policy ends. A past period of cover can still be evidenced when someone asks for it.",
+    label: "Evidence 03 · Record",
     href: "/about/principles",
     linkLabel: "Read our principles",
-    image: IMAGES.claimReview,
-  },
-  {
-    statement:
-      "Documents written to be read, not skimmed past on the way to a signature.",
-    detail:
-      "Schedules and policy wording live on your record in plain language, and stay available after a policy ends so you can evidence cover for a past period.",
-    label: "Commitment 02 · Clarity",
-    href: "/how-it-works/your-policy",
-    linkLabel: "Understanding your policy",
-    image: IMAGES.homeInterior,
-  },
-  {
-    statement: "A person at the end of every route, including the difficult ones.",
-    detail:
-      "Support requests reach a human with the policy, claim or payment in front of them, and disagreements have a documented route rather than a dead end.",
-    label: "Commitment 03 · Service",
-    href: "/claims",
-    linkLabel: "How claims work",
-    image: IMAGES.support,
+    image: MINERAL_IMAGES.emerald,
   },
 ];
 
@@ -56,23 +50,21 @@ export function Testimonials() {
   };
 
   return (
-    <section id="commitments" className="mt-24 scroll-mt-24 sm:mt-32">
+    <section id="evidence" className="mt-24 scroll-mt-24 sm:mt-32">
       <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
         <div className="grid gap-6 lg:grid-cols-12 lg:items-end">
           <Reveal className="lg:col-span-7">
-            <SectionLabel className="text-ink/65">
-              Our commitments
-            </SectionLabel>
+            <SectionLabel className="text-ink/65">What the record proves</SectionLabel>
             <h2 className="mt-4 text-balance text-[clamp(2.1rem,4.5vw,3.6rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
-              Steady when it{" "}
-              <span className="text-electric">matters.</span>
+              Promises with{" "}
+              <span className="text-electric">paper behind them.</span>
             </h2>
           </Reveal>
           <Reveal delay={0.08} className="lg:col-span-5 lg:pb-2">
             <p className="max-w-md text-[0.9rem] leading-7 text-muted-foreground">
-              We do not publish member quotes, review scores or award badges,
-              because none of them have been verified. These are the standards
-              the platform is built to hold itself to instead.
+              We do not publish member quotes or award badges. These are the
+              three standards the platform is built to hold itself to — and the
+              places you can check them.
             </p>
           </Reveal>
         </div>
@@ -105,7 +97,7 @@ export function Testimonials() {
 
                 <div className="absolute inset-x-0 bottom-0 p-5">
                   <p className="max-w-[15rem] text-[0.72rem] leading-5 text-bone/70">
-                    Standards the platform is built to hold itself to - not
+                    Standards the platform is built to hold itself to — not
                     testimonials we cannot verify.
                   </p>
                 </div>

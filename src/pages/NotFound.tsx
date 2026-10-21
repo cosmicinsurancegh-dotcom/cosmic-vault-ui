@@ -24,20 +24,20 @@ const DESTINATIONS: Destination[] = [
   {
     label: "Home",
     href: "/",
-    description: "The six cover lines, and how the vault works.",
+    description: "Vault custody, object cover and how a release works.",
     keywords: "home start landing index",
   },
   {
-    label: "Get a quote",
-    href: "/quote",
-    description: "Tell us what you want to protect. An advisor reviews it.",
-    keywords: "quote price premium apply start",
+    label: "Request a vault review",
+    href: "/#review",
+    description: "Tell us what you are storing. The vault desk reviews it.",
+    keywords: "quote appraisal vault review depositing",
   },
   {
-    label: "All insurance products",
-    href: "/cover",
-    description: "Home, motor, travel, health, life, and business cover.",
-    keywords: "cover product insurance catalogue",
+    label: "What we store",
+    href: "/#store",
+    description: "Bullion, diamonds, gemstones, rare earths and collections.",
+    keywords: "custody bullion diamonds gemstones minerals storage",
   },
   {
     label: "Claims overview",
@@ -119,7 +119,7 @@ function OrbitalZero({
         <span className="absolute left-1/2 top-0 size-[0.42rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-electric-soft shadow-[0_0_16px_4px_rgba(76,125,255,0.45)]" />
       </span>
       <span className="absolute inset-0 animate-orbit [animation-duration:31s] [animation-direction:reverse]">
-        <span className="absolute bottom-[13%] left-1/2 size-1 -translate-x-1/2 translate-y-1/2 rounded-full bg-halo/80" />
+        <span className="absolute bottom-[13%] left-1/2 size-1 -translate-x-1/2 translate-y-1/2 rounded-full bg-electric-soft/80" />
       </span>
       <span className="size-1.5 rounded-full bg-bone/80 shadow-[0_0_12px_2px_rgba(255,255,255,0.25)]" />
     </motion.div>
@@ -259,8 +259,8 @@ export default function NotFound() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4 text-[0.58rem] font-semibold uppercase tracking-[0.26em] text-bone/45">
             <span className="flex items-center gap-2.5">
               <span className="relative flex size-1.5">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-halo/60" />
-                <span className="relative inline-flex size-1.5 rounded-full bg-halo" />
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-electric-soft/60" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-electric-soft" />
               </span>
               Signal lost · Error 404
             </span>
@@ -349,7 +349,7 @@ export default function NotFound() {
                   <p className="text-[0.56rem] font-semibold uppercase tracking-[0.26em] text-bone/45">
                     Flight recorder
                   </p>
-                  <span className="text-[0.55rem] font-semibold uppercase tracking-[0.22em] text-halo/80">
+                  <span className="text-[0.55rem] font-semibold uppercase tracking-[0.22em] text-electric-soft/80">
                     Unmapped
                   </span>
                 </div>
@@ -501,7 +501,7 @@ export default function NotFound() {
               .
             </p>
             <p className="flex items-center gap-2 text-[0.64rem] uppercase tracking-[0.2em] text-bone/35">
-              <span className="size-1 rounded-full bg-halo/80" />
+              <span className="size-1 rounded-full bg-electric-soft/80" />
               All records accounted for
             </p>
           </div>

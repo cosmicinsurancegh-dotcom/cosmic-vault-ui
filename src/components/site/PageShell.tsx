@@ -125,7 +125,7 @@ export function PageHero({
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -left-32 top-1/2 size-[22rem] rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.35),transparent_70%)] blur-2xl"
+        className="pointer-events-none absolute -left-32 top-1/2 size-[22rem] rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(10,18,36,0.05),transparent_70%)] blur-2xl"
       />
       <div
         aria-hidden="true"
@@ -248,18 +248,16 @@ export function PageSection({
   title?: ReactNode;
   intro?: string;
   children?: ReactNode;
-  tone?: "default" | "ice" | "dark";
+  tone?: "default" | "ice";
   className?: string;
   id?: string;
 }) {
-  const dark = tone === "dark";
   return (
     <section
       id={id}
       className={cn(
         "py-14 sm:py-20",
         tone === "ice" && "bg-ice",
-        dark && "starfield relative overflow-hidden bg-[#071227] text-bone",
         className,
       )}
     >
@@ -268,33 +266,18 @@ export function PageSection({
           <div className="grid gap-5 lg:grid-cols-12 lg:items-end">
             <div className="lg:col-span-7">
               {eyebrow && (
-                <p
-                  className={cn(
-                    "text-[0.62rem] font-semibold uppercase tracking-[0.28em]",
-                    dark ? "text-bone/60" : "text-ink/60",
-                  )}
-                >
+                <p className="text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-ink/60">
                   {eyebrow}
                 </p>
               )}
               {title && (
-                <h2
-                  className={cn(
-                    "mt-4 text-balance text-[clamp(1.9rem,3.7vw,2.9rem)] font-semibold leading-[1.04] tracking-[-0.04em]",
-                    dark ? "text-bone" : "text-ink",
-                  )}
-                >
+                <h2 className="mt-4 text-balance text-[clamp(1.9rem,3.7vw,2.9rem)] font-semibold leading-[1.04] tracking-[-0.04em] text-ink">
                   {title}
                 </h2>
               )}
             </div>
             {intro && (
-              <p
-                className={cn(
-                  "max-w-md text-[0.9rem] leading-7 lg:col-span-5 lg:pb-1",
-                  dark ? "text-bone/55" : "text-muted-foreground",
-                )}
-              >
+              <p className="max-w-md text-[0.9rem] leading-7 text-muted-foreground lg:col-span-5 lg:pb-1">
                 {intro}
               </p>
             )}
@@ -400,7 +383,7 @@ export function Callout({
       className={cn(
         "flex gap-3 rounded-[4px] border px-4 py-3.5",
         warning
-          ? "border-halo/45 bg-halo/10"
+          ? "border-ink/15 bg-muted"
           : "border-line bg-card",
       )}
     >
@@ -458,24 +441,24 @@ export function CtaPanel({
 }) {
   return (
     <div className="mx-auto max-w-[1180px] px-5 pb-4 sm:px-8">
-      <div className="starfield relative overflow-hidden rounded-[4px] bg-[#071227] px-6 py-12 text-bone sm:px-10 sm:py-14">
+      <div className="relative overflow-hidden rounded-[4px] border border-line bg-card px-6 py-12 text-ink shadow-[0_30px_70px_-52px_rgba(10,18,36,0.4)] sm:px-10 sm:py-14">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-24 -top-24 size-[24rem] rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.26),transparent_65%)]"
+          className="vault-grid pointer-events-none absolute inset-0 opacity-50 [mask-image:radial-gradient(ellipse_at_85%_0%,black,transparent_72%)]"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -bottom-28 -left-16 size-[20rem] rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(228,217,196,0.12),transparent_68%)]"
+          className="pointer-events-none absolute -right-24 -top-24 size-[24rem] rounded-[4px] bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.10),transparent_65%)]"
         />
         <div className="relative grid gap-8 lg:grid-cols-[1.3fr_0.7fr] lg:items-center">
           <div>
-            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-bone/45">
+            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-ink/45">
               {eyebrow}
             </p>
-            <h2 className="mt-4 max-w-lg text-balance text-[clamp(1.9rem,3.6vw,2.8rem)] font-semibold leading-[1.04] tracking-[-0.04em]">
+            <h2 className="mt-4 max-w-lg text-balance text-[clamp(1.9rem,3.6vw,2.8rem)] font-semibold leading-[1.04] tracking-[-0.04em] text-ink">
               {title}
             </h2>
-            <p className="mt-4 max-w-md text-[0.88rem] leading-6 text-bone/55">
+            <p className="mt-4 max-w-md text-[0.88rem] leading-6 text-ink/60">
               {body}
             </p>
           </div>
@@ -486,7 +469,7 @@ export function CtaPanel({
             {secondary && (
               <Link
                 to={secondary.to}
-                className="group inline-flex items-center justify-center gap-2 rounded-[4px] border border-white/15 px-5 py-2.5 text-[0.82rem] font-medium text-bone/75 transition-colors hover:border-white/35 hover:text-bone"
+                className="group inline-flex items-center justify-center gap-2 rounded-[4px] border border-ink/15 px-5 py-2.5 text-[0.82rem] font-medium text-ink/75 transition-colors hover:border-ink/35 hover:text-ink"
               >
                 {secondary.label}
                 <ArrowUpRight className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />

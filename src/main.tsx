@@ -29,6 +29,12 @@ const ApplicationsPage = lazy(
   () => import("./pages/dashboard/ApplicationsPage.tsx"),
 );
 const PoliciesPage = lazy(() => import("./pages/dashboard/PoliciesPage.tsx"));
+const VaultPage = lazy(() => import("./pages/dashboard/VaultPage.tsx"));
+const ShipmentsPage = lazy(() => import("./pages/dashboard/ShipmentsPage.tsx"));
+const AdminVaultPage = lazy(() => import("./pages/dashboard/AdminVaultPage.tsx"));
+const AdminShipmentsPage = lazy(
+  () => import("./pages/dashboard/AdminShipmentsPage.tsx"),
+);
 const ClaimsPage = lazy(() => import("./pages/dashboard/ClaimsPage.tsx"));
 const ProfilePage = lazy(() => import("./pages/dashboard/ProfilePage.tsx"));
 const SupportPage = lazy(() => import("./pages/dashboard/SupportPage.tsx"));
@@ -95,6 +101,11 @@ const RequireRole = lazy(() =>
 const RequirePermission = lazy(() =>
   import("./pages/dashboard/DashboardLayout.tsx").then((module) => ({
     default: module.RequirePermission,
+  })),
+);
+const RequireVaultOperations = lazy(() =>
+  import("./pages/dashboard/DashboardLayout.tsx").then((module) => ({
+    default: module.RequireVaultOperations,
   })),
 );
 
@@ -310,6 +321,38 @@ createRoot(document.getElementById("root")!).render(
                         <SelfServiceOnly>
                           <PoliciesPage />
                         </SelfServiceOnly>
+                      }
+                    />
+                    <Route
+                      path="vault"
+                      element={
+                        <RequireRole roles={["customer", "broker"]}>
+                          <VaultPage />
+                        </RequireRole>
+                      }
+                    />
+                    <Route
+                      path="shipments"
+                      element={
+                        <RequireRole roles={["customer"]}>
+                          <ShipmentsPage />
+                        </RequireRole>
+                      }
+                    />
+                    <Route
+                      path="admin/vault"
+                      element={
+                        <RequireVaultOperations>
+                          <AdminVaultPage />
+                        </RequireVaultOperations>
+                      }
+                    />
+                    <Route
+                      path="admin/shipments"
+                      element={
+                        <RequireVaultOperations>
+                          <AdminShipmentsPage />
+                        </RequireVaultOperations>
                       }
                     />
                     <Route

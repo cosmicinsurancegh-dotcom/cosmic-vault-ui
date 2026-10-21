@@ -159,7 +159,7 @@ export function QuoteDialog({
                   Talk to a human
                 </p>
                 <DialogTitle className="text-2xl font-semibold tracking-[-0.03em] text-ink sm:text-[1.75rem]">
-                  Tell us what to <span>protect.</span>
+                  Tell us what you’re <span>storing.</span>
                 </DialogTitle>
                 <DialogDescription className="text-sm leading-6">
                   Send a request and an advisor will review it. No obligation, and
@@ -170,7 +170,7 @@ export function QuoteDialog({
               <form onSubmit={handleSubmit} className="space-y-6 px-6 py-6 sm:px-8">
                 <div>
                   <Label className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    What should we protect?
+                    Which custody class?
                   </Label>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     {COVERAGE_OPTIONS.map((option) => {
@@ -240,7 +240,7 @@ export function QuoteDialog({
                     id="quote-message"
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}
-                    placeholder="A family of four, a listed cottage, and a very old camper van…"
+                    placeholder="Three 1 kg bars, an appraisal from 2024, and a release needed before quarter-end…"
                     className="min-h-[86px] resize-none rounded-xl bg-card"
                   />
                 </div>

@@ -720,6 +720,33 @@ const schema = defineSchema(
       .index("by_dedupe", ["dedupeKey"])
       .index("by_email_status", ["emailStatus"]),
 
+    /**
+     * Outbound shipment progress emails. The vault's mineral and shipment
+     * records live in the member's vault store, so this table is the delivery
+     * audit for the message each status change sends: recipient, shipment
+     * status at the time, rendered subject and the provider result. HTML is
+     * kept so staff can see exactly what the member received.
+     */
+    shipmentEmails: defineTable({
+      trackingNumber: v.string(),
+      mineralName: v.string(),
+      ownerName: v.string(),
+      ownerEmail: v.string(),
+      shipmentStatus: v.string(),
+      subject: v.string(),
+      html: v.string(),
+      text: v.string(),
+      deliveryStatus: notificationEmailStatusValidator,
+      attempts: v.number(),
+      error: v.optional(v.string()),
+      sentBy: v.optional(v.id("users")),
+      createdAt: v.number(),
+      deliveredAt: v.optional(v.number()),
+      ...demoFields,
+    })
+      .index("by_tracking", ["trackingNumber", "createdAt"])
+      .index("by_created", ["createdAt"]),
+
     /** Support ------------------------------------------------------------- */
     tickets: defineTable({
       reference: v.string(),

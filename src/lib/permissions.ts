@@ -14,6 +14,8 @@ export const STAFF_PERMISSIONS = {
   AUDIT_VIEW: "audit.view",
   SETTINGS_MANAGE: "settings.manage",
   STAFF_MANAGE: "staff.manage",
+  VAULT_MANAGE: "vault.manage",
+  VAULT_SHIP: "vault.ship",
 } as const;
 
 export const PERMISSION_LABELS: Record<string, string> = {
@@ -32,6 +34,8 @@ export const PERMISSION_LABELS: Record<string, string> = {
   "audit.view": "View audit log",
   "settings.manage": "Manage system settings",
   "staff.manage": "Manage staff & roles",
+  "vault.manage": "Manage mineral records & insurance",
+  "vault.ship": "Initiate & update shipments",
 };
 
 export function normalizeRole(role?: string | null) {

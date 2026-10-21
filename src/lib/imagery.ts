@@ -89,6 +89,74 @@ export const IMAGES = {
   },
 } satisfies Record<string, VaultImage>;
 
+/**
+ * The minerals themselves. Photographs where we have them, studio illustrations
+ * for the materials that were never shot - both sit on the same dark ground, so
+ * the grid reads as one collection rather than a mix of sources.
+ */
+export const MINERAL_IMAGES = {
+  bullion: {
+    src: "/minerals/gold-bars.webp",
+    alt: "Stacked fine gold bars under vault lighting",
+    position: "50% 42%",
+    tone: "#2a1a05",
+  },
+  bullionDetail: {
+    src: "/minerals/gold-bars-detail.webp",
+    alt: "The minted face of a 1 kg fine gold bar",
+    position: "50% 50%",
+    tone: "#3d2708",
+  },
+  diamonds: {
+    src: "/minerals/diamonds.webp",
+    alt: "Loose brilliant-cut diamonds resting on a dark surface",
+    position: "50% 52%",
+    tone: "#141a22",
+  },
+  emerald: {
+    src: "/minerals/emerald.svg",
+    alt: "An emerald-cut green gemstone under studio light",
+    position: "50% 50%",
+    tone: "#071511",
+  },
+  ruby: {
+    src: "/minerals/ruby.svg",
+    alt: "A cushion-cut ruby photographed on a dark surface",
+    position: "50% 50%",
+    tone: "#1a070b",
+  },
+  sapphire: {
+    src: "/minerals/sapphire.svg",
+    alt: "An oval blue sapphire under studio light",
+    position: "50% 50%",
+    tone: "#071120",
+  },
+  rareEarth: {
+    src: "/minerals/rare-earth.svg",
+    alt: "A rare-earth mineral specimen with metallic veins",
+    position: "50% 50%",
+    tone: "#080f0d",
+  },
+  platinum: {
+    src: "/minerals/platinum-coin.svg",
+    alt: "A one-ounce platinum bullion coin",
+    position: "50% 50%",
+    tone: "#0d1118",
+  },
+  silver: {
+    src: "/minerals/silver-bars.svg",
+    alt: "A stack of fine silver bars",
+    position: "50% 50%",
+    tone: "#14171b",
+  },
+  goldNugget: {
+    src: "/minerals/gold-nugget.svg",
+    alt: "A natural gold nugget on a dark surface",
+    position: "50% 50%",
+    tone: "#1b1206",
+  },
+} satisfies Record<string, VaultImage>;
+
 /** Decorative avatars for the advisor strip. */
 export const ADVISOR_FACES: VaultImage[] = [
   { src: "/images/advisor-1.webp", alt: "", position: "50% 30%" },

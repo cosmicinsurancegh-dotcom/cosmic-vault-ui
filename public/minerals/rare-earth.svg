@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1100" role="img" aria-label="A rare-earth mineral specimen with metallic veins on a dark surface">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="80%">
+      <stop offset="0" stop-color="#1f2624"/>
+      <stop offset=".5" stop-color="#0d1211"/>
+      <stop offset="1" stop-color="#040807"/>
+    </radialGradient>
+    <radialGradient id="halo" cx="50%" cy="45%" r="45%">
+      <stop offset="0" stop-color="#8bd7c3" stop-opacity=".24"/>
+      <stop offset=".55" stop-color="#4e786d" stop-opacity=".08"/>
+      <stop offset="1" stop-color="#050908" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rock" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e2e9e5"/>
+      <stop offset=".26" stop-color="#8d9792"/>
+      <stop offset=".52" stop-color="#5b6560"/>
+      <stop offset=".78" stop-color="#a7b1ab"/>
+      <stop offset="1" stop-color="#414b47"/>
+    </linearGradient>
+    <linearGradient id="rock2" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b4bdb8"/>
+      <stop offset=".4" stop-color="#67716c"/>
+      <stop offset="1" stop-color="#2b342f"/>
+    </linearGradient>
+    <linearGradient id="vein" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d9fff6"/>
+      <stop offset=".45" stop-color="#5cf0d1"/>
+      <stop offset="1" stop-color="#0fa48b"/>
+    </linearGradient>
+    <linearGradient id="vein2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff3cd"/>
+      <stop offset=".5" stop-color="#e0b76c"/>
+      <stop offset="1" stop-color="#96702d"/>
+    </linearGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="34"/></filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency=".7" numOctaves="4" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope=".08"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="1600" height="1100" fill="url(#bg)"/>
+  <ellipse cx="800" cy="500" rx="560" ry="420" fill="url(#halo)"/>
+  <g fill="#d8fff5" opacity=".35">
+    <circle cx="230" cy="210" r="1.2"/><circle cx="1340" cy="230" r="1.4"/><circle cx="1420" cy="650" r="1"/>
+    <circle cx="190" cy="740" r="1.5"/><circle cx="1140" cy="130" r=".8"/>
+  </g>
+  <ellipse cx="805" cy="865" rx="340" ry="66" fill="#000" opacity=".7" filter="url(#soft)"/>
+  <g>
+    <path d="M510 665 550 450 690 300 890 260 1080 340 1165 520 1110 730 940 835 710 820 560 760Z" fill="url(#rock)" stroke="#e6efe9" stroke-opacity=".22" stroke-width="2"/>
+    <path d="M710 318 890 278 1050 352 1110 512 1065 700 925 790 725 775 590 720 560 520Z" fill="url(#rock2)" opacity=".92"/>
+    <path d="M590 720 690 610 810 645 870 560 1005 600 1065 700 925 790 725 775Z" fill="#48524d"/>
+    <path d="M690 300 760 430 700 540 560 520 550 450Z" fill="#ccd5cf" opacity=".7"/>
+    <path d="M1080 340 985 465 1040 560 1110 512Z" fill="#8e9892" opacity=".6"/>
+    <path d="M760 430 890 390 985 465 945 570 870 560 810 645 700 540Z" fill="#5e6963"/>
+    <path d="M640 340 700 300 760 330 720 400Z" fill="#f0f6f2" opacity=".35"/>
+    <!-- crystalline veins -->
+    <g filter="url(#glow)">
+      <path d="M640 620 730 500 760 430 830 410 890 390" fill="none" stroke="url(#vein)" stroke-width="9" stroke-linecap="round" opacity=".95"/>
+      <path d="M760 430 780 340 830 300" fill="none" stroke="url(#vein)" stroke-width="5" stroke-linecap="round" opacity=".75"/>
+      <path d="M870 560 930 610 1010 630" fill="none" stroke="url(#vein)" stroke-width="6" stroke-linecap="round" opacity=".7"/>
+      <path d="M700 540 760 590 810 645" fill="none" stroke="url(#vein)" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+      <path d="M890 390 965 450 985 465" fill="none" stroke="url(#vein2)" stroke-width="6" stroke-linecap="round" opacity=".85"/>
+      <path d="M600 700 660 660 700 662" fill="none" stroke="url(#vein2)" stroke-width="4" stroke-linecap="round" opacity=".6"/>
+    </g>
+    <g fill="#dafff5" opacity=".85">
+      <circle cx="730" cy="500" r="4"/><circle cx="830" cy="410" r="3.4"/><circle cx="930" cy="610" r="3.1"/>
+      <circle cx="780" cy="340" r="2.6"/><circle cx="760" cy="590" r="2.4"/>
+    </g>
+    <path d="M920 760 980 460 1040 500 1000 760Z" fill="#161d1a" opacity=".32"/>
+    <path d="M610 740 760 700 820 780 700 810Z" fill="#161d1a" opacity=".26"/>
+  </g>
+  <g opacity=".55">
+    <path d="M1170 890 1430 890" stroke="#a8ffe8" stroke-opacity=".22"/>
+    <text x="1170" y="930" fill="#c8fff1" font-family="Georgia, serif" font-size="18" letter-spacing="7" opacity=".6">MOUNT WELD · AUSTRALIA</text>
+  </g>
+  <rect width="1600" height="1100" filter="url(#grain)" opacity=".55"/>
+  <rect x=".5" y=".5" width="1599" height="1099" fill="none" stroke="#fff" stroke-opacity=".07"/>
+</svg>

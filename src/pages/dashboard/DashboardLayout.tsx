@@ -31,6 +31,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
+import { useVaultActor } from "@/lib/vault/useVault";
 import { api } from "@/convex/_generated/api";
 import {
   forgetThemePreference,
@@ -53,6 +54,7 @@ import {
   CreditCard,
   FileText,
   FolderOpen,
+  Gem,
   Headset,
   LayoutGrid,
   LifeBuoy,
@@ -67,6 +69,7 @@ import {
   Settings2,
   ShieldCheck,
   Store,
+  Truck,
   UserRound,
   Users,
   Wallet,
@@ -98,6 +101,13 @@ const CUSTOMER_NAV: NavGroup[] = [
     ],
   },
   {
+    label: "Vault",
+    items: [
+      { to: "/dashboard/vault", label: "My minerals", Icon: Gem },
+      { to: "/dashboard/shipments", label: "Shipments", Icon: Truck },
+    ],
+  },
+  {
     label: "Cover",
     items: [
       { to: "/dashboard/catalogue", label: "Products", Icon: Store },
@@ -112,6 +122,33 @@ const CUSTOMER_NAV: NavGroup[] = [
     items: [
       { to: "/dashboard/payments", label: "Payments", Icon: CreditCard },
       { to: "/dashboard/documents", label: "Documents", Icon: FolderOpen },
+    ],
+  },
+  {
+    label: "Account",
+    items: [
+      { to: "/dashboard/support", label: "Support", Icon: Headset },
+      { to: "/dashboard/profile", label: "Profile", Icon: UserRound },
+    ],
+  },
+];
+
+/* The guest operations preview only unlocks the vault floor, so its rail is
+   deliberately narrower than a staff account's. It shows the same pages a
+   demonstration reviewer is allowed to open, and nothing that would bounce
+   them back to the member overview. */
+const DEMO_OPERATIONS_NAV: NavGroup[] = [
+  {
+    label: "Workspace",
+    items: [
+      { to: "/dashboard", label: "Overview", Icon: LayoutGrid, end: true },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { to: "/dashboard/admin/vault", label: "Vault register", Icon: Gem },
+      { to: "/dashboard/admin/shipments", label: "Shipment control", Icon: Truck },
     ],
   },
   {
@@ -152,7 +189,10 @@ const BROKER_NAV: NavGroup[] = [
 
 function adminNav(permissions: string[] | undefined, role?: string): NavGroup[] {
   const allow = (permission: string) => can(role, permissions, permission);
-  const operations: NavItem[] = [];
+  const operations: NavItem[] = [
+    { to: "/dashboard/admin/vault", label: "Vault", Icon: Gem },
+    { to: "/dashboard/admin/shipments", label: "Shipments", Icon: Truck },
+  ];
   if (allow(STAFF_PERMISSIONS.CUSTOMERS_VIEW)) {
     operations.push({ to: "/dashboard/admin/customers", label: "Customers", Icon: Users });
   }
@@ -228,6 +268,25 @@ export function RequireRole({
     return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;
+}
+
+export function RequireVaultOperations({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const { user, isLoading } = useAuth();
+  const { actor } = useVaultActor();
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (isStaff(user?.role)) return <>{children}</>;
+  if (user?.isAnonymous && actor.role === "admin") return <>{children}</>;
+  return <Navigate to="/dashboard" replace />;
 }
 
 export function RequirePermission({
@@ -569,16 +628,36 @@ export default function DashboardLayout() {
   const role = normalizeRole(user?.role);
   const permissions = user?.permissions ?? [];
   const staff = isStaff(role);
+  const {
+    actor: vaultActor,
+    canSwitchDemoRole,
+  } = useVaultActor();
+  /* An anonymous visitor can preview the operations side of the vault. The
+     rail, breadcrumb and identity all follow that switch, so the preview never
+     looks like a member workspace with administrator data dropped into it. */
+  const demoOperations = canSwitchDemoRole && vaultActor.role === "admin";
   const groups = staff
     ? adminNav(permissions, role)
-    : role === "broker"
-      ? BROKER_NAV
-      : CUSTOMER_NAV;
+    : demoOperations
+      ? DEMO_OPERATIONS_NAV
+      : role === "broker"
+        ? BROKER_NAV
+        : CUSTOMER_NAV;
 
   const unread = (notifications ?? []).filter((item) => !item.readAt).length;
-  const userName = user?.name ?? "Vault member";
-  const userEmail = user?.email ?? "Anonymous session";
-  const label = roleLabel(role);
+  /* The guest vault is Noor Haddad's demonstration collection. Showing the
+     owner's name in the rail keeps the member preview consistent with the
+     greeting and the records, instead of labelling it "Anonymous session". */
+  const memberDemo = canSwitchDemoRole && vaultActor.role === "client";
+  const userName =
+    demoOperations || memberDemo
+      ? vaultActor.name
+      : user?.name ?? "Vault member";
+  const userEmail =
+    demoOperations || memberDemo
+      ? vaultActor.email
+      : user?.email ?? "Anonymous session";
+  const label = demoOperations ? "Operations" : roleLabel(role);
 
   const activeItem = useMemo(() => {
     const items = groups
@@ -854,13 +933,19 @@ export default function DashboardLayout() {
                       onSelect={() => {
                         if (staff) {
                           navigate("/dashboard/admin/settings");
+                        } else if (demoOperations) {
+                          navigate("/dashboard/admin/vault");
                         } else {
                           navigate("/dashboard/profile");
                         }
                       }}
                     >
                       <Settings2 className="size-3.5" />
-                      {staff ? "Workspace settings" : "Profile"}
+                      {staff
+                        ? "Workspace settings"
+                        : demoOperations
+                          ? "Vault register"
+                          : "Profile"}
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => requestCookieSettings()}>
                       <Cookie className="size-3.5" />

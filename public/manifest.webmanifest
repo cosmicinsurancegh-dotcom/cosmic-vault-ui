@@ -1,7 +1,7 @@
 {
-  "name": "Cosmic Vault - Insurance for the long horizon",
+  "name": "Cosmic Vault - Vault custody and object insurance",
   "short_name": "Cosmic Vault",
-  "description": "Modern health, home, auto and life insurance with human advisors and 48-hour claims.",
+  "description": "Dual-control vault custody and object-level insurance for gold, diamonds, gemstones and critical minerals.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",
