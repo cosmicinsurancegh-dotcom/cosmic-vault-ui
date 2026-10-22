@@ -5,3 +5,7 @@ dist
 test-results
 playwright-report
 blob-report
+
+# Convex deploy keys for CI (never commit)
+.env.convex-prod
+.env.convex-dev

@@ -12,7 +12,7 @@
  */
 
 /** This project's Convex deployment, used when the configured URL is unusable. */
-export const DEFAULT_CONVEX_URL = "https://grateful-pony-619.convex.cloud";
+export const DEFAULT_CONVEX_URL = "https://avid-camel-675.convex.cloud";
 
 // Convex Cloud deployment URLs, plus the local dev server `convex dev` prints.
 const DEPLOYMENT_URL =
