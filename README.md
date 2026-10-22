@@ -58,6 +58,44 @@ and outstanding risks are in
 Install the browser once with `bunx playwright install chromium` if it is not
 already present on the machine.
 
+## Deployment
+
+Two Convex deployments: `descriptive-ferret-801` (production, what the live
+site talks to) and `avid-camel-675` (development). Functions are published by
+the `Deploy Convex functions` workflow, so no one needs a local Convex login
+to ship the backend.
+
+- **Dev functions** - push to `dev`, or run the workflow manually with
+  `target: dev`. Authenticated by the `CONVEX_DEPLOY_KEY_DEV` secret.
+- **Production functions** - manual run only, from `main`, with `target: prod`
+  and `confirm: deploy-prod`. A merge to `main` is not a release. Authenticated
+  by the `CONVEX_DEPLOY_KEY_PROD` secret, held on the `convex-prod`
+  environment.
+- **Frontend** - Vercel builds `main` on push. The browser's Convex URL is
+  `DEFAULT_CONVEX_URL` in `src/lib/convexUrl.ts` (production) unless the Vercel
+  project sets `VITE_CONVEX_URL`, which would override it.
+
+Both jobs install with `bun install --frozen-lockfile`, so `bun.lock` must be
+current before a deploy.
+
+### Release checklist
+
+1. Land the backend change on `dev` (push or dispatch `target: dev`) and let
+   the dev job pass.
+2. From `main`, run the workflow with `target: prod` and
+   `confirm: deploy-prod`.
+3. Check the run: `Check production confirmation` and `Deploy functions` must
+   both be green. A dispatch without the phrase fails there by design.
+4. Confirm production answers:
+   `curl -s https://descriptive-ferret-801.convex.cloud/version`.
+5. Open the live site and sign in once - a green deploy only proves the
+   functions uploaded, not that the client resolves them.
+
+A fresh deployment has no accounts, so seed it before its first sign-in:
+`bunx convex run setup:seedDeployment --prod` creates the reference data and
+starter catalogue. Reviewer approval on the `convex-prod` environment needs a
+paid plan for private repos; until then the typed confirmation is the gate.
+
 ## Environment Variables
 
 The project is set up with project specific CONVEX_DEPLOYMENT and VITE_CONVEX_URL environment variables on the client side.
