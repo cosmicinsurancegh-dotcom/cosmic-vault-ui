@@ -1,5 +1,5 @@
 import { FinalCta } from "@/components/landing/FinalCta";
-import { HeroVaultRecord } from "@/components/landing/HeroVaultRecord";
+import { HeroBroadsheet } from "@/components/landing/heroes/HeroBroadsheet";
 import { Plans } from "@/components/landing/Plans";
 import { Process } from "@/components/landing/Process";
 import { ReleaseTracking } from "@/components/landing/ReleaseTracking";
@@ -44,7 +44,7 @@ export default function Landing() {
         className="fixed inset-x-0 top-0 z-50 h-[2px] origin-left bg-electric"
       />
 
-      <HeroVaultRecord onReview={() => openReview()} />
+      <HeroBroadsheet onQuote={() => openReview()} />
       <Story />
       <Solutions onReview={(key) => openReview({ coverage: key })} />
       <Plans onReview={() => openReview()} />
