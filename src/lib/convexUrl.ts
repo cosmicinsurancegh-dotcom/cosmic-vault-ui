@@ -11,8 +11,13 @@
  * this project's deployment instead of shipping a dead app.
  */
 
-/** This project's Convex deployment, used when the configured URL is unusable. */
-export const DEFAULT_CONVEX_URL = "https://avid-camel-675.convex.cloud";
+/**
+ * This project's Convex deployment, used when the configured URL is unusable.
+ * Production is the default because the deployed site is built without a
+ * `VITE_CONVEX_URL` of its own; local work points at its own deployment in
+ * `.env.local`.
+ */
+export const DEFAULT_CONVEX_URL = "https://descriptive-ferret-801.convex.cloud";
 
 // Convex Cloud deployment URLs, plus the local dev server `convex dev` prints.
 const DEPLOYMENT_URL =
