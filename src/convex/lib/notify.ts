@@ -14,10 +14,17 @@ type NotifyArgs = {
   /** Stable key so retried workflows never double-notify. */
   dedupeKey?: string;
   email?: boolean;
+  /** Designed-email overrides; the settings template is used when omitted. */
+  subject?: string;
+  text?: string;
+  html?: string;
 };
 
 function render(template: string, values: Record<string, string>) {
-  return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => values[key] ?? "");
+  return template.replace(
+    /\{\{(\w+)\}\}/g,
+    (_, key: string) => values[key] ?? "",
+  );
 }
 
 /**
@@ -45,7 +52,9 @@ export async function notifyUser(
   const canEmail =
     args.email !== false && Boolean(user.email) && !user.isAnonymous;
   const settings = await getSettings(ctx);
-  const template = settings.emailTemplates.find((item) => item.key === args.type);
+  const template = settings.emailTemplates.find(
+    (item) => item.key === args.type,
+  );
   const name = user.name?.split(" ")[0] ?? "there";
   const values = {
     name,
@@ -73,8 +82,10 @@ export async function notifyUser(
     await ctx.scheduler.runAfter(0, internal.email.deliver, {
       notificationId: id,
       to: user.email!,
-      subject: render(template?.subject ?? args.title, values),
-      text: render(template?.body ?? "{{title}}\n\n{{body}}", values),
+      subject: args.subject ?? render(template?.subject ?? args.title, values),
+      text:
+        args.text ?? render(template?.body ?? "{{title}}\n\n{{body}}", values),
+      html: args.html,
     });
   }
 

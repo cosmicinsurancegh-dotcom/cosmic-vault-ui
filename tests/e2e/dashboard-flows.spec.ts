@@ -21,6 +21,7 @@ const CUSTOMER_ROUTES: { path: string; ready: string }[] = [
   { path: "/dashboard/quotes", ready: "Loading quotations" },
   { path: "/dashboard/applications", ready: "Loading applications" },
   { path: "/dashboard/policies", ready: "Loading policies" },
+  { path: "/dashboard/minerals", ready: "Loading your minerals" },
   { path: "/dashboard/claims", ready: "Loading claims" },
   { path: "/dashboard/payments", ready: "Loading payments" },
   { path: "/dashboard/documents", ready: "Loading documents" },
@@ -122,6 +123,30 @@ test.describe("staff permissions", () => {
       .poll(() => new URL(page.url()).pathname)
       .toBe("/dashboard/admin/customers");
     await expect(page.getByText(/loading customers/i)).toBeVisible();
+    await expect(page.getByText("Access restricted")).toHaveCount(0);
+  });
+
+  test("the mineral console is gated on policies.manage", async ({ page }) => {
+    await startSignedIn(page, {
+      _id: "e2e-limited-admin",
+      name: "Limited Admin",
+      email: "limited@example.com",
+      role: "admin",
+      permissions: ["customers.view"],
+    });
+
+    await page.goto("/dashboard/admin/minerals");
+    await expect(page.getByText("Access restricted")).toBeVisible();
+
+    await startSignedIn(page, {
+      _id: "e2e-ops-admin",
+      name: "Ops Admin",
+      email: "ops@example.com",
+      role: "admin",
+      permissions: ["customers.view", "policies.manage"],
+    });
+    await page.goto("/dashboard/admin/minerals");
+    await expect(page.getByText(/loading minerals/i)).toBeVisible();
     await expect(page.getByText("Access restricted")).toHaveCount(0);
   });
 });

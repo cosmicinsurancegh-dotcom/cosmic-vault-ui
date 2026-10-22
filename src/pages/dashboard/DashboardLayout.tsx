@@ -38,7 +38,12 @@ import {
   preferencesAllowed,
   requestCookieSettings,
 } from "@/lib/consent";
-import { normalizeRole, STAFF_PERMISSIONS, can, isStaff } from "@/lib/permissions";
+import {
+  normalizeRole,
+  STAFF_PERMISSIONS,
+  can,
+  isStaff,
+} from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format";
 import { initials } from "@/lib/vault";
@@ -74,9 +79,21 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import { useTheme } from "next-themes";
-import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router";
+import {
+  Navigate,
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router";
 import { toast } from "sonner";
 
 type NavItem = {
@@ -112,8 +129,13 @@ const CUSTOMER_NAV: NavGroup[] = [
     items: [
       { to: "/dashboard/catalogue", label: "Products", Icon: Store },
       { to: "/dashboard/quotes", label: "Quotations", Icon: FileText },
-      { to: "/dashboard/applications", label: "Applications", Icon: ClipboardList },
+      {
+        to: "/dashboard/applications",
+        label: "Applications",
+        Icon: ClipboardList,
+      },
       { to: "/dashboard/policies", label: "Policies", Icon: ScrollText },
+      { to: "/dashboard/minerals", label: "Minerals", Icon: Gem },
       { to: "/dashboard/claims", label: "Claims", Icon: LifeBuoy },
     ],
   },
@@ -173,9 +195,18 @@ const BROKER_NAV: NavGroup[] = [
       { to: "/dashboard/broker/customers", label: "My customers", Icon: Users },
       { to: "/dashboard/catalogue", label: "Products", Icon: Store },
       { to: "/dashboard/quotes", label: "Quotations", Icon: FileText },
-      { to: "/dashboard/applications", label: "Applications", Icon: ClipboardList },
+      {
+        to: "/dashboard/applications",
+        label: "Applications",
+        Icon: ClipboardList,
+      },
       { to: "/dashboard/policies", label: "Policies", Icon: ScrollText },
-      { to: "/dashboard/broker/reports", label: "Reports", Icon: CalendarClock },
+      { to: "/dashboard/minerals", label: "Minerals", Icon: Gem },
+      {
+        to: "/dashboard/broker/reports",
+        label: "Reports",
+        Icon: CalendarClock,
+      },
     ],
   },
   {
@@ -187,54 +218,108 @@ const BROKER_NAV: NavGroup[] = [
   },
 ];
 
-function adminNav(permissions: string[] | undefined, role?: string): NavGroup[] {
+function adminNav(
+  permissions: string[] | undefined,
+  role?: string,
+): NavGroup[] {
   const allow = (permission: string) => can(role, permissions, permission);
   const operations: NavItem[] = [
     { to: "/dashboard/admin/vault", label: "Vault", Icon: Gem },
     { to: "/dashboard/admin/shipments", label: "Shipments", Icon: Truck },
   ];
   if (allow(STAFF_PERMISSIONS.CUSTOMERS_VIEW)) {
-    operations.push({ to: "/dashboard/admin/customers", label: "Customers", Icon: Users });
+    operations.push({
+      to: "/dashboard/admin/customers",
+      label: "Customers",
+      Icon: Users,
+    });
   }
   if (allow(STAFF_PERMISSIONS.PRODUCTS_MANAGE)) {
-    operations.push({ to: "/dashboard/admin/products", label: "Products", Icon: PackageSearch });
+    operations.push({
+      to: "/dashboard/admin/products",
+      label: "Products",
+      Icon: PackageSearch,
+    });
   }
   if (allow(STAFF_PERMISSIONS.APPLICATIONS_REVIEW)) {
-    operations.push({ to: "/dashboard/admin/applications", label: "Underwriting", Icon: ClipboardList });
+    operations.push({
+      to: "/dashboard/admin/applications",
+      label: "Underwriting",
+      Icon: ClipboardList,
+    });
   }
   if (allow(STAFF_PERMISSIONS.POLICIES_MANAGE)) {
-    operations.push({ to: "/dashboard/admin/policies", label: "Policies", Icon: ScrollText });
+    operations.push({
+      to: "/dashboard/admin/policies",
+      label: "Policies",
+      Icon: ScrollText,
+    });
+    operations.push({
+      to: "/dashboard/admin/minerals",
+      label: "Minerals",
+      Icon: Gem,
+    });
   }
   if (allow(STAFF_PERMISSIONS.CLAIMS_REVIEW)) {
-    operations.push({ to: "/dashboard/admin/claims", label: "Claims", Icon: LifeBuoy });
+    operations.push({
+      to: "/dashboard/admin/claims",
+      label: "Claims",
+      Icon: LifeBuoy,
+    });
   }
   if (allow(STAFF_PERMISSIONS.PAYMENTS_VIEW)) {
-    operations.push({ to: "/dashboard/admin/payments", label: "Payments", Icon: Wallet });
+    operations.push({
+      to: "/dashboard/admin/payments",
+      label: "Payments",
+      Icon: Wallet,
+    });
   }
   if (allow(STAFF_PERMISSIONS.BROKERS_MANAGE)) {
-    operations.push({ to: "/dashboard/admin/brokers", label: "Brokers", Icon: Store });
+    operations.push({
+      to: "/dashboard/admin/brokers",
+      label: "Brokers",
+      Icon: Store,
+    });
   }
 
   const insight: NavItem[] = [];
   if (allow(STAFF_PERMISSIONS.REPORTS_VIEW)) {
-    insight.push({ to: "/dashboard/admin/reports", label: "Reports", Icon: CalendarClock });
+    insight.push({
+      to: "/dashboard/admin/reports",
+      label: "Reports",
+      Icon: CalendarClock,
+    });
   }
   if (allow(STAFF_PERMISSIONS.AUDIT_VIEW)) {
-    insight.push({ to: "/dashboard/admin/audit", label: "Audit log", Icon: ShieldCheck });
+    insight.push({
+      to: "/dashboard/admin/audit",
+      label: "Audit log",
+      Icon: ShieldCheck,
+    });
   }
 
   const account: NavItem[] = [];
   if (allow(STAFF_PERMISSIONS.CUSTOMERS_VIEW)) {
-    account.push({ to: "/dashboard/admin/support", label: "Support", Icon: Headset });
+    account.push({
+      to: "/dashboard/admin/support",
+      label: "Support",
+      Icon: Headset,
+    });
   }
   if (allow(STAFF_PERMISSIONS.SETTINGS_MANAGE)) {
-    account.push({ to: "/dashboard/admin/settings", label: "Settings", Icon: Settings2 });
+    account.push({
+      to: "/dashboard/admin/settings",
+      label: "Settings",
+      Icon: Settings2,
+    });
   }
 
   return [
     {
       label: "Workspace",
-      items: [{ to: "/dashboard", label: "Overview", Icon: LayoutGrid, end: true }],
+      items: [
+        { to: "/dashboard", label: "Overview", Icon: LayoutGrid, end: true },
+      ],
     },
     { label: "Operations", items: operations },
     { label: "Insight", items: insight },
@@ -312,9 +397,9 @@ export function RequirePermission({
           Access restricted
         </h1>
         <p className="mt-2 text-xs leading-5 text-muted-foreground">
-          Your account does not include the permission required for this area. Ask
-          a super admin to review your staff permissions. This check is enforced on
-          the server as well.
+          Your account does not include the permission required for this area.
+          Ask a super admin to review your staff permissions. This check is
+          enforced on the server as well.
         </p>
       </div>
     );
@@ -559,7 +644,9 @@ function SidebarBody({
         <div
           className={cn(
             "rounded-2xl border border-line bg-card/80 p-2.5",
-            collapsed ? "flex flex-col items-center gap-2" : "flex items-center gap-2.5",
+            collapsed
+              ? "flex flex-col items-center gap-2"
+              : "flex items-center gap-2.5",
           )}
         >
           <Tooltip delayDuration={180}>
@@ -570,7 +657,9 @@ function SidebarBody({
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={10}>
               {userName}
-              <span className="block text-[0.62rem] opacity-60">{userEmail}</span>
+              <span className="block text-[0.62rem] opacity-60">
+                {userEmail}
+              </span>
             </TooltipContent>
           </Tooltip>
           {!collapsed && (
@@ -594,7 +683,9 @@ function SidebarBody({
                 <LogOut className="size-3.5" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side={collapsed ? "right" : "top"}>Sign out</TooltipContent>
+            <TooltipContent side={collapsed ? "right" : "top"}>
+              Sign out
+            </TooltipContent>
           </Tooltip>
         </div>
       </div>
@@ -774,7 +865,9 @@ export default function DashboardLayout() {
                   side="left"
                   className="w-[286px] overflow-hidden bg-background p-0"
                 >
-                  <SheetTitle className="sr-only">Dashboard navigation</SheetTitle>
+                  <SheetTitle className="sr-only">
+                    Dashboard navigation
+                  </SheetTitle>
                   <SidebarBody
                     groups={groups}
                     collapsed={false}
@@ -897,7 +990,8 @@ export default function DashboardLayout() {
                             </p>
                             <p className="mt-1.5 text-[0.58rem] uppercase tracking-[0.12em] text-muted-foreground">
                               {formatDateTime(item.createdAt)}
-                              {item.emailStatus === "failed" && " · email failed"}
+                              {item.emailStatus === "failed" &&
+                                " · email failed"}
                             </p>
                           </button>
                         ))
@@ -970,9 +1064,10 @@ export default function DashboardLayout() {
                     Founding administrator setup
                   </p>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    No super admin exists yet. The first signed-in user can claim
-                    the founding role, then create products and staff accounts.
-                    This option disappears permanently once a super admin exists.
+                    No super admin exists yet. The first signed-in user can
+                    claim the founding role, then create products and staff
+                    accounts. This option disappears permanently once a super
+                    admin exists.
                   </p>
                 </div>
                 <Button

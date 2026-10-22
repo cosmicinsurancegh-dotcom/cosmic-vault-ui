@@ -39,6 +39,12 @@ export const STATUS_LABELS: Record<string, string> = {
   low: "Low",
   normal: "Normal",
   high: "High",
+  preparing: "Preparing",
+  in_transit: "In transit",
+  customs_hold: "Held at customs",
+  out_for_delivery: "Out for delivery",
+  delivered: "Delivered",
+  delayed: "Delayed",
 };
 
 export function statusLabel(value?: string) {
@@ -47,20 +53,26 @@ export function statusLabel(value?: string) {
 }
 
 const TONES: Record<string, string> = {
-  active: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  succeeded: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  active:
+    "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  succeeded:
+    "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
   paid: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  approved: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  verified: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  approved:
+    "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  verified:
+    "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
   sent: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  quoted: "border-primary/25 bg-primary/10 text-primary dark:text-electric-soft",
+  quoted:
+    "border-primary/25 bg-primary/10 text-primary dark:text-electric-soft",
   under_assessment:
     "border-primary/25 bg-primary/10 text-primary dark:text-electric-soft",
   submitted: "border-halo/50 bg-halo/20 text-[#7a5a1c] dark:text-halo",
   under_review: "border-halo/50 bg-halo/20 text-[#7a5a1c] dark:text-halo",
   additional_info_required:
     "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  pending: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  pending:
+    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
   payment_pending:
     "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
   renewal_pending:
@@ -77,6 +89,17 @@ const TONES: Record<string, string> = {
   closed: "border-line bg-muted text-muted-foreground",
   draft: "border-line bg-muted text-muted-foreground",
   refunded: "border-line bg-muted text-muted-foreground",
+  preparing: "border-halo/50 bg-halo/20 text-[#7a5a1c] dark:text-halo",
+  in_transit:
+    "border-primary/25 bg-primary/10 text-primary dark:text-electric-soft",
+  customs_hold:
+    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  out_for_delivery:
+    "border-primary/25 bg-primary/10 text-primary dark:text-electric-soft",
+  delivered:
+    "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  delayed:
+    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
 };
 
 export function toneForStatus(value?: string) {

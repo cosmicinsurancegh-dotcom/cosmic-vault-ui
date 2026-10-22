@@ -35,10 +35,11 @@ Timestamps are stored in UTC milliseconds and rendered with the user's locale.
 | ----------------------------------------------------------------------- | ------------------------------------------- |
 | `/dashboard`                                                            | Any signed-in user (role-specific overview) |
 | `/dashboard/catalogue`, `quotes`, `applications`, `policies`, `profile` | Customer + broker                           |
+| `/dashboard/minerals`                                                   | Customer + broker (assigned minerals only)  |
 | `/dashboard/claims`                                                     | Customer only                               |
 | `/dashboard/payments`, `documents`, `support`                           | Any signed-in user (scoped rows)            |
 | `/dashboard/broker/customers`, `broker/reports`                         | Broker only                                 |
-| `/dashboard/admin/*`                                                    | Staff, additionally gated per permission    |
+| `/dashboard/admin/*`, including `admin/minerals`                        | Staff, additionally gated per permission    |
 
 `RequireAuth` preserves the requested path in `/auth?returnTo=…`; staff routes are
 wrapped in `StaffOnly` + `RequirePermission`, broker routes in `RequireRole`.
@@ -77,7 +78,8 @@ super admin only while no super admin exists. The dashboard shows a one-time
 draft/published/archived), `quotations`, `applications`, `applicationEvents`,
 `policies`, `policyRequests`, `claims`, `claimEvents`, `transactions`,
 `documents`, `notifications`, `tickets`, `ticketMessages`, `auditEvents`,
-`settings`, plus Convex Auth tables.
+`settings`, `minerals`, `mineralPolicies`, `shipments`, `shipmentEvents`, plus
+Convex Auth tables.
 
 Policies and quotations snapshot the product version, wording version, premium,
 currency, coverage, excess and exclusions that applied when they were created, so
@@ -123,6 +125,23 @@ distinct states; `claims.close` only accepts paid or declined claims.
 idempotency key; `payments.confirm` is staff-only, records a provider reference and
 marks `providerVerified`. Refunds require `refunds.approve`, are idempotent per
 transaction, and cannot exceed the original amount. No card data is stored.
+
+**Minerals and shipments** - `minerals.create` (permission `policies.manage`)
+records a mineral, its policy and its first shipment in one transaction, then
+assigns it to a member: either an existing customer/broker account or a new one
+created from a name and email address. The invited `users` row carries
+`emailVerificationTime`, so Convex Auth links it to the account created when the
+owner signs in with an emailed one-time code instead of creating a duplicate.
+A branded assignment email goes out immediately.
+
+`minerals.updateShipmentStatus` records a `shipmentEvents` row, audit entry and
+status change, then emails the assigned member through the same notification
+pipeline. The email is a designed HTML template (`lib/shipmentEmail`) - navy
+header, status banner, four-step delivery tracker, shipment/policy details and a
+CTA into `/dashboard/minerals` - with a plain-text fallback. Delivery state is
+recorded on the notification exactly like every other email, so staff can retry
+failures. Members see their minerals, policy and shipment timeline at
+`/dashboard/minerals`; the staff register is `/dashboard/admin/minerals`.
 
 **Brokers** - broker accounts are created/updated by staff; assignments are
 explicit (`customers.assignBroker`) and revocable. Brokers see only assigned

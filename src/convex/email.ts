@@ -16,6 +16,8 @@ export const deliver = internalAction({
     to: v.string(),
     subject: v.string(),
     text: v.string(),
+    /** A designed template. Falls back to the text-to-HTML wrapper. */
+    html: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const key = process.env.VLY_INTEGRATION_KEY;
@@ -34,10 +36,12 @@ export const deliver = internalAction({
         to: args.to,
         subject: args.subject,
         text: args.text,
-        html: `<div style="font-family:ui-sans-serif,system-ui,sans-serif;line-height:1.6;color:#0d1730">${args.text
-          .split("\n\n")
-          .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br/>")}</p>`)
-          .join("")}</div>`,
+        html:
+          args.html ??
+          `<div style="font-family:ui-sans-serif,system-ui,sans-serif;line-height:1.6;color:#0d1730">${args.text
+            .split("\n\n")
+            .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br/>")}</p>`)
+            .join("")}</div>`,
       });
 
       if (!result.success) {
@@ -58,7 +62,8 @@ export const deliver = internalAction({
       await ctx.runMutation(internal.notifications.recordEmailResult, {
         notificationId: args.notificationId,
         status: "failed",
-        error: error instanceof Error ? error.message : "Unknown delivery error.",
+        error:
+          error instanceof Error ? error.message : "Unknown delivery error.",
       });
       return { delivered: false, reason: "exception" };
     }

@@ -110,6 +110,38 @@ export const ticketStatusValidator = v.union(
   v.literal("closed"),
 );
 
+/** Mineral assets, their cover and the shipments that move them. */
+export const mineralStatusValidator = v.union(
+  v.literal("active"),
+  v.literal("archived"),
+);
+
+export const mineralCoverageValidator = v.union(
+  v.literal("all_risk"),
+  v.literal("cargo_transit"),
+  v.literal("storage"),
+  v.literal("liability"),
+);
+export type MineralCoverage = Infer<typeof mineralCoverageValidator>;
+
+export const mineralPolicyStatusValidator = v.union(
+  v.literal("draft"),
+  v.literal("active"),
+  v.literal("expired"),
+  v.literal("cancelled"),
+);
+
+export const shipmentStatusValidator = v.union(
+  v.literal("preparing"),
+  v.literal("in_transit"),
+  v.literal("customs_hold"),
+  v.literal("out_for_delivery"),
+  v.literal("delivered"),
+  v.literal("delayed"),
+  v.literal("cancelled"),
+);
+export type ShipmentStatus = Infer<typeof shipmentStatusValidator>;
+
 // Legacy coverage + quote validators used by the landing-page lead form.
 export const coverageValidator = v.union(
   v.literal("health"),
@@ -778,6 +810,92 @@ const schema = defineSchema(
       internal: v.boolean(),
       createdAt: v.number(),
     }).index("by_ticket", ["ticketId"]),
+
+    /** Mineral assets ------------------------------------------------------ */
+    minerals: defineTable({
+      reference: v.string(),
+      name: v.string(),
+      category: v.string(),
+      description: v.optional(v.string()),
+      quantity: v.number(),
+      unit: v.string(),
+      declaredValue: v.number(), // minor units
+      currency: v.string(),
+      status: mineralStatusValidator,
+      assignedUserId: v.optional(v.id("users")),
+      assignedAt: v.optional(v.number()),
+      assignedBy: v.optional(v.id("users")),
+      createdBy: v.id("users"),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+      ...demoFields,
+    })
+      .index("by_reference", ["reference"])
+      .index("by_assigned", ["assignedUserId"])
+      .index("by_status", ["status"]),
+
+    mineralPolicies: defineTable({
+      mineralId: v.id("minerals"),
+      policyNumber: v.string(),
+      provider: v.string(),
+      coverage: mineralCoverageValidator,
+      coverageLimit: v.number(), // minor units
+      premium: v.number(), // minor units
+      currency: v.string(),
+      startDate: v.number(),
+      endDate: v.number(),
+      status: mineralPolicyStatusValidator,
+      notes: v.optional(v.string()),
+      createdBy: v.id("users"),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+      ...demoFields,
+    })
+      .index("by_mineral", ["mineralId"])
+      .index("by_number", ["policyNumber"])
+      .index("by_status", ["status"]),
+
+    shipments: defineTable({
+      mineralId: v.id("minerals"),
+      reference: v.string(),
+      carrier: v.string(),
+      trackingNumber: v.optional(v.string()),
+      origin: v.string(),
+      destination: v.string(),
+      departureAt: v.optional(v.number()),
+      estimatedArrivalAt: v.optional(v.number()),
+      status: shipmentStatusValidator,
+      currentLocation: v.optional(v.string()),
+      notes: v.optional(v.string()),
+      // Denormalised so a member's shipments can be read without fanning out
+      // over every mineral record on each dashboard load.
+      assignedUserId: v.optional(v.id("users")),
+      createdBy: v.id("users"),
+      updatedBy: v.optional(v.id("users")),
+      lastStatusAt: v.number(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+      ...demoFields,
+    })
+      .index("by_mineral", ["mineralId"])
+      .index("by_assigned", ["assignedUserId"])
+      .index("by_reference", ["reference"])
+      .index("by_status", ["status"]),
+
+    shipmentEvents: defineTable({
+      shipmentId: v.id("shipments"),
+      mineralId: v.id("minerals"),
+      status: shipmentStatusValidator,
+      fromStatus: v.optional(shipmentStatusValidator),
+      location: v.optional(v.string()),
+      note: v.optional(v.string()),
+      actorId: v.id("users"),
+      actorRole: v.string(),
+      createdAt: v.number(),
+      ...demoFields,
+    })
+      .index("by_shipment", ["shipmentId"])
+      .index("by_mineral", ["mineralId"]),
 
     /** Audit --------------------------------------------------------------- */
     auditLogs: defineTable({
