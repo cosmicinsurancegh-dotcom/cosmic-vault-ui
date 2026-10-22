@@ -1,0 +1,117 @@
+name: Deploy Convex functions
+
+# Branch gating:
+#   push to `dev`  -> avid-camel-675
+#   push to `main` -> descriptive-ferret-801
+# A manual run can pick either target, but prod only ever deploys from `main`.
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - "src/convex/**"
+      - "convex.json"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/convex-deploy.yml"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deployment to push functions to
+        type: choice
+        required: true
+        options: [dev, prod]
+
+permissions:
+  contents: read
+
+# One deploy at a time per deployment, so two pushes cannot interleave.
+concurrency:
+  group: convex-${{ github.event_name == 'workflow_dispatch' && inputs.target || (github.ref == 'refs/heads/main' && 'prod' || 'dev') }}
+  cancel-in-progress: false
+
+jobs:
+  dev:
+    name: Deploy functions to dev (avid-camel-675)
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
+      (github.event_name == 'workflow_dispatch' && inputs.target == 'dev')
+    runs-on: ubuntu-latest
+    environment: convex-dev
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Catches an empty secret and the worst copy/paste mistake: the prod key
+      # sitting in the dev secret, which would silently deploy production.
+      - name: Verify deploy key scope
+        env:
+          KEY: ${{ secrets.CONVEX_DEPLOY_KEY_DEV }}
+          EXPECTED: dev
+        run: |
+          set -euo pipefail
+          if [ -z "${KEY}" ]; then
+            echo "::error::CONVEX_DEPLOY_KEY_DEV is not set. Add it as a repository or convex-dev environment secret."
+            exit 1
+          fi
+          case "${KEY}" in
+            "${EXPECTED}":*) echo "Key scope: ${EXPECTED}" ;;
+            *)
+              echo "::error::CONVEX_DEPLOY_KEY_DEV is scoped to '${KEY%%:*}', not '${EXPECTED}'. Refusing to deploy."
+              exit 1
+              ;;
+          esac
+
+      # The key alone selects the deployment; no CONVEX_DEPLOYMENT is needed.
+      - name: Deploy functions
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY_DEV }}
+        run: bunx convex deploy --yes
+
+  prod:
+    name: Deploy functions to prod (descriptive-ferret-801)
+    # Dispatch runs from whichever branch was selected, so prod also requires main.
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.target == 'prod' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    environment: convex-prod
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify deploy key scope
+        env:
+          KEY: ${{ secrets.CONVEX_DEPLOY_KEY_PROD }}
+          EXPECTED: prod
+        run: |
+          set -euo pipefail
+          if [ -z "${KEY}" ]; then
+            echo "::error::CONVEX_DEPLOY_KEY_PROD is not set. Add it as a repository or convex-prod environment secret."
+            exit 1
+          fi
+          case "${KEY}" in
+            "${EXPECTED}":*) echo "Key scope: ${EXPECTED}" ;;
+            *)
+              echo "::error::CONVEX_DEPLOY_KEY_PROD is scoped to '${KEY%%:*}', not '${EXPECTED}'. Refusing to deploy."
+              exit 1
+              ;;
+          esac
+
+      - name: Deploy functions
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY_PROD }}
+        run: bunx convex deploy --yes
