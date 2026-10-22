@@ -86,8 +86,14 @@ current before a deploy.
    `confirm: deploy-prod`.
 3. Check the run: `Check production confirmation` and `Deploy functions` must
    both be green. A dispatch without the phrase fails there by design.
-4. Confirm production answers:
-   `curl -s https://descriptive-ferret-801.convex.cloud/version`.
+4. Confirm production is serving the code you pushed, not just answering.
+   List what is deployed and grep for a function this release added or renamed:
+   `bunx convex function-spec --prod | grep -q 'setup.js:seedDeployment' && echo live`.
+   Then execute against the deployment, which proves the runtime works and not
+   only that a host replies:
+   `bunx convex run --prod --inline-query 'return (await ctx.db.query("products").take(1)).length'`.
+   Do not use `/version` for this - it reports the Convex backend build, which
+   does not change when your functions do.
 5. Open the live site and sign in once - a green deploy only proves the
    functions uploaded, not that the client resolves them.
 
