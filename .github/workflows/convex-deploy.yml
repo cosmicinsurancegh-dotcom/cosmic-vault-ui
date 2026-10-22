@@ -1,12 +1,14 @@
 name: Deploy Convex functions
 
-# Branch gating:
-#   push to `dev`  -> avid-camel-675
-#   push to `main` -> descriptive-ferret-801
-# A manual run can pick either target, but prod only ever deploys from `main`.
+# Gating:
+#   push to `dev`    -> avid-camel-675
+#   manual, dev      -> avid-camel-675
+#   manual, prod     -> descriptive-ferret-801, only from `main` and only when
+#                       `confirm` is typed as deploy-prod.
+# No push ever reaches production: a merge to `main` is not a deploy.
 on:
   push:
-    branches: [dev, main]
+    branches: [dev]
     paths:
       - "src/convex/**"
       - "convex.json"
@@ -20,6 +22,10 @@ on:
         type: choice
         required: true
         options: [dev, prod]
+      confirm:
+        description: Type deploy-prod to confirm a production deploy (required for target=prod)
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -76,14 +82,28 @@ jobs:
 
   prod:
     name: Deploy functions to prod (descriptive-ferret-801)
-    # Dispatch runs from whichever branch was selected, so prod also requires main.
+    # Dispatch runs from whichever branch was selected, so prod also requires
+    # main. Pushes never qualify.
     if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_dispatch' && inputs.target == 'prod' && github.ref == 'refs/heads/main')
+      github.event_name == 'workflow_dispatch' &&
+      inputs.target == 'prod' &&
+      github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: convex-prod
     timeout-minutes: 10
     steps:
+      # A dispatch that forgets the phrase fails loudly here instead of quietly
+      # skipping, so a half-filled form can never look like a deploy.
+      - name: Check production confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          set -euo pipefail
+          if [ "${CONFIRM}" != "deploy-prod" ]; then
+            echo "::error::Production deploys require confirm=deploy-prod. Re-run from main with target=prod and type that phrase."
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
 
       - uses: oven-sh/setup-bun@v2
