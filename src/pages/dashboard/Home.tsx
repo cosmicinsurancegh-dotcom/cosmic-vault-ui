@@ -24,7 +24,12 @@ import { useMutation, useQuery } from "convex/react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { formatMoney, formatMoneyList, formatDate, daysUntil } from "@/lib/format";
-import { isStaff, normalizeRole } from "@/lib/permissions";
+import {
+  STAFF_PERMISSIONS,
+  can,
+  isStaff,
+  normalizeRole,
+} from "@/lib/permissions";
 import {
   ArrowUpRight,
   BadgeCheck,
@@ -44,6 +49,11 @@ export default function Home() {
   const { actor: vaultActor } = useVaultActor();
   const role = normalizeRole(user?.role);
   const staff = isStaff(role);
+  const canManageMinerals = can(
+    user?.role,
+    user?.permissions,
+    STAFF_PERMISSIONS.POLICIES_MANAGE,
+  );
   /* A guest can preview the vault from the operations side. Its home belongs to
      the vault, not to the insurance-wide Command Centre, which remains for
      signed-in staff with real permissions. */
@@ -80,6 +90,7 @@ export default function Home() {
         months={months}
         onMonthsChange={setMonths}
         userName={user?.name}
+        canManageMinerals={canManageMinerals}
       />
     );
   }

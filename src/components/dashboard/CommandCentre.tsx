@@ -121,11 +121,15 @@ export function CommandCentre({
   months,
   onMonthsChange,
   userName,
+  canManageMinerals,
 }: {
   board: Board;
   months: number;
   onMonthsChange: (months: number) => void;
   userName?: string;
+  /* Adding a mineral is the staff console's most used write, so it belongs on
+     the dashboard itself rather than only behind the sidebar's Minerals link. */
+  canManageMinerals?: boolean;
 }) {
   const navigate = useNavigate();
   const reduceMotion = useReducedMotion();
@@ -305,6 +309,15 @@ export function CommandCentre({
               );
             })}
           </div>
+          {canManageMinerals && (
+            <Button
+              asChild
+              variant="outline"
+              className="h-10 rounded-[4px] bg-card px-4"
+            >
+              <Link to="/dashboard/admin/minerals">Add mineral</Link>
+            </Button>
+          )}
           <Button asChild className="h-10 rounded-[4px] px-4">
             <Link to={copy.primaryHref}>
               {copy.primaryLabel}
