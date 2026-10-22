@@ -401,7 +401,10 @@ const schema = defineSchema(
       effectiveFrom: v.number(),
       renewalNoticeDays: v.number(),
       cancellationNoticeDays: v.number(),
-      createdBy: v.id("users"),
+      // Optional because the starter catalogue is seeded by an operator before
+      // any staff account exists (`setup.seedDeployment`); products created in
+      // the admin UI still record who made them.
+      createdBy: v.optional(v.id("users")),
       publishedBy: v.optional(v.id("users")),
       publishedAt: v.optional(v.number()),
       createdAt: v.number(),

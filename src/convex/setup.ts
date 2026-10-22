@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import {
@@ -487,7 +487,7 @@ export async function ensureReferenceData(ctx: MutationCtx) {
   await ensureSettings(ctx);
 }
 
-async function seedCatalogue(ctx: MutationCtx, actorId: Id<"users">) {
+async function seedCatalogue(ctx: MutationCtx, actorId?: Id<"users">) {
   const now = Date.now();
   let created = 0;
   for (const product of SEED_PRODUCTS) {
@@ -624,6 +624,38 @@ export const seedStarterCatalogue = mutation({
       after: { created },
     });
     return { created };
+  },
+});
+
+/**
+ * Operator seeding for a fresh deployment, run with `bunx convex run`.
+ *
+ * The admin UI can only seed the catalogue once someone has signed in and
+ * holds `products.manage`, and a brand-new deployment has no accounts at all,
+ * so day-one products have to come from an operator. Being internal, no
+ * browser can reach it, and it is idempotent: rows that already exist are left
+ * alone, so a second run is a no-op.
+ */
+export const seedDeployment = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    await ensureReferenceData(ctx);
+    const created = await seedCatalogue(ctx);
+    const [products, countries, currencies, categories] = await Promise.all([
+      ctx.db.query("products").take(300),
+      ctx.db.query("countries").take(200),
+      ctx.db.query("currencies").take(50),
+      ctx.db.query("categories").take(50),
+    ]);
+    return {
+      productsCreated: created,
+      productsTotal: products.length,
+      productsPublished: products.filter((item) => item.status === "published")
+        .length,
+      countries: countries.length,
+      currencies: currencies.length,
+      categories: categories.length,
+    };
   },
 });
 
