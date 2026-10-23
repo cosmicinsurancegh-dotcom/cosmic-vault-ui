@@ -194,7 +194,7 @@ export default function CoverDetail({ slug }: { slug: string }) {
         ]}
       />
 
-      <div className="mx-auto -mt-6 max-w-[1180px] px-5 pb-14 sm:px-8">
+      <div className="mx-auto -mt-6 max-w-[1240px] px-5 pb-14">
         <Link
           to="/cover"
           className="group inline-flex items-center gap-2 text-[0.82rem] font-medium text-ink/60 transition-colors hover:text-primary"

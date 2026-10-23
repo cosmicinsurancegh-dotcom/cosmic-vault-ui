@@ -151,7 +151,7 @@ export function HeroBroadsheet({ onQuote }: HeroVariantProps) {
         className="pointer-events-none absolute -right-40 top-0 -z-10 size-[36rem] rounded-full bg-primary/[0.06] blur-3xl"
       />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[1320px] flex-1 flex-col px-5 sm:px-8 lg:px-10">
+      <div className="relative z-10 mx-auto flex w-full max-w-[1240px] flex-1 flex-col px-5">
         <div className="grid flex-1 items-center gap-7 py-5 sm:gap-12 sm:py-12 lg:grid-cols-12 lg:gap-8">
           {/* Type column */}
           <div className="lg:col-span-7 lg:pr-6">

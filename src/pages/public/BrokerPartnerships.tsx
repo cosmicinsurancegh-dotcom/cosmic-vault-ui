@@ -200,7 +200,7 @@ export default function BrokerPartnerships() {
         ]}
       />
 
-      <div className="mx-auto -mt-4 max-w-[1180px] px-5 pb-14 sm:px-8">
+      <div className="mx-auto -mt-4 max-w-[1240px] px-5 pb-14">
         <p className="flex items-center gap-2 text-[0.75rem] text-muted-foreground">
           <Lock className="size-3.5 text-electric" />
           Assignment, consent and permission checks are enforced by the backend,

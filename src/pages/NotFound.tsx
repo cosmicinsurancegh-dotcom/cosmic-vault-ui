@@ -255,7 +255,7 @@ export default function NotFound() {
           className="pointer-events-none absolute left-[-19rem] top-[-19rem] hidden size-[38rem] rounded-full bg-[radial-gradient(circle,rgba(76,125,255,0.16),transparent_64%)] lg:block"
         />
 
-        <div className="relative mx-auto max-w-[1240px] px-5 pb-14 pt-8 sm:px-8 sm:pb-20 sm:pt-10">
+        <div className="relative mx-auto max-w-[1240px] px-5 pb-14 pt-8 sm:pb-20 sm:pt-10">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4 text-[0.58rem] font-semibold uppercase tracking-[0.26em] text-bone/45">
             <span className="flex items-center gap-2.5">
               <span className="relative flex size-1.5">
@@ -394,7 +394,7 @@ export default function NotFound() {
 
       {/* Search: a real way out, rather than a decorative suggestion grid. */}
       <section className="relative border-t border-white/10 bg-[#071227]/80">
-        <div className="mx-auto max-w-[1240px] px-5 py-12 sm:px-8 sm:py-16">
+        <div className="mx-auto max-w-[1240px] px-5 py-12 sm:py-16">
           <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-end lg:gap-12">
             <div>
               <p className="text-[0.6rem] font-semibold uppercase tracking-[0.28em] text-bone/45">

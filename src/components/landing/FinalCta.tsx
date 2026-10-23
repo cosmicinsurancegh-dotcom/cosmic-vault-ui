@@ -9,7 +9,7 @@ import { SectionLabel } from "./SectionLabel";
 export function FinalCta({ onReview }: { onReview: () => void }) {
   return (
     <section id="review" className="mt-24 scroll-mt-24 sm:mt-32">
-      <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
+      <div className="mx-auto max-w-[1240px] px-5">
         <Reveal y={30}>
           <div className="group relative overflow-hidden rounded-[4px] border border-line bg-card shadow-[0_30px_70px_-52px_rgba(10,18,36,0.4)]">
             <div

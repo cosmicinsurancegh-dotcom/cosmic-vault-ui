@@ -29,8 +29,8 @@ const actionStyles: Record<ActionVariant, string> = {
 
 const actionChip: Record<ActionVariant, string> = {
   primary: "bg-primary-foreground/20 text-primary-foreground",
-  outline: "bg-foreground text-background",
-  light: "bg-foreground text-background",
+  outline: "bg-primary text-primary-foreground",
+  light: "bg-primary text-primary-foreground",
 };
 
 export function SiteButton({
@@ -135,7 +135,7 @@ export function PageHero({
         <span className="absolute left-1/2 top-0 size-1.5 -translate-x-1/2 rounded-[4px] bg-electric/60" />
       </div>
 
-      <div className="relative mx-auto max-w-[1180px] px-5 pb-12 pt-10 sm:px-8 sm:pb-16 sm:pt-14">
+      <div className="relative mx-auto max-w-[1240px] px-5 pb-12 pt-10 sm:pb-16 sm:pt-14">
         <Reveal y={12}>
           <p className="flex items-center gap-3 text-[0.64rem] font-semibold uppercase tracking-[0.28em] text-ink/60">
             <span className="h-px w-7 bg-electric/60" />
@@ -261,7 +261,7 @@ export function PageSection({
         className,
       )}
     >
-      <div className="relative mx-auto max-w-[1180px] px-5 sm:px-8">
+      <div className="relative mx-auto max-w-[1240px] px-5">
         {(eyebrow || title || intro) && (
           <div className="grid gap-5 lg:grid-cols-12 lg:items-end">
             <div className="lg:col-span-7">
@@ -440,7 +440,7 @@ export function CtaPanel({
   secondary?: { label: string; to: string };
 }) {
   return (
-    <div className="mx-auto max-w-[1180px] px-5 pb-4 sm:px-8">
+    <div className="mx-auto max-w-[1240px] px-5 pb-4">
       <div className="relative overflow-hidden rounded-[4px] border border-line bg-card px-6 py-12 text-ink shadow-[0_30px_70px_-52px_rgba(10,18,36,0.4)] sm:px-10 sm:py-14">
         <div
           aria-hidden="true"
@@ -490,7 +490,7 @@ export function RelatedLinks({
   links: { label: string; href: string; description?: string }[];
 }) {
   return (
-    <div className="mx-auto max-w-[1180px] px-5 py-12 sm:px-8 sm:py-16">
+    <div className="mx-auto max-w-[1240px] px-5 py-12 sm:py-16">
       <p className="text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-ink/60">
         {title}
       </p>

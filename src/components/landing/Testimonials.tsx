@@ -51,7 +51,7 @@ export function Testimonials() {
 
   return (
     <section id="evidence" className="mt-24 scroll-mt-24 sm:mt-32">
-      <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
+      <div className="mx-auto max-w-[1240px] px-5">
         <div className="grid gap-6 lg:grid-cols-12 lg:items-end">
           <Reveal className="lg:col-span-7">
             <SectionLabel className="text-ink/65">What the record proves</SectionLabel>

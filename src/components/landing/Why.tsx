@@ -45,7 +45,7 @@ export function Why() {
 
   return (
     <section id="standards" className="relative mt-24 scroll-mt-24 sm:mt-32">
-      <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
+      <div className="mx-auto max-w-[1240px] px-5">
         <Reveal className="mx-auto max-w-2xl text-center">
           <p className="text-[0.66rem] font-semibold uppercase tracking-[0.30em] text-ink/65">
             Vault standards

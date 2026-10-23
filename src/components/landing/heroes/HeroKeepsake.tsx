@@ -140,7 +140,7 @@ export function HeroKeepsake({ onQuote }: HeroVariantProps) {
 
       <div className="relative z-10 flex flex-col pt-24 sm:pt-28 lg:min-h-[clamp(36rem,40vw,42rem)] lg:flex-row lg:items-center lg:pt-0">
         <div className="w-full px-5 pb-10 sm:px-8 sm:pb-12 lg:px-10 lg:pb-0">
-          <div className="mx-auto w-full max-w-[1320px]">
+          <div className="mx-auto w-full max-w-[1240px]">
             <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:gap-10 lg:pb-16 lg:pt-28">
               {/* Margin rail: the reference's vertical pair of arrows. */}
               <div className="hidden shrink-0 flex-col gap-3 lg:flex">

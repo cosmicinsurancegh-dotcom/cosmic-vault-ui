@@ -31,7 +31,7 @@ const evidence = [
 export function Story() {
   return (
     <section id="custody" className="relative mt-24 scroll-mt-28 sm:mt-32">
-      <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
+      <div className="mx-auto max-w-[1240px] px-5">
         <Reveal>
           <SectionLabel className="text-ink/65">Why one record</SectionLabel>
         </Reveal>

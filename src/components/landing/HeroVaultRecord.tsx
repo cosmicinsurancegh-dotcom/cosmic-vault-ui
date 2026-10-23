@@ -89,7 +89,7 @@ export function HeroVaultRecord({ onReview }: { onReview: () => void }) {
         ))}
       </div>
 
-      <div className="relative mx-auto max-w-[1240px] px-5 pb-14 pt-28 sm:px-8 sm:pt-32 lg:pb-20 lg:pt-36">
+      <div className="relative mx-auto max-w-[1240px] px-5 pb-14 pt-28 sm:pt-32 lg:pb-20 lg:pt-36">
         <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
           <div className="max-w-[40rem]">
             <motion.div

@@ -18,7 +18,7 @@ const CLASSES: { label: string; href: string; image: VaultImage }[] = [
 export function Footer() {
   return (
     <footer className="mt-20 border-t border-line bg-muted text-ink/80 sm:mt-28">
-      <div className="mx-auto max-w-[1180px] px-5 pb-10 pt-14 sm:px-8 sm:pt-16">
+      <div className="mx-auto max-w-[1240px] px-5 pb-10 pt-14 sm:pt-16">
         <div className="grid gap-10 lg:grid-cols-12 lg:gap-8">
           <div className="lg:col-span-4">
             <Brand as="div" className="text-ink" />
@@ -123,7 +123,7 @@ export function Footer() {
         </p>
       </div>
 
-      <div className="mx-auto max-w-[1180px] px-5 pb-10 sm:px-8">
+      <div className="mx-auto max-w-[1240px] px-5 pb-10">
         <div className="flex items-center justify-between gap-4 border-t border-line pt-7">
           <p className="text-[0.6rem] font-semibold uppercase tracking-[0.24em] text-ink/45">
             Inside the vault
@@ -155,7 +155,7 @@ export function Footer() {
       <div className="overflow-hidden border-t border-line">
         <p
           aria-hidden="true"
-          className="mx-auto max-w-[1180px] translate-y-[16%] select-none whitespace-nowrap px-5 text-[clamp(2.1rem,12vw,10rem)] font-semibold leading-[0.8] tracking-[-0.06em] text-ink/[0.06] sm:px-8"
+          className="mx-auto max-w-[1240px] translate-y-[16%] select-none whitespace-nowrap px-5 text-[clamp(2.1rem,12vw,10rem)] font-semibold leading-[0.8] tracking-[-0.06em] text-ink/[0.06]"
         >
           COSMIC VAULT
         </p>

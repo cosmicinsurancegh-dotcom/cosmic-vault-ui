@@ -130,6 +130,113 @@ export const NAV_SECTIONS: NavSection[] = [
     },
   },
   {
+    id: "cover",
+    label: "Cover",
+    href: "/cover",
+    match: ["/cover"],
+    groups: [
+      {
+        title: "Object insurance",
+        links: [
+          {
+            label: "All cover",
+            href: "/cover",
+            description: "Every policy we write",
+            icon: ShieldCheck,
+          },
+          {
+            label: "Understanding cover",
+            href: "/cover/understanding",
+            description: "What a named policy means",
+            icon: BookOpen,
+          },
+          {
+            label: "Limits and exclusions",
+            href: "/cover/limits-and-exclusions",
+            description: "What is and isn't covered",
+            icon: Scale,
+          },
+        ],
+      },
+      {
+        title: "Get covered",
+        links: [
+          {
+            label: "Get a quote",
+            href: "/quote",
+            description: "Custody and cover, priced together",
+            icon: FileCheck2,
+          },
+          {
+            label: "How it works",
+            href: "/how-it-works",
+            description: "Apply, policy and renewals",
+            icon: Compass,
+          },
+        ],
+      },
+    ],
+    feature: {
+      eyebrow: "Named policy",
+      title: "Every object carries its own cover.",
+      body: "Cover is underwritten by hand against the appraisal, with the reasons recorded on the same record as the object.",
+      image: MINERAL_IMAGES.sapphire,
+      primary: { label: "Get a quote", href: "/quote" },
+      secondary: { label: "Limits and exclusions", href: "/cover/limits-and-exclusions" },
+    },
+  },
+  {
+    id: "claims",
+    label: "Claims",
+    href: "/claims",
+    match: ["/claims"],
+    groups: [
+      {
+        title: "Claims",
+        links: [
+          {
+            label: "Claims overview",
+            href: "/claims",
+            description: "How a claim is handled",
+            icon: LifeBuoy,
+          },
+          {
+            label: "Make a claim",
+            href: "/claims/make-a-claim",
+            description: "Start in a few minutes",
+            icon: ClipboardList,
+          },
+          {
+            label: "Track a claim",
+            href: "/claims/track",
+            description: "Status from your member record",
+            icon: ScanLine,
+          },
+          {
+            label: "Policy documents",
+            href: "/claims/policy-documents",
+            description: "Schedules and certificates",
+            icon: FolderOpen,
+          },
+          {
+            label: "Claim payments",
+            href: "/claims/payments",
+            description: "When and how you are paid",
+            icon: Landmark,
+          },
+        ],
+      },
+    ],
+    feature: {
+      eyebrow: "Fair process",
+      title: "A claim is read by a person, not a queue.",
+      body: "Every claim is reviewed against the object's own record, with a written reason for the outcome.",
+      image: MINERAL_IMAGES.ruby,
+      primary: { label: "Make a claim", href: "/claims/make-a-claim" },
+      secondary: { label: "Complaints procedure", href: "/legal/complaints" },
+    },
+  },
+  {
     id: "members",
     label: "Members",
     href: "/dashboard",

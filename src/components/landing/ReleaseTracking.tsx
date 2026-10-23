@@ -57,7 +57,7 @@ const FACTS = [
 export function ReleaseTracking() {
   return (
     <section id="tracking" className="mt-24 scroll-mt-24 bg-ice py-20 sm:mt-32 sm:py-24">
-      <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
+      <div className="mx-auto max-w-[1240px] px-5">
         <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
           <Reveal className="lg:col-span-7">
             <SectionLabel className="text-ink/60">Release & tracking</SectionLabel>

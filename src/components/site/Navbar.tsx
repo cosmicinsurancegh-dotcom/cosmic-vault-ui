@@ -72,7 +72,7 @@ function MegaPanel({
       transition={{ duration: reduceMotion ? 0 : 0.16, ease: "easeOut" }}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
-      className="absolute inset-x-0 top-full z-50 pt-2"
+      className="absolute inset-x-5 top-full z-50 pt-2"
     >
       <div className="overflow-hidden rounded-[4px] border border-line bg-popover/98 shadow-[0_28px_80px_-36px_rgba(8,18,39,0.5)] backdrop-blur-xl">
         <div className="flex flex-col gap-8 p-5 sm:p-6 lg:flex-row">
@@ -286,6 +286,8 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
   useEffect(() => () => cancelClose(), []);
 
 
+  /* Over the blue hero, before scrolling, the bar reads light on blue. */
+  const light = overlay && !scrolled;
   const signInHref = `/auth?returnTo=${encodeURIComponent("/dashboard")}`;
   const activeSection = NAV_SECTIONS.find((section) =>
     sectionIsActive(section, location.pathname),
@@ -307,17 +309,20 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
 
       <div
         ref={containerRef}
-        className="relative mx-auto max-w-[1240px] px-3 pt-3 sm:px-5 sm:pt-4"
+        className="relative mx-auto max-w-[1240px] px-5 pt-3 sm:pt-4"
       >
         <div
           className={cn(
-            "relative flex items-center justify-between gap-3 rounded-[4px] border border-ink/10 px-3 py-2 backdrop-blur-xl transition-[background-color,border-color,box-shadow] duration-300 sm:px-4",
+            "relative flex items-center justify-between gap-3 rounded-[4px] border px-3 py-2 backdrop-blur-xl transition-[background-color,border-color,box-shadow] duration-300 sm:px-4",
+            light
+              ? "border-white/20 bg-white/10 text-white"
+              : "border-ink/10",
             scrolled
               ? "bg-background/92 shadow-[0_18px_44px_-34px_rgba(10,18,36,0.35)]"
-              : "bg-background/72",
+              : !light && "bg-background/72",
           )}
         >
-          <Brand compact className="pl-1.5 text-ink" />
+          <Brand compact className={cn("pl-1.5", light ? "text-white" : "text-ink")} />
 
           <nav aria-label="Primary" className="hidden items-center gap-0.5 lg:flex">
             {NAV_SECTIONS.map((section) => {
@@ -349,9 +354,13 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
                   }}
                   className={cn(
                     "inline-flex items-center gap-1 rounded-[4px] px-3 py-2 text-[0.82rem] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background xl:px-3.5",
-                    isOpen || isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-ink/65 hover:bg-primary/8 hover:text-primary",
+                    light
+                      ? isOpen || isActive
+                        ? "bg-white/15 text-white"
+                        : "text-white/80 hover:bg-white/10 hover:text-white"
+                      : isOpen || isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-ink/65 hover:bg-primary/8 hover:text-primary",
                   )}
                 >
                   {section.label}
@@ -368,20 +377,25 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
 
           <div className="flex items-center gap-1.5">
             <ThemeToggle
-              className="hidden size-9 border-transparent hover:border-line lg:grid"
+              className={cn(
+                "hidden size-9 border-transparent hover:border-line lg:grid",
+                light && "text-white hover:bg-white/10",
+              )}
             />
 
             {isAuthenticated ? (
               <Link
                 to="/dashboard"
-                className="hidden rounded-[4px] px-3 py-2 text-[0.82rem] font-medium text-ink/65 transition-colors hover:bg-primary/8 hover:text-primary lg:inline-flex"
+                className={cn("hidden rounded-[4px] px-3 py-2 text-[0.82rem] font-medium transition-colors lg:inline-flex",
+                  light ? "text-white/80 hover:bg-white/10 hover:text-white" : "text-ink/65 hover:bg-primary/8 hover:text-primary")}
               >
                 My vault
               </Link>
             ) : (
               <Link
                 to={signInHref}
-                className="hidden rounded-[4px] px-3 py-2 text-[0.82rem] font-medium text-ink/65 transition-colors hover:bg-primary/8 hover:text-primary lg:inline-flex"
+                className={cn("hidden rounded-[4px] px-3 py-2 text-[0.82rem] font-medium transition-colors lg:inline-flex",
+                  light ? "text-white/80 hover:bg-white/10 hover:text-white" : "text-ink/65 hover:bg-primary/8 hover:text-primary")}
               >
                 Sign in
               </Link>
@@ -389,17 +403,24 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
 
             <Link
               to="/#review"
-              className="group hidden items-center gap-2 rounded-[4px] bg-primary py-2 pl-4 pr-2 text-[0.82rem] font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex"
+              className={cn("group hidden items-center gap-2 rounded-[4px] py-2 pl-4 pr-2 text-[0.82rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex",
+                light
+                  ? "bg-white text-[#2B61EB] hover:bg-white/90"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90",
+              )}
             >
               Request a review
-              <span className="grid size-6 place-items-center rounded-[4px] bg-primary-foreground/20">
+              <span className={cn("grid size-6 place-items-center rounded-[4px]", light ? "bg-[#2B61EB]/15" : "bg-primary-foreground/20")}>
                 <ArrowUpRight className="size-3.5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
               </span>
             </Link>
 
             <Link
               to="/#review"
-              className="inline-flex h-10 items-center rounded-[4px] bg-primary px-4 text-xs font-medium text-primary-foreground sm:hidden"
+              className={cn(
+                "inline-flex h-10 items-center rounded-[4px] px-4 text-xs font-medium sm:hidden",
+                light ? "bg-white text-[#2B61EB]" : "bg-primary text-primary-foreground",
+              )}
             >
               Review
             </Link>
@@ -410,7 +431,9 @@ export function Navbar({ overlay = false }: { overlay?: boolean }) {
                   type="button"
                   aria-label={mobileOpen ? "Close menu" : "Open menu"}
                   aria-expanded={mobileOpen}
-                  className="grid size-10 place-items-center rounded-[4px] border border-ink/12 text-ink transition-colors hover:bg-ink/[0.045] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:hidden"
+                  className={cn("grid size-10 place-items-center rounded-[4px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:hidden",
+                    light ? "border-white/30 text-white hover:bg-white/10" : "border-ink/12 text-ink hover:bg-ink/[0.045]",
+                  )}
                 >
                   {mobileOpen ? <X className="size-4" /> : <Menu className="size-4" />}
                 </button>

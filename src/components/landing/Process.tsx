@@ -35,7 +35,7 @@ const steps = [
 export function Process({ onReview }: { onReview: () => void }) {
   return (
     <section id="process" className="mt-24 scroll-mt-24 sm:mt-32">
-      <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
+      <div className="mx-auto max-w-[1240px] px-5">
         <Reveal y={36}>
           <div className="relative overflow-hidden rounded-[4px] border border-line bg-card px-6 py-12 text-ink shadow-[0_30px_70px_-52px_rgba(10,18,36,0.4)] sm:px-10 sm:py-14">
             <div

@@ -246,7 +246,7 @@ export function HeroSignal({ onQuote }: HeroVariantProps) {
         </motion.div>
       </div>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[1320px] flex-1 flex-col px-5 pt-3 sm:px-8 lg:px-10">
+      <div className="relative z-10 mx-auto flex w-full max-w-[1240px] flex-1 flex-col px-5 pt-3">
         <motion.header
           initial={reduce ? false : { opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
