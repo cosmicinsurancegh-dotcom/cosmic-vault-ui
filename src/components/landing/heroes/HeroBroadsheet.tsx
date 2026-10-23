@@ -1,5 +1,4 @@
-import { COVERS } from "@/lib/covers";
-import { coverImage } from "@/lib/imagery";
+import { MINERAL_IMAGES } from "@/lib/imagery";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
@@ -10,7 +9,6 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router";
 
 export type HeroVariantProps = {
   onQuote: () => void;
@@ -20,76 +18,44 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 const AUTOPLAY_MS = 5200;
 
 const HEADLINE: { text: string; accent?: boolean }[] = [
-  { text: "Cover for" },
-  { text: "the life you've" },
-  { text: "actually built.", accent: true },
+  { text: "Stored in the" },
+  { text: "vault. Covered" },
+  { text: "to the gram.", accent: true },
 ];
 
-const COVER_LABELS: Record<string, string> = {
-  home: "Home & contents",
-  motor: "Motor",
-  travel: "Travel",
-  health: "Health",
-  life: "Life & family",
-  business: "Business",
-};
-
-/* Policy details change with the image, so the stub is a real document for
-   the cover line on screen rather than a generic prop. */
-const POLICY_DETAILS: Record<
-  string,
-  { policy: string; detailLabel: string; detail: string; excess: string }
-> = {
-  home: {
-    policy: "4471",
-    detailLabel: "Property",
-    detail: "14 Alder Lane",
-    excess: "£250",
+/* The four storage classes, in the same order the store section lists them.
+   Each slide is a real certificate stub, so the reference, the recorded
+   measure and the seal belong to the object on screen. */
+const SLIDES = [
+  {
+    label: "Bullion & bars",
+    image: MINERAL_IMAGES.bullion,
+    reference: "CV-A-1042",
+    detailLabel: "Weight",
+    detail: "1,000.0 g · assayed",
   },
-  motor: {
-    policy: "2218",
-    detailLabel: "Vehicle",
-    detail: "Golf GTE · LX24 KFR",
-    excess: "£350",
+  {
+    label: "Diamonds & gemstones",
+    image: MINERAL_IMAGES.diamonds,
+    reference: "CV-D-2287",
+    detailLabel: "Graded",
+    detail: "12 stones · ct certified",
   },
-  travel: {
-    policy: "9084",
-    detailLabel: "Trip",
-    detail: "Worldwide · annual",
-    excess: "£100",
+  {
+    label: "Rare earths",
+    image: MINERAL_IMAGES.rareEarth,
+    reference: "CV-R-0913",
+    detailLabel: "Documented",
+    detail: "Oxide · 99.9% · lot sealed",
   },
-  health: {
-    policy: "3157",
-    detailLabel: "Membership",
-    detail: "Level 3 · 2 adults",
-    excess: "£250",
+  {
+    label: "Collections",
+    image: MINERAL_IMAGES.ruby,
+    reference: "CV-C-4408",
+    detailLabel: "Objects",
+    detail: "9 pieces · one record",
   },
-  life: {
-    policy: "6602",
-    detailLabel: "Benefit",
-    detail: "£450,000 · 25 yrs",
-    excess: "None",
-  },
-  business: {
-    policy: "1793",
-    detailLabel: "Trade",
-    detail: "8 staff · £1.2m",
-    excess: "£500",
-  },
-};
-
-/** The six cover lines, used as the auto-sliding insurance imagery. */
-const SLIDES = COVERS.map((cover) => ({
-  slug: cover.slug,
-  label: COVER_LABELS[cover.slug] ?? cover.navLabel,
-  image: coverImage(cover.slug),
-  ...(POLICY_DETAILS[cover.slug] ?? {
-    policy: "0000",
-    detailLabel: "Detail",
-    detail: "—",
-    excess: "—",
-  }),
-}));
+];
 
 function StubRow({ label, value }: { label: string; value: string }) {
   return (
@@ -103,7 +69,7 @@ function StubRow({ label, value }: { label: string; value: string }) {
 /**
  * Hero study 01 — "The Broadsheet".
  * A printed editorial composition on the Cosmic Vault palette, with an
- * auto-advancing set of the six real cover lines in the photograph slot.
+ * auto-advancing set of the four storage classes in the photograph slot.
  */
 export function HeroBroadsheet({ onQuote }: HeroVariantProps) {
   const reduce = useReducedMotion();
@@ -195,7 +161,7 @@ export function HeroBroadsheet({ onQuote }: HeroVariantProps) {
               transition={{ duration: 0.7, delay: 0.2 }}
               className="text-[0.55rem] font-semibold uppercase tracking-[0.28em] text-primary"
             >
-              Insurance, written by hand
+              Vault custody · object insurance
             </motion.p>
 
             <h1 className="mt-4 max-w-[12ch] text-[clamp(2.55rem,7.1vw,6.4rem)] font-semibold leading-[0.9] tracking-[-0.055em] text-ink sm:mt-5">
@@ -232,12 +198,12 @@ export function HeroBroadsheet({ onQuote }: HeroVariantProps) {
             >
               <div className="max-w-[24rem]">
                 <p className="hidden text-[0.88rem] leading-7 text-muted-foreground sm:block">
-                  Six cover lines, written by underwriters who read the file —
-                  not a form.
+                  Gold, stones and critical minerals — held under dual control,
+                  each on its own named policy.
                 </p>
                 <p className="mt-2.5 flex items-center gap-2 text-[0.58rem] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:mt-3 sm:text-[0.6rem]">
                   <ShieldCheck className="size-3.5 shrink-0 text-primary" />
-                  Reviewed before any cover begins
+                  Cover bound before the drawer closes
                 </p>
               </div>
 
@@ -247,28 +213,28 @@ export function HeroBroadsheet({ onQuote }: HeroVariantProps) {
                   onClick={onQuote}
                   className="group inline-flex items-center gap-3 rounded-[4px] bg-primary py-2 pl-5 pr-2 text-[0.86rem] font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
-                  Request a quote
+                  Request a vault review
                   <span className="grid size-8 place-items-center rounded-[4px] bg-primary-foreground/20 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:rotate-45">
                     <ArrowUpRight className="size-4" strokeWidth={2} />
                   </span>
                 </button>
-                <Link
-                  to="/how-it-works"
+                <a
+                  href="#store"
                   className="link-slide text-[0.72rem] font-medium text-muted-foreground transition-colors hover:text-ink sm:text-[0.74rem]"
                 >
-                  Read how a claim is settled
-                </Link>
+                  See what we store
+                </a>
               </div>
             </motion.div>
           </div>
 
-          {/* Auto-sliding cover imagery with the policy stub breaking out */}
+          {/* Auto-sliding class imagery with the certificate stub breaking out */}
           <div className="relative lg:col-span-5">
             <motion.figure
               ref={figureRef}
               role="group"
               aria-roledescription="carousel"
-              aria-label="The six Cosmic Vault cover lines"
+              aria-label="The four storage classes"
               initial={reduce ? false : { clipPath: "inset(0 0 100% 0)" }}
               animate={{ clipPath: "inset(0 0 0% 0)" }}
               transition={{ duration: 1.15, delay: 0.22, ease: EASE }}
@@ -287,7 +253,7 @@ export function HeroBroadsheet({ onQuote }: HeroVariantProps) {
               <div className="relative aspect-[16/11] w-full sm:aspect-[4/5] lg:aspect-auto lg:h-[min(64vh,38rem)]">
                 <AnimatePresence initial={false}>
                   <motion.img
-                    key={active.slug}
+                    key={active.label}
                     src={active.image.src}
                     alt={active.image.alt}
                     loading="eager"
@@ -312,10 +278,10 @@ export function HeroBroadsheet({ onQuote }: HeroVariantProps) {
               <div className="absolute right-3 top-3 z-10 flex items-center gap-0.5 rounded-full border border-bone/20 bg-navy/35 p-1 backdrop-blur-md">
                 {SLIDES.map((item, index) => (
                   <button
-                    key={item.slug}
+                    key={item.label}
                     type="button"
                     onClick={() => setSlide(index)}
-                    aria-label={`Show ${item.label} cover`}
+                    aria-label={`Show the ${item.label} class`}
                     aria-current={index === slide ? "true" : undefined}
                     className="grid size-5 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bone/80"
                   >
@@ -336,8 +302,8 @@ export function HeroBroadsheet({ onQuote }: HeroVariantProps) {
                     aria-pressed={userPaused === true}
                     aria-label={
                       userPaused === true
-                        ? "Play cover slideshow"
-                        : "Pause cover slideshow"
+                        ? "Play class slideshow"
+                        : "Pause class slideshow"
                     }
                     className="ml-0.5 grid size-5 place-items-center rounded-full text-bone/80 transition-colors hover:bg-bone/10 hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bone/80"
                   >
@@ -359,7 +325,7 @@ export function HeroBroadsheet({ onQuote }: HeroVariantProps) {
               </figcaption>
             </motion.figure>
 
-            {/* Paper policy stub */}
+            {/* Paper certificate stub */}
             <motion.div
               initial={reduce ? false : { opacity: 0, y: 26, rotate: -9 }}
               animate={{ opacity: 1, y: 0, rotate: -3 }}
@@ -367,20 +333,20 @@ export function HeroBroadsheet({ onQuote }: HeroVariantProps) {
               className="absolute -bottom-7 -left-8 hidden w-[15rem] rounded-[4px] bg-card p-4 shadow-[0_30px_60px_-28px_rgba(8,18,39,0.55)] lg:block"
             >
               <div className="flex items-center justify-between gap-2 text-[0.46rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                <span>Certificate of cover</span>
+                <span>Vault certificate</span>
                 <ShieldCheck className="size-3.5 text-primary" />
               </div>
               <p className="mt-2 font-display text-[1.1rem] leading-none tracking-[-0.02em] text-ink">
-                Policy {active.policy}
+                Ref {active.reference}
               </p>
               <div className="mt-3 space-y-1.5 text-[0.56rem] leading-4">
-                <StubRow label="Insured" value="A. Whitfield" />
-                <StubRow label="Cover" value={active.label} />
+                <StubRow label="Depositor" value="A. Whitfield" />
+                <StubRow label="Class" value={active.label} />
                 <StubRow label={active.detailLabel} value={active.detail} />
-                <StubRow label="Excess" value={active.excess} />
+                <StubRow label="Seal" value="Intact" />
               </div>
               <div className="absolute -right-3 -top-4 grid size-16 rotate-[9deg] place-items-center rounded-full bg-card text-center text-[0.4rem] font-semibold uppercase leading-[1.35] tracking-[0.12em] text-primary shadow-[0_12px_26px_-16px_rgba(8,18,39,0.55)]">
-                Reviewed
+                Appraised
                 <br />
                 12 Nov
               </div>
