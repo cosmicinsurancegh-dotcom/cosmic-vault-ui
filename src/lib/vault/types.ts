@@ -31,52 +31,49 @@ export type ShippingStatusMeta = {
   dot: string;
 };
 
-export const SHIPPING_STATUS_META: Record<ShippingStatus, ShippingStatusMeta> = {
-  pending: {
-    label: "Pending",
-    longLabel: "Pending",
-    description: "Authorised and queued with vault operations.",
-    index: 0,
-    tone: "border-line bg-muted text-muted-foreground",
-    dot: "bg-muted-foreground/50",
-  },
-  in_progress: {
-    label: "In Progress",
-    longLabel: "In Progress",
-    description: "Being prepared, verified and packaged.",
-    index: 1,
-    tone:
-      "border-primary/25 bg-primary/10 text-primary dark:text-electric-soft",
-    dot: "bg-primary",
-  },
-  on_hold: {
-    label: "On Hold",
-    longLabel: "On Hold",
-    description: "Paused pending an operational or customs check.",
-    index: 2,
-    tone:
-      "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-    dot: "bg-amber-500",
-  },
-  in_transit: {
-    label: "In Transit",
-    longLabel: "In Transit",
-    description: "With the secure carrier and moving to its destination.",
-    index: 3,
-    tone:
-      "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300",
-    dot: "bg-violet-500",
-  },
-  shipped: {
-    label: "Shipped",
-    longLabel: "Shipped / Delivered",
-    description: "Delivered and signed for at the destination.",
-    index: 4,
-    tone:
-      "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-    dot: "bg-emerald-500",
-  },
-};
+export const SHIPPING_STATUS_META: Record<ShippingStatus, ShippingStatusMeta> =
+  {
+    pending: {
+      label: "Pending",
+      longLabel: "Pending",
+      description: "Authorised and queued with vault operations.",
+      index: 0,
+      tone: "border-line bg-muted text-muted-foreground",
+      dot: "bg-muted-foreground/50",
+    },
+    in_progress: {
+      label: "In Progress",
+      longLabel: "In Progress",
+      description: "Being prepared, verified and packaged.",
+      index: 1,
+      tone: "border-primary/25 bg-primary/10 text-primary dark:text-electric-soft",
+      dot: "bg-electric-soft",
+    },
+    on_hold: {
+      label: "On Hold",
+      longLabel: "On Hold",
+      description: "Paused pending an operational or customs check.",
+      index: 2,
+      tone: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+      dot: "bg-amber-500",
+    },
+    in_transit: {
+      label: "In Transit",
+      longLabel: "In Transit",
+      description: "With the secure carrier and moving to its destination.",
+      index: 3,
+      tone: "border-primary bg-primary text-primary-foreground",
+      dot: "bg-primary",
+    },
+    shipped: {
+      label: "Shipped",
+      longLabel: "Shipped / Delivered",
+      description: "Delivered and signed for at the destination.",
+      index: 4,
+      tone: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+      dot: "bg-emerald-500",
+    },
+  };
 
 export const MINERAL_TYPES = [
   "Gold Bar",
@@ -105,11 +102,7 @@ export type MineralCategory = (typeof MINERAL_CATEGORIES)[number];
 export const WEIGHT_UNITS = ["g", "kg", "oz", "ct"] as const;
 export type WeightUnit = (typeof WEIGHT_UNITS)[number];
 
-export const PREMIUM_FREQUENCIES = [
-  "monthly",
-  "quarterly",
-  "annual",
-] as const;
+export const PREMIUM_FREQUENCIES = ["monthly", "quarterly", "annual"] as const;
 
 export type PremiumFrequency = (typeof PREMIUM_FREQUENCIES)[number];
 
@@ -134,14 +127,12 @@ export const INSURANCE_STATUS_META: Record<
 > = {
   active: {
     label: "Insured",
-    tone:
-      "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+    tone: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
     dot: "bg-emerald-500",
   },
   pending: {
     label: "Insurance pending",
-    tone:
-      "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    tone: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
     dot: "bg-amber-500",
   },
   expired: {

@@ -2,7 +2,6 @@ import { MINERAL_IMAGES } from "@/lib/imagery";
 import {
   animate,
   motion,
-  useMotionTemplate,
   useMotionValue,
   useMotionValueEvent,
   useReducedMotion,
@@ -105,6 +104,52 @@ function Ring({ radius }: { radius: number }) {
   );
 }
 
+/* Fixed drafting layer: crosshair, 5° scale, registration marks and a dimension line. */
+function Reticle() {
+  const ticks = Array.from({ length: 72 }, (_, i) => i * 5);
+  return (
+    <svg viewBox="-300 -300 600 600" className="pointer-events-none absolute inset-0 size-full text-white" aria-hidden="true">
+      <g stroke="currentColor" fill="none">
+        <circle r="203" strokeOpacity={0.14} strokeDasharray="2 5" />
+        <circle r="150" strokeOpacity={0.14} />
+        <line x1="-300" x2="300" strokeOpacity={0.12} strokeDasharray="1 6" />
+        <line y1="-300" y2="300" strokeOpacity={0.12} strokeDasharray="1 6" />
+        {ticks.map((d) => {
+          const a = (d * Math.PI) / 180;
+          const long = d % 45 === 0;
+          const r1 = 203;
+          const r2 = long ? 192 : 197;
+          return (
+            <line
+              key={d}
+              x1={Math.sin(a) * r1}
+              y1={-Math.cos(a) * r1}
+              x2={Math.sin(a) * r2}
+              y2={-Math.cos(a) * r2}
+              strokeOpacity={long ? 0.5 : 0.22}
+            />
+          );
+        })}
+        {[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([x, y]) => (
+          <path key={`${x}${y}`} d={`M${x * 296} ${y * 270} V${y * 296} H${x * 270}`} strokeOpacity={0.45} />
+        ))}
+        <path d="M-120 288 H120 M-120 282 V294 M120 282 V294" strokeOpacity={0.4} />
+      </g>
+      <g className="fill-white font-display" fontSize="8" letterSpacing="1.5" textAnchor="middle">
+        <text y="291" x="0" fillOpacity={0.6} className="[paint-order:stroke]" stroke="#2B61EB" strokeWidth="6">
+          Ø 340 MM · GRADE 316
+        </text>
+        <text x="-282" y="-278" textAnchor="start" fillOpacity={0.5}>
+          FIG. 01
+        </text>
+        <text x="282" y="-278" textAnchor="end" fillOpacity={0.5}>
+          1:1.6
+        </text>
+      </g>
+    </svg>
+  );
+}
+
 /**
  * Hero study — "The Strongroom".
  * Cosmic Vault white, ink and electric blue. A combination dial turns with the
@@ -142,25 +187,9 @@ export function HeroStrongroom({ onQuote }: HeroVariantProps) {
   const inner = useTransform(outer, (v) => -v * 1.6);
   const bezel = useTransform(outer, (v) => v * 0.35);
 
-  /* Pointer tilt: the dial leans toward the cursor, sheen follows it. */
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const px = useSpring(mx, { stiffness: 120, damping: 20 });
-  const py = useSpring(my, { stiffness: 120, damping: 20 });
-  const rotateX = useTransform(py, [-0.5, 0.5], [10, -10]);
-  const rotateY = useTransform(px, [-0.5, 0.5], [-12, 12]);
-  const sheenX = useTransform(px, (v) => 50 + v * 100);
-  const sheenY = useTransform(py, (v) => 50 + v * 100);
-  const sheen = useMotionTemplate`radial-gradient(circle at ${sheenX}% ${sheenY}%, rgb(255 255 255 / 0.38), transparent 45%)`;
-
   /* Bolts withdraw as the door opens. */
   const bolt = useTransform(scroll, [0, 0.6], ["0%", "130%"]);
 
-  const aim = (e: PointerEvent) => {
-    if (reduce || e.pointerType === "touch") return;
-    mx.set(e.clientX / window.innerWidth - 0.5);
-    my.set(e.clientY / window.innerHeight - 0.5);
-  };
   const angleAt = (e: PointerEvent) => {
     const r = dialRef.current!.getBoundingClientRect();
     return (
@@ -218,11 +247,6 @@ export function HeroStrongroom({ onQuote }: HeroVariantProps) {
     <section
       id="top"
       ref={ref}
-      onPointerMove={aim}
-      onPointerLeave={() => {
-        mx.set(0);
-        my.set(0);
-      }}
       className="relative isolate flex min-h-[max(40rem,88svh)] flex-col justify-center overflow-hidden bg-[#2B61EB] pb-10 pt-20 text-white"
     >
       {/* Ice-tinted ground fading to white, with one soft electric bloom behind the dial and a faint tooth. */}
@@ -239,49 +263,49 @@ export function HeroStrongroom({ onQuote }: HeroVariantProps) {
         className="pointer-events-none absolute inset-0 -z-10 text-white/[0.07] [background-image:radial-gradient(currentColor_0.5px,transparent_0.5px)] [background-size:4px_4px]"
       />
 
-      {/* The dial: a tilting stack of layers at different depths — bezel, two counter-turning rings, bolts and the bullion. */}
+      {/* The dial: a static stack of machined layers — bezel, two counter-turning rings, bolts and the bullion. */}
       <div
         ref={dialRef}
         onPointerDown={grabDial}
         onPointerMove={turnDial}
         onPointerUp={releaseDial}
         onPointerCancel={releaseDial}
-        style={{ perspective: 1400 }}
         className="pointer-events-none absolute -right-[22vw] top-1/2 aspect-square w-[min(120vw,60rem)] -translate-y-1/2 select-none opacity-25 sm:pointer-events-auto sm:cursor-grab sm:opacity-100 sm:active:cursor-grabbing lg:right-[max(1.25rem,calc((100vw-1240px)/2+1.25rem))] lg:w-[min(38vw,34rem)]"
       >
-        <motion.div
-          style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-          className="absolute inset-0"
-        >
-          {/* Depth plates under the rotating layers */}
+        <div className="absolute inset-0">
+          {/* Machined plates: stepped faces with inset shadows read as recessed and raised metal */}
           <div
             aria-hidden="true"
-            className="absolute inset-0 rounded-full border border-white/20 bg-white/[0.04] shadow-[0_40px_70px_-30px_color-mix(in_oklch,var(--navy)_60%,transparent)]"
+            className="absolute inset-0 rounded-full border border-white/20 bg-[radial-gradient(circle,rgb(255_255_255/0.02)_55%,rgb(255_255_255/0.10)_100%)] shadow-[0_40px_70px_-30px_color-mix(in_oklch,var(--navy)_60%,transparent),inset_0_2px_0_rgb(255_255_255/0.18),inset_0_-14px_30px_rgb(0_20_80/0.35)]"
           />
           <div
             aria-hidden="true"
-            style={{ transform: "translateZ(24px)" }}
-            className="absolute inset-[9%] rounded-full border border-white/25 bg-[#1f4fd0]/30 shadow-[0_30px_50px_-20px_color-mix(in_oklch,var(--navy)_65%,transparent)]"
+            className="absolute inset-[9%] rounded-full border border-white/25 bg-[radial-gradient(circle_at_50%_30%,#2f66ee,#1a45bd_85%)] shadow-[0_24px_40px_-14px_rgb(0_20_80/0.6),inset_0_1.5px_0_rgb(255_255_255/0.3),inset_0_-10px_24px_rgb(0_20_80/0.45)]"
           />
+          <div
+            aria-hidden="true"
+            className="absolute inset-[20%] rounded-full border border-white/15 bg-[#163a9e]/40 shadow-[inset_0_8px_22px_rgb(0_15_70/0.6),0_1px_0_rgb(255_255_255/0.2)]"
+          />
+          <Reticle />
 
-          <div aria-hidden="true" style={{ transform: "translateZ(12px)" }} className="absolute inset-0">
+          <div aria-hidden="true" className="absolute inset-0">
             <motion.div style={{ rotate: bezel }} className="size-full">
               <Bezel />
             </motion.div>
           </div>
-          <div aria-hidden="true" style={{ transform: "translateZ(40px)" }} className="absolute inset-[9%]">
+          <div aria-hidden="true" className="absolute inset-[9%]">
             <motion.div style={{ rotate: outer }} className="size-full">
               <Ring radius={286} />
             </motion.div>
           </div>
-          <div aria-hidden="true" style={{ transform: "translateZ(64px)" }} className="absolute inset-[9%]">
+          <div aria-hidden="true" className="absolute inset-[9%]">
             <motion.div style={{ rotate: inner }} className="absolute inset-[11%]">
               <Ring radius={222} />
             </motion.div>
           </div>
 
           {/* Locking bolts, seated against the bullion and withdrawing with scroll */}
-          <div aria-hidden="true" style={{ transform: "translateZ(76px)" }} className="absolute inset-0">
+          <div aria-hidden="true" className="absolute inset-0">
             {BOLTS.map((deg) => (
               <div key={deg} className="absolute inset-0" style={{ transform: `rotate(${deg}deg)` }}>
                 <motion.span
@@ -292,27 +316,20 @@ export function HeroStrongroom({ onQuote }: HeroVariantProps) {
             ))}
           </div>
 
-          <motion.div
-            whileHover={reduce ? undefined : { scale: 1.08 }}
-            transition={{ type: "spring", stiffness: 220, damping: 18 }}
-            style={{ transform: "translateZ(96px)" }}
-            className="group absolute inset-[34%] overflow-hidden rounded-full border border-white/50 shadow-[0_30px_60px_-20px_color-mix(in_oklch,var(--navy)_70%,transparent)]"
-          >
+          <div className="absolute inset-[34%] overflow-hidden rounded-full border border-white/50 shadow-[0_0_0_5px_rgb(255_255_255/0.08),0_0_0_6px_rgb(255_255_255/0.25),0_30px_60px_-20px_color-mix(in_oklch,var(--navy)_70%,transparent)]">
             <img
               src={MINERAL_IMAGES.bullion.src}
               alt=""
               decoding="async"
               draggable={false}
-              className="size-full scale-[1.35] object-cover transition-transform duration-700 group-hover:scale-[1.5]"
+              className="size-full scale-[1.35] object-cover"
             />
             <span className="absolute inset-0 bg-[radial-gradient(circle,transparent_40%,color-mix(in_oklch,var(--navy)_35%,transparent))]" />
-            <span className="absolute inset-x-0 bottom-[14%] text-center text-[0.5rem] font-semibold uppercase tracking-[0.2em] text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-              Sealed · dual control
-            </span>
-          </motion.div>
+            <span className="absolute inset-0 rounded-full shadow-[inset_0_6px_14px_rgb(0_15_70/0.5),inset_0_-2px_6px_rgb(255_255_255/0.15)]" />
+          </div>
 
           {/* Index notch */}
-          <div aria-hidden="true" style={{ transform: "translateZ(110px)" }} className="absolute inset-0">
+          <div aria-hidden="true" className="absolute inset-0">
             <motion.span
               style={{ opacity: flash }}
               className="absolute left-1/2 top-[1%] h-[8%] w-[14px] -translate-x-1/2 rounded-full bg-white blur-md"
@@ -320,13 +337,7 @@ export function HeroStrongroom({ onQuote }: HeroVariantProps) {
             <span className="absolute left-1/2 top-[1%] h-[7%] w-[3px] -translate-x-1/2 bg-white" />
           </div>
 
-          {/* Specular sheen following the pointer */}
-          <motion.div
-            aria-hidden="true"
-            style={{ transform: "translateZ(120px)", backgroundImage: sheen }}
-            className="pointer-events-none absolute inset-0 rounded-full mix-blend-overlay"
-          />
-        </motion.div>
+        </div>
       </div>
 
       <div className="pointer-events-none relative z-10 mx-auto flex w-full max-w-[1240px] flex-col px-5 pb-8">
