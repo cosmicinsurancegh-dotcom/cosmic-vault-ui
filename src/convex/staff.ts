@@ -7,8 +7,17 @@ import {
   requirePermission,
 } from "./lib/authz";
 import { writeAudit } from "./lib/audit";
+import {
+  assertInviteEmail,
+  findUserByEmail,
+  inviteMessage,
+  inviteUser,
+  normalizeInviteEmail,
+  normalizeInviteName,
+} from "./lib/invite";
 import { notifyUser } from "./lib/notify";
 import { requiredText } from "./lib/refs";
+import { getSettings } from "./lib/settings";
 
 async function superAdmins(ctx: Parameters<typeof requirePermission>[0]) {
   const users = await ctx.db.query("users").take(500);
@@ -109,6 +118,78 @@ export const promote = mutation({
       dedupeKey: `staff-promote:${user._id}:${now}`,
     });
     return true;
+  },
+});
+
+export const invite = mutation({
+  args: {
+    name: v.string(),
+    email: v.string(),
+    role: v.union(v.literal("admin"), v.literal("super_admin")),
+    permissions: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const viewer = await requirePermission(ctx, PERMISSIONS.STAFF_MANAGE);
+    if (viewer.role !== "super_admin") {
+      throw new Error("Only a super admin can create staff accounts.");
+    }
+    const email = assertInviteEmail(normalizeInviteEmail(args.email));
+    const existing = await findUserByEmail(ctx, email);
+    if (existing) {
+      throw new Error(
+        "That email already has an account. Grant staff access instead of creating a second one.",
+      );
+    }
+    const permissions =
+      args.role === "super_admin"
+        ? ALL_PERMISSIONS
+        : (args.permissions ?? DEFAULT_ADMIN_PERMISSIONS);
+    for (const permission of permissions) {
+      if (!ALL_PERMISSIONS.includes(permission)) {
+        throw new Error(`Unknown permission: ${permission}`);
+      }
+    }
+
+    const name = normalizeInviteName(args.name);
+    const userId = await inviteUser(ctx, { name, email, role: args.role });
+    const now = Date.now();
+    await ctx.db.patch(userId, {
+      permissions: [...new Set(permissions)],
+      lastRoleChangeAt: now,
+    });
+    await writeAudit(ctx, viewer, {
+      action: "staff.invited",
+      entityType: "users",
+      entityId: userId,
+      after: { role: args.role, permissions, email },
+      reason: "Staff account invited by a super admin.",
+    });
+
+    const settings = await getSettings(ctx);
+    const label = args.role === "super_admin" ? "super admin" : "administrator";
+    const message = inviteMessage({
+      name,
+      company: settings.companyName,
+      support: settings.supportEmail,
+      lines: [
+        `A ${label} account has been created for you at ${settings.companyName}.`,
+        "You will see the staff workspace after you sign in.",
+      ],
+    });
+    await notifyUser(ctx, {
+      userId,
+      type: "account.security",
+      title: `Your ${label} access is ready`,
+      body: `A ${label} account was created for you. Sign in with this email address to receive a one-time code.`,
+      href: "/dashboard",
+      relatedType: "users",
+      relatedId: userId,
+      dedupeKey: `staff-invite:${userId}`,
+      subject: message.subject,
+      text: message.text,
+    });
+
+    return { userId };
   },
 });
 

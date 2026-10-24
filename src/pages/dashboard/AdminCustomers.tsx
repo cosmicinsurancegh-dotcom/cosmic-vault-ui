@@ -12,6 +12,7 @@ import {
   Th,
 } from "@/components/dashboard/PlatformUI";
 import { TicketDialog } from "@/pages/dashboard/SupportPage";
+import { NewCustomerDialog } from "@/components/dashboard/NewCustomerDialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,7 +30,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { formatDate, formatDateTime, formatMoney, statusLabel } from "@/lib/format";
 import { STAFF_PERMISSIONS, can } from "@/lib/permissions";
 import { useMutation, useQuery } from "convex/react";
-import { Loader2, Search, ShieldCheck, Users } from "lucide-react";
+import { Loader2, Search, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -41,6 +42,12 @@ export function AdminCustomersPage() {
   const [verification, setVerification] = useState("all");
   const [page, setPage] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState<Id<"users"> | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const canManage = can(
+    user?.role,
+    user?.permissions,
+    STAFF_PERMISSIONS.CUSTOMERS_MANAGE,
+  );
   const reference = useQuery(api.setup.referenceData);
   const directory = useQuery(api.customers.directory, {
     search: search || undefined,
@@ -59,6 +66,16 @@ export function AdminCustomersPage() {
         eyebrow="Customer management"
         title="The customer directory."
         description="Search, verify, and service customer accounts. Suspension never deletes policies or financial records."
+        actions={
+          canManage ? (
+            <Button
+              className="h-10 rounded-[4px] px-4"
+              onClick={() => setInviteOpen(true)}
+            >
+              <UserPlus className="size-4" /> New customer
+            </Button>
+          ) : undefined
+        }
       />
 
       <Panel>
@@ -172,10 +189,22 @@ export function AdminCustomersPage() {
           userId={selectedUserId}
           open={Boolean(selectedUserId)}
           onOpenChange={(open) => !open && setSelectedUserId(null)}
-          canManage={can(user?.role, user?.permissions, STAFF_PERMISSIONS.CUSTOMERS_MANAGE)}
+          canManage={canManage}
           canAssignBroker={can(user?.role, user?.permissions, STAFF_PERMISSIONS.BROKERS_MANAGE)}
         />
       )}
+
+      <NewCustomerDialog
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        onInvited={(email) => {
+          setSearch(email);
+          setStatus("all");
+          setCountry("all");
+          setVerification("all");
+          setPage(1);
+        }}
+      />
     </div>
   );
 }

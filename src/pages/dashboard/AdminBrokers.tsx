@@ -35,12 +35,15 @@ export default function AdminBrokersPage() {
   const brokers = useQuery(api.brokers.list);
   const reference = useQuery(api.setup.referenceData);
   const createProfile = useMutation(api.brokers.createProfile);
+  const invite = useMutation(api.brokers.invite);
   const [createOpen, setCreateOpen] = useState(false);
+  const [mode, setMode] = useState<"new" | "existing">("new");
   const [assignmentsFor, setAssignmentsFor] = useState<{
     profileId: Id<"brokerProfiles">;
     orgName: string;
   } | null>(null);
   const [form, setForm] = useState({
+    name: "",
     email: "",
     orgName: "",
     contactName: "",
@@ -74,9 +77,11 @@ export default function AdminBrokersPage() {
       />
 
       <Callout tone="info" title="Onboarding">
-        The broker must first create an account with their email. Adding them here promotes that account
-        to the broker role and creates the brokerage profile. Commission is disabled unless both the
-        company setting and the broker record enable it.
+        Invite a new broker and we create the account, brokerage profile and
+        reference in one step; they sign in with their email address and a
+        one-time code. If the broker already has an account, add them by email
+        instead. Commission is disabled unless both the company setting and the
+        broker record enable it.
       </Callout>
 
       {brokers.length === 0 ? (
@@ -134,10 +139,40 @@ export default function AdminBrokersPage() {
           <DialogHeader>
             <DialogTitle>Add a broker</DialogTitle>
             <DialogDescription>
-              The email must belong to an existing account. Their role changes to broker immediately.
+              {mode === "new"
+                ? "Creates the broker account, brokerage profile and reference, then sends a sign-in invitation."
+                : "The email must belong to an existing account. Their role changes to broker immediately."}
             </DialogDescription>
           </DialogHeader>
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                { key: "new", label: "Invite a new broker" },
+                { key: "existing", label: "Add an existing account" },
+              ] as const
+            ).map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => setMode(option.key)}
+                aria-pressed={mode === option.key}
+                className={
+                  mode === option.key
+                    ? "rounded-[4px] bg-primary px-3 py-1.5 text-[0.62rem] font-medium text-primary-foreground"
+                    : "rounded-[4px] border border-line px-3 py-1.5 text-[0.62rem] font-medium text-muted-foreground hover:text-ink"
+                }
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
+            {mode === "new" && (
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="b-name">Contact full name</Label>
+                <Input id="b-name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Morgan Ellis" className="h-9 rounded-lg bg-card" />
+              </div>
+            )}
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="b-email">Broker email</Label>
               <Input id="b-email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="h-9 rounded-lg bg-card" />
@@ -200,12 +235,18 @@ export default function AdminBrokersPage() {
             <Button variant="outline" className="rounded-[4px]" onClick={() => setCreateOpen(false)}>Cancel</Button>
             <Button
               className="rounded-[4px]"
-              disabled={pending || !form.email || !form.orgName || !form.contactName || form.countries.length === 0}
+              disabled={
+                pending ||
+                (mode === "new" && form.name.trim().length < 2) ||
+                !form.email ||
+                !form.orgName ||
+                !form.contactName ||
+                form.countries.length === 0
+              }
               onClick={async () => {
                 setPending(true);
                 try {
-                  await createProfile({
-                    email: form.email,
+                  const payload = {
                     orgName: form.orgName,
                     contactName: form.contactName,
                     phone: form.phone || undefined,
@@ -213,10 +254,19 @@ export default function AdminBrokersPage() {
                     agreementRef: form.agreementRef || undefined,
                     commissionEnabled: form.commissionEnabled,
                     commissionRate: Number(form.commissionRate || 0),
-                  });
-                  toast.success("Broker created and notified.");
+                  };
+                  if (mode === "new") {
+                    await invite({ ...payload, name: form.name, email: form.email });
+                    toast.success("Broker invited", {
+                      description: "The brokerage profile is active and the sign-in invitation is queued.",
+                    });
+                  } else {
+                    await createProfile({ ...payload, email: form.email });
+                    toast.success("Broker created and notified.");
+                  }
                   setCreateOpen(false);
-                  setForm({ email: "", orgName: "", contactName: "", phone: "", countries: ["GB"], agreementRef: "", commissionEnabled: false, commissionRate: "0" });
+                  setMode("new");
+                  setForm({ name: "", email: "", orgName: "", contactName: "", phone: "", countries: ["GB"], agreementRef: "", commissionEnabled: false, commissionRate: "0" });
                 } catch (error) {
                   toast.error(error instanceof Error ? error.message : "Could not create the broker.");
                 } finally {
@@ -224,7 +274,8 @@ export default function AdminBrokersPage() {
                 }
               }}
             >
-              {pending && <Loader2 className="size-4 animate-spin" />} Create broker
+              {pending && <Loader2 className="size-4 animate-spin" />}
+              {mode === "new" ? "Invite broker" : "Add broker"}
             </Button>
           </div>
         </DialogContent>

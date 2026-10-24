@@ -9,6 +9,14 @@ import {
 } from "./lib/authz";
 import { writeAudit } from "./lib/audit";
 import { assertCustomerAccess } from "./lib/access";
+import {
+  assertInviteEmail,
+  findUserByEmail,
+  inviteMessage,
+  inviteUser,
+  normalizeInviteEmail,
+  normalizeInviteName,
+} from "./lib/invite";
 import { notifyUser } from "./lib/notify";
 import { ensureCustomerProfile, getCustomerProfile } from "./lib/people";
 import { cleanText, isValidEmail, requiredText } from "./lib/refs";
@@ -45,6 +53,82 @@ async function assertCountryAndCurrency(
     }
   }
 }
+
+export const invite = mutation({
+  args: {
+    name: v.string(),
+    email: v.string(),
+    country: v.string(),
+    currency: v.string(),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const viewer = await requirePermission(ctx, PERMISSIONS.CUSTOMERS_MANAGE);
+    const email = assertInviteEmail(normalizeInviteEmail(args.email));
+    const existing = await findUserByEmail(ctx, email);
+    if (existing) {
+      if (existing.role === "admin" || existing.role === "super_admin") {
+        throw new Error("That email belongs to a staff account.");
+      }
+      if (existing.role === "broker") {
+        throw new Error(
+          "That email already has a broker account. Add it from the Brokers screen.",
+        );
+      }
+      throw new Error(
+        "That email already has an account. Open it in the directory instead of inviting it again.",
+      );
+    }
+    await assertCountryAndCurrency(ctx, args.country, args.currency);
+    const name = normalizeInviteName(args.name);
+
+    const userId = await inviteUser(ctx, { name, email, role: "customer" });
+    const profile = await ensureCustomerProfile(ctx, userId);
+    await ctx.db.patch(profile._id, {
+      fullName: name,
+      email,
+      country: args.country,
+      currency: args.currency,
+      notes: cleanText(args.notes, "Notes", 2000) || undefined,
+      updatedAt: Date.now(),
+    });
+
+    await writeAudit(ctx, viewer, {
+      action: "customer.invited",
+      entityType: "customers",
+      entityId: userId,
+      after: { name, email, country: args.country, currency: args.currency },
+      reason: "Invited from the customer directory.",
+    });
+
+    const settings = await getSettings(ctx);
+    const message = inviteMessage({
+      name,
+      company: settings.companyName,
+      support: settings.supportEmail,
+      lines: [
+        `An account has been created for you at ${settings.companyName} with this email address.`,
+        "",
+        `Your customer reference is ${profile.reference}.`,
+        "If you were not expecting this, reply to this message and our concierge will close the account.",
+      ],
+    });
+    await notifyUser(ctx, {
+      userId,
+      type: "account.welcome",
+      title: "Your Cosmic Vault account is ready",
+      body: `Your customer reference is ${profile.reference}. Sign in with this email address to receive a one-time code.`,
+      href: "/dashboard",
+      relatedType: "customers",
+      relatedId: userId,
+      dedupeKey: `customer-invite:${userId}`,
+      subject: message.subject,
+      text: message.text,
+    });
+
+    return { userId, reference: profile.reference };
+  },
+});
 
 export const ensureProfile = mutation({
   args: {},

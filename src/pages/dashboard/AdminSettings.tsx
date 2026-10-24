@@ -44,6 +44,7 @@ export default function AdminSettingsPage() {
   const update = useMutation(api.settings.update);
   const resetTemplates = useMutation(api.settings.resetTemplates);
   const promote = useMutation(api.staff.promote);
+  const inviteStaff = useMutation(api.staff.invite);
   const setPermissions = useMutation(api.staff.setPermissions);
   const revoke = useMutation(api.staff.revoke);
   const setStaffStatus = useMutation(api.staff.setStatus);
@@ -69,6 +70,11 @@ export default function AdminSettingsPage() {
   const [staffEmail, setStaffEmail] = useState("");
   const [staffRole, setStaffRole] = useState<"admin" | "super_admin">("admin");
   const [staffReason, setStaffReason] = useState("");
+  const [newStaff, setNewStaff] = useState({
+    name: "",
+    email: "",
+    role: "admin" as "admin" | "super_admin",
+  });
   const [permissionTarget, setPermissionTarget] = useState<Id<"users"> | null>(null);
   const [permissionDraft, setPermissionDraft] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
@@ -333,10 +339,86 @@ export default function AdminSettingsPage() {
         <Panel>
           <PanelHeader
             title="Staff & roles"
-            description="Only a super admin can grant access or change permissions. The last super admin cannot be revoked."
+            description="Only a super admin can create staff, grant access or change permissions. The last super admin cannot be revoked."
           />
+          {user?.role === "super_admin" && (
+            <div className="border-b border-line px-5 py-4">
+              <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Create a staff account
+              </p>
+              <p className="mt-1 text-[0.65rem] leading-5 text-muted-foreground">
+                Creates the account and queues a sign-in invitation. Use the
+                permissions control below to scope an administrator after it
+                exists.
+              </p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <Input
+                  value={newStaff.name}
+                  onChange={(event) =>
+                    setNewStaff({ ...newStaff, name: event.target.value })
+                  }
+                  placeholder="Full name"
+                  className="h-9 flex-1 rounded-lg bg-card text-xs"
+                />
+                <Input
+                  value={newStaff.email}
+                  onChange={(event) =>
+                    setNewStaff({ ...newStaff, email: event.target.value })
+                  }
+                  placeholder="name@example.com"
+                  className="h-9 flex-1 rounded-lg bg-card text-xs"
+                />
+                <select
+                  aria-label="New staff role"
+                  value={newStaff.role}
+                  onChange={(event) =>
+                    setNewStaff({
+                      ...newStaff,
+                      role: event.target.value as "admin" | "super_admin",
+                    })
+                  }
+                  className="h-9 rounded-lg border border-line bg-card px-2 text-xs text-ink"
+                >
+                  <option value="admin">Administrator</option>
+                  <option value="super_admin">Super admin</option>
+                </select>
+                <Button
+                  size="sm"
+                  className="h-9 rounded-[4px] px-3"
+                  disabled={
+                    pending ||
+                    newStaff.name.trim().length < 2 ||
+                    newStaff.email.trim().length < 4
+                  }
+                  onClick={async () => {
+                    setPending(true);
+                    try {
+                      await inviteStaff(newStaff);
+                      toast.success("Staff account created", {
+                        description: `${newStaff.email.trim().toLowerCase()} - a sign-in invitation is queued.`,
+                      });
+                      setNewStaff({ name: "", email: "", role: "admin" });
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "Could not create the staff account.",
+                      );
+                    } finally {
+                      setPending(false);
+                    }
+                  }}
+                >
+                  <UserPlus className="size-3.5" /> Create
+                </Button>
+              </div>
+            </div>
+          )}
           <div className="border-b border-line px-5 py-4">
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Grant access to an existing account
+            </p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <Input
                 value={staffEmail}
                 onChange={(event) => setStaffEmail(event.target.value)}

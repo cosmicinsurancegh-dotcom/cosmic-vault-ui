@@ -13,6 +13,7 @@ import {
   type Viewer,
 } from "./lib/authz";
 import { writeAudit } from "./lib/audit";
+import { inviteUser, normalizeInviteEmail, normalizeInviteName } from "./lib/invite";
 import { notifyUser } from "./lib/notify";
 import { ensureCustomerProfile, displayName } from "./lib/people";
 import {
@@ -167,13 +168,8 @@ async function resolveAssignee(
     return { userId: user._id, isNewAccount: false };
   }
 
-  const name = requiredText(assignment.newUser?.name, "Full name", 120);
-  if (name.length < 2) throw new Error("Full name is too short.");
-  const email = requiredText(
-    assignment.newUser?.email,
-    "Email",
-    160,
-  ).toLowerCase();
+  const name = normalizeInviteName(assignment.newUser?.name);
+  const email = normalizeInviteEmail(assignment.newUser?.email);
   if (!isValidEmail(email))
     throw new Error("Please add a valid email address.");
 
@@ -193,18 +189,9 @@ async function resolveAssignee(
     return { userId: existing._id, isNewAccount: false };
   }
 
-  const now = Date.now();
-  // Marking the address verified is what lets Convex Auth link the invitation
-  // to the account the person creates when they sign in with an emailed code:
-  // ownership is still proven by that code, never by this record.
-  const userId = await ctx.db.insert("users", {
-    name,
-    email,
-    role: "customer",
-    status: "active",
-    emailVerificationTime: now,
-    isAnonymous: false,
-  });
+  // The invited row carries the verified marker, so the first emailed-code
+  // sign-in links to it instead of creating a duplicate identity.
+  const userId = await inviteUser(ctx, { name, email, role: "customer" });
   await ensureCustomerProfile(ctx, userId);
   await writeAudit(ctx, viewer, {
     action: "customer.invited",

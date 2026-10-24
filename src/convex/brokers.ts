@@ -8,6 +8,14 @@ import {
   requireViewer,
 } from "./lib/authz";
 import { writeAudit } from "./lib/audit";
+import {
+  assertInviteEmail,
+  findUserByEmail,
+  inviteMessage,
+  inviteUser,
+  normalizeInviteEmail,
+  normalizeInviteName,
+} from "./lib/invite";
 import { notifyUser } from "./lib/notify";
 import { cleanText, isValidEmail, requiredText } from "./lib/refs";
 import { getSettings } from "./lib/settings";
@@ -20,6 +28,61 @@ async function brokerProfileFor(
     .query("brokerProfiles")
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .unique();
+}
+
+type BrokerProfileArgs = {
+  orgName: string;
+  contactName: string;
+  phone?: string;
+  countries: string[];
+  agreementRef?: string;
+  commissionEnabled?: boolean;
+  commissionRate?: number;
+};
+
+async function activeCountries(
+  ctx: QueryCtx | MutationCtx,
+  countries: string[],
+) {
+  const codes = [
+    ...new Set(countries.map((code) => code.trim().toUpperCase()).filter(Boolean)),
+  ];
+  if (codes.length === 0) throw new Error("Choose at least one country.");
+  for (const code of codes) {
+    const record = await ctx.db
+      .query("countries")
+      .withIndex("by_code", (q) => q.eq("code", code))
+      .unique();
+    if (!record || !record.active) throw new Error("Choose a supported country.");
+  }
+  return codes;
+}
+
+/** One profile writer for both an existing account and a fresh invitation. */
+async function insertBrokerProfile(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  email: string,
+  args: BrokerProfileArgs,
+  now: number,
+) {
+  const countries = await activeCountries(ctx, args.countries);
+  return await ctx.db.insert("brokerProfiles", {
+    userId,
+    reference: `BRK-${userId.slice(-6).toUpperCase()}`,
+    orgName: requiredText(args.orgName, "Brokerage name", 160),
+    contactName: requiredText(args.contactName, "Contact name", 120),
+    email,
+    phone: cleanText(args.phone, "Phone", 32) || undefined,
+    countries,
+    status: "active",
+    agreementRef:
+      cleanText(args.agreementRef, "Agreement reference", 120) || undefined,
+    commissionEnabled: args.commissionEnabled ?? false,
+    commissionRate: Math.max(0, Math.min(30, args.commissionRate ?? 0)),
+    createdAt: now,
+    updatedAt: now,
+  });
 }
 
 export const myProfile = query({
@@ -191,21 +254,7 @@ export const createProfile = mutation({
       status: "active",
       lastRoleChangeAt: now,
     });
-    const id = await ctx.db.insert("brokerProfiles", {
-      userId: user._id,
-      reference: `BRK-${user._id.slice(-6).toUpperCase()}`,
-      orgName,
-      contactName: requiredText(args.contactName, "Contact name", 120),
-      email,
-      phone: cleanText(args.phone, "Phone", 32) || undefined,
-      countries: args.countries,
-      status: "active",
-      agreementRef: cleanText(args.agreementRef, "Agreement reference", 120) || undefined,
-      commissionEnabled: args.commissionEnabled ?? false,
-      commissionRate: Math.max(0, Math.min(30, args.commissionRate ?? 0)),
-      createdAt: now,
-      updatedAt: now,
-    });
+    const id = await insertBrokerProfile(ctx, user._id, email, args, now);
     await writeAudit(ctx, viewer, {
       action: "broker.created",
       entityType: "brokerProfiles",
@@ -222,6 +271,75 @@ export const createProfile = mutation({
       dedupeKey: `broker-created:${id}`,
     });
     return { brokerProfileId: id };
+  },
+});
+
+export const invite = mutation({
+  args: {
+    name: v.string(),
+    email: v.string(),
+    orgName: v.string(),
+    contactName: v.string(),
+    phone: v.optional(v.string()),
+    countries: v.array(v.string()),
+    agreementRef: v.optional(v.string()),
+    commissionEnabled: v.optional(v.boolean()),
+    commissionRate: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const viewer = await requirePermission(ctx, PERMISSIONS.BROKERS_MANAGE);
+    const email = assertInviteEmail(normalizeInviteEmail(args.email));
+    const existing = await findUserByEmail(ctx, email);
+    if (existing) {
+      if (existing.role === "admin" || existing.role === "super_admin") {
+        throw new Error("Staff accounts cannot also be brokers.");
+      }
+      if (existing.role === "broker") {
+        throw new Error("This account already has a broker profile.");
+      }
+      throw new Error(
+        "That email already has an account. Add it with the existing-account option.",
+      );
+    }
+
+    const name = normalizeInviteName(args.name);
+    const orgName = requiredText(args.orgName, "Brokerage name", 160);
+    const userId = await inviteUser(ctx, { name, email, role: "broker" });
+    const now = Date.now();
+    const id = await insertBrokerProfile(ctx, userId, email, args, now);
+
+    await writeAudit(ctx, viewer, {
+      action: "broker.invited",
+      entityType: "brokerProfiles",
+      entityId: id,
+      after: { role: "broker", orgName, email },
+      reason: "Broker invited from the broker console.",
+    });
+
+    const settings = await getSettings(ctx);
+    const message = inviteMessage({
+      name,
+      company: settings.companyName,
+      support: settings.supportEmail,
+      lines: [
+        `${orgName} now has a broker workspace at ${settings.companyName}.`,
+        "You will only see customers explicitly assigned to your brokerage, and you can prepare quotations and applications on their behalf.",
+      ],
+    });
+    await notifyUser(ctx, {
+      userId,
+      type: "account.security",
+      title: "Your broker workspace is ready",
+      body: `${orgName} can now access a broker workspace. You will only see customers assigned to your brokerage.`,
+      href: "/dashboard",
+      relatedType: "brokerProfiles",
+      relatedId: id,
+      dedupeKey: `broker-invite:${id}`,
+      subject: message.subject,
+      text: message.text,
+    });
+
+    return { brokerProfileId: id, userId };
   },
 });
 
