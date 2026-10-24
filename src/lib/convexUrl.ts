@@ -7,15 +7,24 @@
  * answer. The symptom is a control that spins forever - the email-code button
  * sits on "Sending code" and no error is ever shown.
  *
- * Only a real Convex deployment URL is usable, so anything else falls back to
- * this project's deployment instead of shipping a dead app.
+ * A configured value is therefore used only when it really is a Convex
+ * deployment. Anything else - a platform domain, a relative path, a typo - is
+ * reported as a configuration error instead of being swapped for another host,
+ * because guessing hides the mistake: the published build then queries a
+ * deployment that serves no functions and every screen fails with an opaque
+ * "Server Error".
  */
 
 /**
- * This project's Convex deployment, used when the configured URL is unusable.
- * Production is the default because the deployed site is built without a
- * `VITE_CONVEX_URL` of its own; local work points at its own deployment in
- * `.env.local`.
+ * This project's production Convex deployment, used when the environment
+ * supplies no URL. The published site is built without a `VITE_CONVEX_URL` of
+ * its own, so this is the backend it talks to; local work points at its own
+ * deployment in `.env.local`.
+ *
+ * A reachable host is not a working backend: this deployment answered `/version`
+ * while every function call failed, which the browser reports as an opaque
+ * "Server Error". Publish the functions with the `Deploy Convex functions`
+ * workflow (target `prod`) before treating the site as live.
  */
 export const DEFAULT_CONVEX_URL = "https://descriptive-ferret-801.convex.cloud";
 
@@ -39,11 +48,13 @@ export function isConvexDeploymentUrl(
 
 /**
  * Resolves the Convex URL for the client: the configured value when it is a
- * Convex deployment, otherwise `DEFAULT_CONVEX_URL`. Returns `null` only if
- * both are unusable, which is the case `MissingConvexConfig` reports.
+ * Convex deployment, this project's production deployment when nothing is
+ * configured, and `null` when the configured value is unusable. `null` renders
+ * the configuration screen, which is the only honest answer - the app cannot
+ * reach a backend it was never given.
  */
 export function resolveConvexUrl(configured?: string | null): string | null {
   const candidate = configured?.trim();
-  if (candidate && isConvexDeploymentUrl(candidate)) return candidate;
+  if (candidate) return isConvexDeploymentUrl(candidate) ? candidate : null;
   return DEFAULT_CONVEX_URL || null;
 }

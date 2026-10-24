@@ -18,8 +18,9 @@ export function MissingConvexConfig() {
           <code className="rounded border border-line bg-muted px-1.5 py-0.5 text-ink/90">
             VITE_CONVEX_URL
           </code>{" "}
-          is missing for this environment. Add it to the Vercel project for both
-          Production and Preview, then redeploy.
+          is missing or is not a Convex deployment URL for this environment. Add
+          it to the Vercel project for both Production and Preview, then
+          redeploy.
         </p>
         <p className="mt-3 text-xs leading-5 text-ink/45">
           Vercel → Project → Settings → Environment Variables →

@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/sonner";
+import { BackendHealthNotice } from "@/components/dashboard/BackendHealthNotice";
 import { RequireAuth } from "@/components/RequireAuth";
 import { CookieConsent } from "@/components/site/CookieConsent";
 import { MissingConvexConfig } from "@/components/site/MissingConvexConfig";
@@ -188,8 +189,8 @@ class RootErrorBoundary extends React.Component<
 
 // A Convex client cannot tell a wrong URL from a slow one: it just waits for a
 // connection that never opens. So an unusable VITE_CONVEX_URL must never reach
-// the client - resolve it to this project's deployment instead (see
-// `@/lib/convexUrl`).
+// the client - it resolves to `null` and the configuration screen renders
+// instead (see `@/lib/convexUrl`).
 const configuredConvexUrl = import.meta.env.VITE_CONVEX_URL as
   | string
   | undefined;
@@ -200,7 +201,7 @@ if (
   !isConvexDeploymentUrl(configuredConvexUrl)
 ) {
   console.warn(
-    `[convex] VITE_CONVEX_URL is not a Convex deployment URL ("${configuredConvexUrl}"); using ${convexUrl}.`,
+    `[convex] VITE_CONVEX_URL is not a Convex deployment URL ("${configuredConvexUrl}"); showing the configuration screen.`,
   );
 }
 const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;
@@ -244,6 +245,10 @@ createRoot(document.getElementById("root")!).render(
           >
             <BrowserRouter>
               <RouteSyncer />
+              {/* Above the routes: a backend that runs no functions also breaks
+                  the signed-in user query, so the dashboard shell never gets far
+                  enough to render its own explanation. */}
+              {convexUrl && <BackendHealthNotice url={convexUrl} />}
               <CookieConsent />
               <Suspense fallback={<RouteLoading />}>
                 <Routes>

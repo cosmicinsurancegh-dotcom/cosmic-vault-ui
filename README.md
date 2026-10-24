@@ -90,6 +90,13 @@ to ship the backend.
   `DEFAULT_CONVEX_URL` in `src/lib/convexUrl.ts` (production) unless the Vercel
   project sets `VITE_CONVEX_URL`, which would override it.
 
+The dashboard checks the deployment on load, independently of the Convex
+client: it fetches the public `setup:status` over the Convex HTTP API and, when
+the host answers but runs no function, the deployment is paused, or it cannot
+be reached, shows a banner above the dashboard naming the cause with a *Check
+again* button. A reachable host is not a working backend, and the client's own
+"Server Error" does not say which of those it is.
+
 Both jobs install with `bun install --frozen-lockfile`, so `bun.lock` must be
 current before a deploy.
 
@@ -121,11 +128,14 @@ paid plan for private repos; until then the typed confirmation is the gate.
 
 The project is set up with project specific CONVEX_DEPLOYMENT and VITE_CONVEX_URL environment variables on the client side.
 
-`VITE_CONVEX_URL` is validated in `src/lib/convexUrl.ts`: a missing value or a
-non-Convex URL falls back to this project's deployment (with a dev warning)
-instead of producing a client that can never connect. Sign-in requests also
-have a 15 second deadline (`src/lib/signInTimeout.ts`), so an unreachable
-deployment shows an error rather than a button stuck on "Sending code".
+`VITE_CONVEX_URL` is validated in `src/lib/convexUrl.ts`: a missing value
+resolves to the production deployment (`DEFAULT_CONVEX_URL`), while a value that
+is not a Convex deployment URL renders the configuration screen. It is never
+silently swapped for another host, because guessing hides the mistake - the
+client then queries a deployment that serves no functions and every screen
+fails with an opaque "Server Error". Sign-in requests also have a 15 second
+deadline (`src/lib/signInTimeout.ts`), so an unreachable deployment shows an
+error rather than a button stuck on "Sending code".
 
 The convex server has a separate set of environment variables that are accessible by the convex backend.
 

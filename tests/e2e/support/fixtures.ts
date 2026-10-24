@@ -73,6 +73,22 @@ export const test = base.extend<{
       // as "stable" for a real click, so the suite runs with the preference on.
       await page.emulateMedia({ reducedMotion: "reduce" });
 
+      // The dashboard probes the deployment over the Convex HTTP API, so it can
+      // explain a backend that answers but runs no functions. Answer as a
+      // healthy deployment here to keep the notice out of unrelated scenarios;
+      // a spec that wants the failure registers its own route, which Playwright
+      // matches first.
+      await page.route("**/api/query", (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            status: "value",
+            value: { hasSuperAdmin: false },
+          }),
+        }),
+      );
+
       // The app sets `scroll-behavior: smooth` globally. Playwright waits for
       // an element's box to hold still before clicking, and animated scrolling
       // makes that wait restart indefinitely, so tests scroll instantly.

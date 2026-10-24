@@ -9,7 +9,8 @@ import {
  * A wrong `VITE_CONVEX_URL` produces no error at runtime - the Convex client
  * simply waits for a connection that never opens, so the email-code button
  * spins on "Sending code" forever. These tests pin the resolution that keeps
- * that from reaching the client.
+ * that from reaching the client, including the rule that an unusable value is
+ * reported rather than swapped for another deployment.
  */
 describe("isConvexDeploymentUrl", () => {
   it("accepts Convex deployment and site URLs", () => {
@@ -49,6 +50,13 @@ describe("isConvexDeploymentUrl", () => {
 });
 
 describe("resolveConvexUrl", () => {
+  it("uses this project's production deployment by default", () => {
+    expect(DEFAULT_CONVEX_URL).toBe(
+      "https://descriptive-ferret-801.convex.cloud",
+    );
+    expect(isConvexDeploymentUrl(DEFAULT_CONVEX_URL)).toBe(true);
+  });
+
   it("keeps a valid configured deployment", () => {
     expect(resolveConvexUrl("https://my-app-42.convex.cloud")).toBe(
       "https://my-app-42.convex.cloud",
@@ -61,20 +69,18 @@ describe("resolveConvexUrl", () => {
     );
   });
 
-  it("falls back to this project's deployment for a wrong domain", () => {
-    // The value the published Vercel build was compiled with.
-    expect(resolveConvexUrl("https://freebuff.com")).toBe(DEFAULT_CONVEX_URL);
-  });
-
-  it("falls back when nothing is configured", () => {
+  it("uses the production deployment when nothing is configured", () => {
     expect(resolveConvexUrl(undefined)).toBe(DEFAULT_CONVEX_URL);
+    expect(resolveConvexUrl(null)).toBe(DEFAULT_CONVEX_URL);
     expect(resolveConvexUrl("")).toBe(DEFAULT_CONVEX_URL);
+    expect(resolveConvexUrl("   ")).toBe(DEFAULT_CONVEX_URL);
   });
 
-  it("always returns something a client can connect to", () => {
-    expect(isConvexDeploymentUrl(DEFAULT_CONVEX_URL)).toBe(true);
-    expect(
-      isConvexDeploymentUrl(resolveConvexUrl("https://freebuff.com")),
-    ).toBe(true);
+  it("refuses to guess when the configured value is not a deployment", () => {
+    // The app renders its configuration screen instead of querying a host that
+    // cannot answer - the failure mode behind the opaque Server Error.
+    expect(resolveConvexUrl("https://freebuff.com")).toBeNull();
+    expect(resolveConvexUrl("https://cosmic-vault-ui.vercel.app")).toBeNull();
+    expect(resolveConvexUrl("grateful-pony-619.convex.cloud")).toBeNull();
   });
 });
