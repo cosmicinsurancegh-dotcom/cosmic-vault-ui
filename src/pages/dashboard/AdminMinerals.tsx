@@ -12,6 +12,16 @@ import {
   Th,
   Timeline,
 } from "@/components/dashboard/PlatformUI";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -37,7 +47,7 @@ import { formatDate, formatMoney, toMinor } from "@/lib/format";
 import { STAFF_PERMISSIONS, can } from "@/lib/permissions";
 import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
-import { Gem, Loader2, Plus, Search, Truck } from "lucide-react";
+import { Gem, Loader2, Plus, Search, Truck, UserRoundPlus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -267,6 +277,16 @@ export default function AdminMineralsPage() {
                           {assignee.email}
                         </p>
                       </>
+                    ) : canManage ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 rounded-[4px] bg-transparent px-2 text-[0.62rem]"
+                        onClick={() => setDetailId(mineral._id)}
+                        title={`Assign ${mineral.name} to a member`}
+                      >
+                        Assign
+                      </Button>
                     ) : (
                       <span className="text-muted-foreground">Unassigned</span>
                     )}
@@ -841,6 +861,254 @@ function CreateMineralDialog({
   );
 }
 
+/**
+ * Owner controls for a mineral that is already on record. Assignment travels
+ * with the record: every shipment attached to the mineral moves too, the new
+ * owner is emailed and the previous owner gets an in-app notice.
+ */
+function AssignmentSection({
+  mineralId,
+  currentAssigneeId,
+  canManage,
+}: {
+  mineralId: Id<"minerals">;
+  currentAssigneeId?: Id<"users">;
+  canManage: boolean;
+}) {
+  const reassign = useMutation(api.minerals.reassign);
+  const [mode, setMode] = useState<"existing" | "new">("existing");
+  const [search, setSearch] = useState("");
+  const [userId, setUserId] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [note, setNote] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const options = useQuery(api.minerals.assigneeOptions, {
+    search: search.trim() || undefined,
+  });
+
+  if (!canManage) return null;
+
+  const selectedOption = (options ?? []).find(
+    (option) => option.userId === userId,
+  );
+  const targetLabel =
+    mode === "existing"
+      ? selectedOption
+        ? `${selectedOption.name} · ${selectedOption.email}`
+        : ""
+      : newName.trim()
+        ? `${newName.trim()} · ${newEmail.trim()}`
+        : "";
+  const sameOwner =
+    mode === "existing" && Boolean(userId) && userId === currentAssigneeId;
+  const ready =
+    mode === "existing"
+      ? userId.length > 0 && !sameOwner
+      : newName.trim().length > 1 && newEmail.includes("@");
+
+  const submit = async () => {
+    setPending(true);
+    try {
+      const result = await reassign({
+        mineralId,
+        assignment:
+          mode === "existing"
+            ? { mode: "existing" as const, userId: userId as Id<"users"> }
+            : {
+                mode: "new" as const,
+                newUser: { name: newName, email: newEmail },
+              },
+        note: note.trim() || undefined,
+      });
+      toast.success(
+        result.isNewAccount
+          ? "Reassigned. A member account was created and invited."
+          : result.notified
+            ? "Reassigned. The new owner has been emailed."
+            : "Reassigned. No owner email was sent.",
+      );
+      setUserId("");
+      setNewName("");
+      setNewEmail("");
+      setNote("");
+      setSearch("");
+      setConfirmOpen(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not reassign the mineral.",
+      );
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <section className="space-y-3 rounded-xl border border-line p-4">
+      <div className="flex items-start gap-2.5">
+        <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-[4px] border border-line bg-card text-primary">
+          <UserRoundPlus className="size-3.5" />
+        </span>
+        <div>
+          <h3 className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Change owner
+          </h3>
+          <p className="mt-1 text-[0.65rem] leading-5 text-muted-foreground">
+            Assign this mineral to another customer or broker. Every shipment
+            attached to it moves with the record, and the new owner is emailed.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setMode("existing")}
+          className={
+            mode === "existing"
+              ? "rounded-[4px] bg-primary px-3 py-1.5 text-[0.68rem] font-medium text-primary-foreground"
+              : "rounded-[4px] border border-line px-3 py-1.5 text-[0.68rem] font-medium text-muted-foreground"
+          }
+        >
+          Choose an existing account
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("new")}
+          className={
+            mode === "new"
+              ? "rounded-[4px] bg-primary px-3 py-1.5 text-[0.68rem] font-medium text-primary-foreground"
+              : "rounded-[4px] border border-line px-3 py-1.5 text-[0.68rem] font-medium text-muted-foreground"
+          }
+        >
+          Create a new member
+        </button>
+      </div>
+
+      {mode === "existing" ? (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search name or email"
+              aria-label="Search member accounts"
+              className="h-9 rounded-lg bg-card pl-8 text-xs"
+            />
+          </div>
+          <select
+            aria-label="New owner"
+            value={userId}
+            onChange={(event) => setUserId(event.target.value)}
+            className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
+          >
+            <option value="">Choose a customer or broker…</option>
+            {(options ?? []).map((option) => (
+              <option key={option.userId} value={option.userId}>
+                {option.name} · {option.email}
+                {option.role === "broker" ? " (broker)" : ""}
+                {option.userId === currentAssigneeId ? " — current owner" : ""}
+              </option>
+            ))}
+          </select>
+          {sameOwner && (
+            <p className="text-[0.62rem] text-muted-foreground sm:col-span-2">
+              This account already owns the mineral.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="assign-new-name">Full name</Label>
+            <Input
+              id="assign-new-name"
+              value={newName}
+              onChange={(event) => setNewName(event.target.value)}
+              className="h-9 rounded-lg bg-card text-xs"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="assign-new-email">Email</Label>
+            <Input
+              id="assign-new-email"
+              type="email"
+              value={newEmail}
+              onChange={(event) => setNewEmail(event.target.value)}
+              className="h-9 rounded-lg bg-card text-xs"
+            />
+          </div>
+          <p className="text-[0.62rem] leading-5 text-muted-foreground sm:col-span-2">
+            The account is created now and becomes sign-in capable when the
+            member signs in with this email using a one-time code. An existing
+            account with the same email is reused.
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-1.5">
+        <Label htmlFor="assign-note">Reason for the change (optional)</Label>
+        <Input
+          id="assign-note"
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          placeholder="Recorded in the audit log"
+          className="h-9 rounded-lg bg-card text-xs"
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+        <p className="max-w-sm text-[0.62rem] leading-5 text-muted-foreground">
+          The new owner is emailed immediately; the previous owner is notified
+          in their dashboard.
+        </p>
+        <Button
+          size="sm"
+          className="h-9 rounded-[4px] px-4"
+          disabled={!ready || pending}
+          onClick={() => setConfirmOpen(true)}
+        >
+          {pending && <Loader2 className="size-3.5 animate-spin" />}
+          Reassign mineral
+        </Button>
+      </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent className="rounded-[4px] border-line bg-background">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reassign this mineral?</AlertDialogTitle>
+            <AlertDialogDescription>
+              It will be owned by {targetLabel || "the new account"}, and every
+              shipment recorded against it moves as well. The previous owner
+              loses access to it in their dashboard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-[4px]" disabled={pending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-[4px]"
+              disabled={pending}
+              onClick={(event) => {
+                event.preventDefault();
+                void submit();
+              }}
+            >
+              {pending && <Loader2 className="size-3.5 animate-spin" />}
+              Reassign
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
+  );
+}
+
 function MineralDetailDialog({
   mineralId,
   canManage,
@@ -927,6 +1195,12 @@ function MineralDetailDialog({
               )}
             </div>
           </section>
+
+          <AssignmentSection
+            mineralId={mineral._id}
+            currentAssigneeId={mineral.assignedUserId}
+            canManage={canManage}
+          />
 
           {shipment && (
             <section className="space-y-3 rounded-xl border border-line p-4">

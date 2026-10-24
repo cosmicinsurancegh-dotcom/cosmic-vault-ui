@@ -442,6 +442,236 @@ export const create = mutation({
   },
 });
 
+/**
+ * Move a mineral that is already on record — together with every shipment
+ * attached to it — to another customer or broker. Creation only binds an owner
+ * once; this is the correction path for a record recorded against the wrong
+ * account, and it keeps both member dashboards accurate.
+ */
+export const reassign = mutation({
+  args: {
+    mineralId: v.id("minerals"),
+    assignment: v.object({
+      mode: v.union(v.literal("existing"), v.literal("new")),
+      userId: v.optional(v.id("users")),
+      newUser: v.optional(v.object({ name: v.string(), email: v.string() })),
+    }),
+    note: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const viewer = await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+    const mineral = await ctx.db.get(args.mineralId);
+    if (!mineral) throw new Error("Mineral not found.");
+
+    // Reuse the creation rules: staff can never own a mineral, an existing
+    // email is reused, and an unknown email becomes an invited customer.
+    const { userId, isNewAccount } = await resolveAssignee(
+      ctx,
+      viewer,
+      args.assignment,
+    );
+    if (!isNewAccount && mineral.assignedUserId === userId) {
+      throw new Error("This mineral is already assigned to that account.");
+    }
+
+    const previousUserId = mineral.assignedUserId;
+    const previousUser = previousUserId
+      ? await ctx.db.get(previousUserId)
+      : null;
+    const note = cleanText(args.note, "Note", 500) || undefined;
+    const now = Date.now();
+
+    await ctx.db.patch(mineral._id, {
+      assignedUserId: userId,
+      assignedAt: now,
+      assignedBy: viewer.user._id,
+      updatedAt: now,
+    });
+
+    // Shipments carry a denormalised owner so a member's consignments can be
+    // read without walking every mineral. Ownership always follows the mineral.
+    const shipments = await ctx.db
+      .query("shipments")
+      .withIndex("by_mineral", (q) => q.eq("mineralId", mineral._id))
+      .take(100);
+    for (const shipment of shipments) {
+      await ctx.db.patch(shipment._id, {
+        assignedUserId: userId,
+        updatedBy: viewer.user._id,
+        updatedAt: now,
+      });
+    }
+
+    const assignedUser = await ctx.db.get(userId);
+    await writeAudit(ctx, viewer, {
+      action: "mineral.reassigned",
+      entityType: "minerals",
+      entityId: mineral._id,
+      before: {
+        assignedUserId: previousUserId ?? null,
+        ownerName: previousUser ? displayName(previousUser) : null,
+        ownerEmail: previousUser?.email ?? null,
+      },
+      after: {
+        assignedUserId: userId,
+        ownerName: assignedUser ? displayName(assignedUser) : null,
+        ownerEmail: assignedUser?.email ?? null,
+        shipments: shipments.map((shipment) => shipment._id),
+        newAccount: isNewAccount,
+      },
+      reason: note,
+    });
+
+    const settings = await getSettings(ctx);
+    const policy = await latestPolicy(ctx, mineral._id);
+    const latestShipment =
+      [...shipments].sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
+    const updated: Doc<"minerals"> = {
+      ...mineral,
+      assignedUserId: userId,
+      assignedAt: now,
+      assignedBy: viewer.user._id,
+      updatedAt: now,
+    };
+
+    if (assignedUser) {
+      const email = renderAssignmentEmail({
+        recipientName: (assignedUser.name ?? displayName(assignedUser)).split(
+          " ",
+        )[0],
+        isNewAccount,
+        companyName: settings.companyName,
+        supportEmail: settings.supportEmail,
+        appUrl: appUrl(),
+        mineral: toEmailMineral(updated),
+        policy: policy ? toEmailPolicy(policy) : undefined,
+        shipment: latestShipment ? toEmailShipment(latestShipment) : undefined,
+      });
+      await notifyUser(ctx, {
+        userId,
+        type: "mineral.assigned",
+        title: `${mineral.name} has been added to your vault`,
+        body: `${mineral.name} (${mineral.reference}) was assigned to you by ${settings.companyName}.${latestShipment ? ` Shipment ${latestShipment.reference} is ${SHIPMENT_STATUS_LABELS[latestShipment.status].toLowerCase()}.` : ""}`,
+        href: "/dashboard/minerals",
+        relatedType: "minerals",
+        relatedId: mineral._id,
+        // The timestamp keeps a record that moves back to a previous owner
+        // from being swallowed by the assignment notification already queued.
+        dedupeKey: `mineral.reassigned:${mineral._id}:${userId}:${now}`,
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
+      });
+    }
+
+    if (previousUserId && previousUserId !== userId) {
+      await notifyUser(ctx, {
+        userId: previousUserId,
+        type: "mineral.unassigned",
+        title: `${mineral.name} has moved to another account`,
+        body: `${mineral.name} (${mineral.reference}) is no longer assigned to you. Contact ${settings.supportEmail} if this is unexpected.`,
+        href: "/dashboard/minerals",
+        relatedType: "minerals",
+        relatedId: mineral._id,
+        dedupeKey: `mineral.unassigned:${mineral._id}:${previousUserId}:${now}`,
+        // A record leaving a vault is an in-app notice, not an email.
+        email: false,
+      });
+    }
+
+    return {
+      mineralId: mineral._id,
+      assignedUserId: userId,
+      previousUserId: previousUserId ?? null,
+      shipmentIds: shipments.map((shipment) => shipment._id),
+      isNewAccount,
+      notified: Boolean(assignedUser?.email) && !assignedUser?.isAnonymous,
+    };
+  },
+});
+
+/**
+ * Return a mineral to the unassigned pool. The record, its policy and every
+ * shipment stay on file; only ownership is cleared, so the mineral becomes an
+ * attach candidate again. The previous owner is told in their dashboard.
+ */
+export const detach = mutation({
+  args: {
+    mineralId: v.id("minerals"),
+    note: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const viewer = await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+    const mineral = await ctx.db.get(args.mineralId);
+    if (!mineral) throw new Error("Mineral not found.");
+
+    const previousUserId = mineral.assignedUserId;
+    if (!previousUserId) {
+      throw new Error("This mineral is not assigned to anyone.");
+    }
+    const previousUser = await ctx.db.get(previousUserId);
+    const note = cleanText(args.note, "Note", 500) || undefined;
+    const now = Date.now();
+
+    await ctx.db.patch(mineral._id, {
+      assignedUserId: undefined,
+      assignedAt: undefined,
+      assignedBy: undefined,
+      updatedAt: now,
+    });
+
+    const shipments = await ctx.db
+      .query("shipments")
+      .withIndex("by_mineral", (q) => q.eq("mineralId", mineral._id))
+      .take(100);
+    for (const shipment of shipments) {
+      await ctx.db.patch(shipment._id, {
+        assignedUserId: undefined,
+        updatedBy: viewer.user._id,
+        updatedAt: now,
+      });
+    }
+
+    await writeAudit(ctx, viewer, {
+      action: "mineral.detached",
+      entityType: "minerals",
+      entityId: mineral._id,
+      before: {
+        assignedUserId: previousUserId,
+        ownerName: previousUser ? displayName(previousUser) : null,
+        ownerEmail: previousUser?.email ?? null,
+      },
+      after: {
+        assignedUserId: null,
+        shipments: shipments.map((shipment) => shipment._id),
+      },
+      reason: note,
+    });
+
+    if (previousUser) {
+      const settings = await getSettings(ctx);
+      await notifyUser(ctx, {
+        userId: previousUserId,
+        type: "mineral.unassigned",
+        title: `${mineral.name} has been removed from your vault`,
+        body: `${mineral.name} (${mineral.reference}) is no longer assigned to you. Contact ${settings.supportEmail} if this is unexpected.`,
+        href: "/dashboard/minerals",
+        relatedType: "minerals",
+        relatedId: mineral._id,
+        dedupeKey: `mineral.detached:${mineral._id}:${previousUserId}:${now}`,
+        // Removing a record from a vault is an in-app notice, not an email.
+        email: false,
+      });
+    }
+
+    return {
+      mineralId: mineral._id,
+      previousUserId,
+      shipmentIds: shipments.map((shipment) => shipment._id),
+    };
+  },
+});
+
 export const updateShipmentStatus = mutation({
   args: {
     shipmentId: v.id("shipments"),
@@ -497,8 +727,11 @@ export const updateShipmentStatus = mutation({
     });
 
     let notified = false;
-    if (mineral.assignedUserId) {
-      const user = await ctx.db.get(mineral.assignedUserId);
+    // The mineral is the source of truth for ownership; the shipment's copy is
+    // kept in step by `reassign`, and covers records written before it existed.
+    const ownerId = mineral.assignedUserId ?? shipment.assignedUserId;
+    if (ownerId) {
+      const user = await ctx.db.get(ownerId);
       if (user) {
         const settings = await getSettings(ctx);
         const policy = await latestPolicy(ctx, mineral._id);
@@ -686,6 +919,78 @@ export const mine = query({
           shipment,
           events,
         };
+      }),
+    );
+  },
+});
+
+/**
+ * Minerals that no account owns yet, offered from a customer record so staff
+ * can attach an existing holding to the customer in front of them. Convex does
+ * not index missing optional fields, so this filters the register instead of
+ * querying `by_assigned`.
+ */
+export const unassigned = query({
+  args: {},
+  handler: async (ctx) => {
+    await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+    const minerals = await ctx.db.query("minerals").order("desc").take(300);
+    const rows = minerals
+      .filter((mineral) => !mineral.assignedUserId)
+      .slice(0, 100);
+
+    return await Promise.all(
+      rows.map(async (mineral) => {
+        const shipments = await ctx.db
+          .query("shipments")
+          .withIndex("by_mineral", (q) => q.eq("mineralId", mineral._id))
+          .order("desc")
+          .take(5);
+        const shipment =
+          shipments.sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
+        return { mineral, shipment, shipments };
+      }),
+    );
+  },
+});
+
+/**
+ * Minerals owned by one account, for the staff customer record. Scoped by the
+ * customer's `_id` rather than reusing `list`, so the detail view can show a
+ * single customer's holdings without loading the whole register.
+ */
+export const forOwner = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+    const owner = await ctx.db.get(args.userId);
+    if (!owner) throw new Error("That account no longer exists.");
+
+    const minerals = await ctx.db
+      .query("minerals")
+      .withIndex("by_assigned", (q) => q.eq("assignedUserId", args.userId))
+      .order("desc")
+      .take(50);
+
+    return await Promise.all(
+      minerals.map(async (mineral) => {
+        const [policies, shipments] = await Promise.all([
+          ctx.db
+            .query("mineralPolicies")
+            .withIndex("by_mineral", (q) => q.eq("mineralId", mineral._id))
+            .order("desc")
+            .take(5),
+          ctx.db
+            .query("shipments")
+            .withIndex("by_mineral", (q) => q.eq("mineralId", mineral._id))
+            .order("desc")
+            .take(5),
+        ]);
+        const policy =
+          policies.sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
+        const shipment =
+          shipments.sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
+        return { mineral, policy, shipment, shipments };
       }),
     );
   },

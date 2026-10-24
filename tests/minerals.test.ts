@@ -368,6 +368,396 @@ describe("minerals and shipments", () => {
   });
 });
 
+describe("reassigning minerals and shipments", () => {
+  it("moves the mineral and all of its shipments to another member", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const previousOwner = await seedCustomer(t);
+    const newOwner = await seedCustomer(t, "new-owner@cosmicvault.test");
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(previousOwner));
+
+    // A second consignment on the same mineral must follow the owner too.
+    const secondShipment = await t.run(
+      async (ctx) =>
+        await ctx.db.insert("shipments", {
+          mineralId: created.mineralId,
+          reference: "SHP-SECOND",
+          carrier: "Malca-Amit",
+          origin: "London, GB",
+          destination: "Zurich, CH",
+          status: "preparing",
+          assignedUserId: previousOwner,
+          createdBy: admin,
+          lastStatusAt: Date.now(),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        }),
+    );
+
+    const result = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.reassign, {
+        mineralId: created.mineralId,
+        assignment: { mode: "existing" as const, userId: newOwner },
+        note: "Recorded against the wrong client.",
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    expect(result).toMatchObject({
+      assignedUserId: newOwner,
+      previousUserId: previousOwner,
+      isNewAccount: false,
+      notified: true,
+    });
+    expect(result.shipmentIds.sort()).toEqual(
+      [created.shipmentId, secondShipment].sort(),
+    );
+
+    const stored = await t.run(async (ctx) => ({
+      mineral: await ctx.db.get(created.mineralId),
+      shipments: await ctx.db.query("shipments").collect(),
+      audit: await ctx.db.query("auditLogs").collect(),
+      notifications: await ctx.db.query("notifications").collect(),
+    }));
+
+    expect(stored.mineral).toMatchObject({
+      assignedUserId: newOwner,
+      assignedBy: admin,
+    });
+    expect(stored.shipments).toHaveLength(2);
+    expect(
+      stored.shipments.every(
+        (shipment) => shipment.assignedUserId === newOwner,
+      ),
+    ).toBe(true);
+
+    const audit = stored.audit.find(
+      (entry) => entry.action === "mineral.reassigned",
+    );
+    expect(audit).toMatchObject({
+      entityId: created.mineralId,
+      actorId: admin,
+      reason: "Recorded against the wrong client.",
+      before: { assignedUserId: previousOwner },
+      after: { assignedUserId: newOwner, newAccount: false },
+    });
+
+    const assignmentEmail = stored.notifications.find(
+      (notification) =>
+        notification.userId === newOwner &&
+        notification.type === "mineral.assigned",
+    );
+    expect(assignmentEmail).toMatchObject({
+      emailStatus: "queued",
+      href: "/dashboard/minerals",
+    });
+
+    const notice = stored.notifications.find(
+      (notification) =>
+        notification.userId === previousOwner &&
+        notification.type === "mineral.unassigned",
+    );
+    expect(notice).toMatchObject({ emailStatus: "skipped" });
+    expect(notice?.title).toContain("moved to another account");
+
+    const newOwnersVault = await t
+      .withIdentity({ subject: newOwner })
+      .query(api.minerals.mine, {});
+    expect(newOwnersVault).toHaveLength(1);
+    expect(newOwnersVault[0].mineral._id).toBe(created.mineralId);
+    expect(stored.shipments.map((shipment) => shipment.reference)).toContain(
+      newOwnersVault[0].shipment?.reference,
+    );
+
+    const previousOwnersVault = await t
+      .withIdentity({ subject: previousOwner })
+      .query(api.minerals.mine, {});
+    expect(previousOwnersVault).toHaveLength(0);
+  });
+
+  it("creates or reuses the receiving account from an email address", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const previousOwner = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(previousOwner));
+
+    const result = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.reassign, {
+        mineralId: created.mineralId,
+        assignment: {
+          mode: "new" as const,
+          newUser: { name: "Rae Receiver", email: "Rae@Example.test" },
+        },
+      });
+
+    expect(result.isNewAccount).toBe(true);
+    const createdUser = await t.run(
+      async (ctx) => await ctx.db.get(result.assignedUserId),
+    );
+    expect(createdUser).toMatchObject({
+      name: "Rae Receiver",
+      email: "rae@example.test",
+      role: "customer",
+    });
+
+    const second = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, {
+        ...payload(previousOwner),
+        policy: { ...payload().policy, policyNumber: "CV-MIN-2026-099" },
+      });
+    const reused = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.reassign, {
+        mineralId: second.mineralId,
+        assignment: {
+          mode: "new" as const,
+          newUser: { name: "Rae Receiver", email: "RAE@example.test" },
+        },
+      });
+    expect(reused.isNewAccount).toBe(false);
+    expect(reused.assignedUserId).toBe(result.assignedUserId);
+  });
+
+  it("guards ownership, roles and no-op moves", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    const other = await seedCustomer(t, "other@cosmicvault.test");
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+
+    await expect(
+      t.withIdentity({ subject: admin }).mutation(api.minerals.reassign, {
+        mineralId: created.mineralId,
+        assignment: { mode: "existing" as const, userId: client },
+      }),
+    ).rejects.toThrow(/already assigned/i);
+
+    await expect(
+      t.withIdentity({ subject: admin }).mutation(api.minerals.reassign, {
+        mineralId: created.mineralId,
+        assignment: { mode: "existing" as const, userId: admin },
+      }),
+    ).rejects.toThrow(/customer or broker/i);
+
+    await expect(
+      t.withIdentity({ subject: other }).mutation(api.minerals.reassign, {
+        mineralId: created.mineralId,
+        assignment: { mode: "existing" as const, userId: other },
+      }),
+    ).rejects.toThrow(/restricted to staff/i);
+  });
+});
+
+describe("minerals for a customer record", () => {
+  it("lists only that customer's minerals with their policy and shipment", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    const other = await seedCustomer(t, "other@cosmicvault.test");
+    await seedCurrency(t);
+
+    const first = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, {
+        ...payload(other),
+        policy: { ...payload().policy, policyNumber: "CV-MIN-2026-200" },
+      });
+
+    await expect(
+      t
+        .withIdentity({ subject: client })
+        .query(api.minerals.forOwner, { userId: client }),
+    ).rejects.toThrow(/restricted to staff/i);
+
+    const rows = await t
+      .withIdentity({ subject: admin })
+      .query(api.minerals.forOwner, { userId: client });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].mineral._id).toBe(first.mineralId);
+    expect(rows[0].policy?.policyNumber).toBe("CV-MIN-2026-014");
+    expect(rows[0].shipment?._id).toBe(first.shipmentId);
+    expect(rows[0].shipments).toHaveLength(1);
+
+    await t.withIdentity({ subject: admin }).mutation(api.minerals.reassign, {
+      mineralId: first.mineralId,
+      assignment: { mode: "existing" as const, userId: other },
+    });
+
+    expect(
+      await t
+        .withIdentity({ subject: admin })
+        .query(api.minerals.forOwner, { userId: client }),
+    ).toHaveLength(0);
+    expect(
+      await t
+        .withIdentity({ subject: admin })
+        .query(api.minerals.forOwner, { userId: other }),
+    ).toHaveLength(2);
+  });
+});
+
+describe("unassigned minerals", () => {
+  it("offers only ownerless minerals and attaches one to the customer", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+
+    // Detach the record so it becomes an attach candidate on a customer page.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(created.mineralId, { assignedUserId: undefined });
+      const shipments = await ctx.db
+        .query("shipments")
+        .withIndex("by_mineral", (q) => q.eq("mineralId", created.mineralId))
+        .collect();
+      for (const shipment of shipments) {
+        await ctx.db.patch(shipment._id, { assignedUserId: undefined });
+      }
+    });
+
+    await expect(
+      t.withIdentity({ subject: client }).query(api.minerals.unassigned, {}),
+    ).rejects.toThrow(/restricted to staff/i);
+
+    const rows = await t
+      .withIdentity({ subject: admin })
+      .query(api.minerals.unassigned, {});
+    expect(rows).toHaveLength(1);
+    expect(rows[0].mineral._id).toBe(created.mineralId);
+    expect(rows[0].shipment?._id).toBe(created.shipmentId);
+
+    const result = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.reassign, {
+        mineralId: created.mineralId,
+        assignment: { mode: "existing" as const, userId: client },
+        note: "Matched to the customer record.",
+      });
+    await t.finishAllScheduledFunctions(() => {});
+    expect(result.notified).toBe(true);
+
+    expect(
+      await t.withIdentity({ subject: admin }).query(api.minerals.unassigned, {}),
+    ).toHaveLength(0);
+    expect(
+      await t.withIdentity({ subject: client }).query(api.minerals.mine, {}),
+    ).toHaveLength(1);
+
+    const stored = await t.run(async (ctx) => ({
+      mineral: await ctx.db.get(created.mineralId),
+      shipment: await ctx.db.get(created.shipmentId),
+      audit: await ctx.db.query("auditLogs").collect(),
+    }));
+    expect(stored.mineral?.assignedUserId).toBe(client);
+    expect(stored.shipment?.assignedUserId).toBe(client);
+    expect(
+      stored.audit.some((entry) => entry.action === "mineral.reassigned"),
+    ).toBe(true);
+  });
+});
+
+describe("detaching minerals", () => {
+  it("returns the mineral and its shipments to the unassigned pool", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+
+    await expect(
+      t.withIdentity({ subject: client }).mutation(api.minerals.detach, {
+        mineralId: created.mineralId,
+      }),
+    ).rejects.toThrow(/restricted to staff/i);
+
+    const result = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.detach, {
+        mineralId: created.mineralId,
+        note: "Customer moved the record to another vault.",
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    expect(result).toMatchObject({
+      previousUserId: client,
+      shipmentIds: [created.shipmentId],
+    });
+
+    const stored = await t.run(async (ctx) => ({
+      mineral: await ctx.db.get(created.mineralId),
+      shipment: await ctx.db.get(created.shipmentId),
+      audit: await ctx.db.query("auditLogs").collect(),
+      notifications: await ctx.db.query("notifications").collect(),
+    }));
+
+    expect(stored.mineral?.assignedUserId).toBeUndefined();
+    expect(stored.mineral?.assignedAt).toBeUndefined();
+    expect(stored.shipment?.assignedUserId).toBeUndefined();
+
+    const audit = stored.audit.find(
+      (entry) => entry.action === "mineral.detached",
+    );
+    expect(audit).toMatchObject({
+      entityId: created.mineralId,
+      reason: "Customer moved the record to another vault.",
+      before: { assignedUserId: client },
+      after: { assignedUserId: null },
+    });
+
+    const notice = stored.notifications.find(
+      (notification) =>
+        notification.userId === client &&
+        notification.type === "mineral.unassigned" &&
+        notification.title.includes("removed from your vault"),
+    );
+    expect(notice).toMatchObject({ emailStatus: "skipped" });
+
+    expect(
+      await t
+        .withIdentity({ subject: admin })
+        .query(api.minerals.forOwner, { userId: client }),
+    ).toHaveLength(0);
+    expect(
+      (
+        await t.withIdentity({ subject: admin }).query(api.minerals.unassigned, {})
+      ).map((row) => row.mineral._id),
+    ).toContain(created.mineralId);
+    expect(
+      await t.withIdentity({ subject: client }).query(api.minerals.mine, {}),
+    ).toHaveLength(0);
+
+    await expect(
+      t.withIdentity({ subject: admin }).mutation(api.minerals.detach, {
+        mineralId: created.mineralId,
+      }),
+    ).rejects.toThrow(/not assigned/i);
+  });
+});
+
 describe("shipment status email", () => {
   const base = {
     recipientName: "Casey",

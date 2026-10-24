@@ -13,6 +13,16 @@ import {
 } from "@/components/dashboard/PlatformUI";
 import { TicketDialog } from "@/pages/dashboard/SupportPage";
 import { NewCustomerDialog } from "@/components/dashboard/NewCustomerDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,7 +40,18 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import { STAFF_PERMISSIONS, can } from "@/lib/permissions";
 import { useMutation, useQuery } from "convex/react";
-import { Loader2, Search, ShieldCheck, UserPlus, Users } from "lucide-react";
+import {
+  ArrowRightLeft,
+  Gem,
+  Loader2,
+  Plus,
+  Search,
+  ShieldCheck,
+  Truck,
+  UserMinus,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -191,6 +212,11 @@ export function AdminCustomersPage() {
           onOpenChange={(open) => !open && setSelectedUserId(null)}
           canManage={canManage}
           canAssignBroker={can(user?.role, user?.permissions, STAFF_PERMISSIONS.BROKERS_MANAGE)}
+          canManageMinerals={can(
+            user?.role,
+            user?.permissions,
+            STAFF_PERMISSIONS.POLICIES_MANAGE,
+          )}
         />
       )}
 
@@ -215,12 +241,14 @@ function CustomerDialog({
   onOpenChange,
   canManage,
   canAssignBroker,
+  canManageMinerals,
 }: {
   userId: Id<"users">;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   canManage: boolean;
   canAssignBroker: boolean;
+  canManageMinerals: boolean;
 }) {
   const detail = useQuery(api.customers.detail, { userId });
   const reference = useQuery(api.setup.referenceData);
@@ -472,6 +500,11 @@ function CustomerDialog({
             </section>
           )}
 
+          <CustomerMineralsSection
+            userId={userId}
+            canManage={canManageMinerals}
+          />
+
           <div className="grid gap-4 sm:grid-cols-2">
             <RecordList
               title="Applications"
@@ -556,6 +589,487 @@ function CustomerDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+const MINERAL_COVERAGE: Record<string, string> = {
+  all_risk: "All risk",
+  cargo_transit: "Cargo & transit",
+  storage: "Storage",
+  liability: "Liability",
+};
+
+/**
+ * The customer's minerals and consignments, with the same owner controls the
+ * mineral console exposes. Moving a record here uses `minerals.reassign`, so
+ * every shipment follows the mineral to the new customer.
+ */
+function CustomerMineralsSection({
+  userId,
+  canManage,
+}: {
+  userId: Id<"users">;
+  canManage: boolean;
+}) {
+  const rows = useQuery(
+    api.minerals.forOwner,
+    canManage ? { userId } : "skip",
+  );
+  const options = useQuery(
+    api.minerals.assigneeOptions,
+    canManage ? {} : "skip",
+  );
+  const candidates = useQuery(
+    api.minerals.unassigned,
+    canManage ? {} : "skip",
+  );
+  const reassign = useMutation(api.minerals.reassign);
+  const detach = useMutation(api.minerals.detach);
+  const [movingId, setMovingId] = useState<Id<"minerals"> | null>(null);
+  const [targetId, setTargetId] = useState("");
+  const [note, setNote] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [attaching, setAttaching] = useState(false);
+  const [attachId, setAttachId] = useState("");
+  const [attachNote, setAttachNote] = useState("");
+  const [attachConfirmOpen, setAttachConfirmOpen] = useState(false);
+  const [attachPending, setAttachPending] = useState(false);
+  const [detachTarget, setDetachTarget] = useState<{
+    id: Id<"minerals">;
+    name: string;
+  } | null>(null);
+  const [detachNote, setDetachNote] = useState("");
+  const [detachPending, setDetachPending] = useState(false);
+
+  if (!canManage) return null;
+
+  const minerals = rows ?? [];
+  const unowned = candidates ?? [];
+  const attachCandidate =
+    unowned.find((row) => row.mineral._id === attachId) ?? null;
+  const moving = minerals.find((row) => row.mineral._id === movingId) ?? null;
+  const targets = (options ?? []).filter(
+    (option) => option.userId !== userId,
+  );
+  const target = targets.find((option) => option.userId === targetId);
+  const outstanding = minerals.filter(
+    (row) => row.shipments.length > 0,
+  ).length;
+
+  const submitAttach = async () => {
+    if (!attachCandidate) return;
+    setAttachPending(true);
+    try {
+      const result = await reassign({
+        mineralId: attachCandidate.mineral._id,
+        assignment: { mode: "existing", userId },
+        note: attachNote.trim() || undefined,
+      });
+      toast.success(
+        result.notified
+          ? "Mineral attached. The customer has been emailed."
+          : "Mineral attached. No customer email was sent.",
+      );
+      setAttaching(false);
+      setAttachId("");
+      setAttachNote("");
+      setAttachConfirmOpen(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not attach the mineral.",
+      );
+    } finally {
+      setAttachPending(false);
+    }
+  };
+
+  const submitDetach = async () => {
+    if (!detachTarget) return;
+    setDetachPending(true);
+    try {
+      await detach({
+        mineralId: detachTarget.id,
+        note: detachNote.trim() || undefined,
+      });
+      toast.success(
+        `${detachTarget.name} is back in the unassigned pool.`,
+      );
+      setDetachTarget(null);
+      setDetachNote("");
+      setMovingId(null);
+      setAttaching(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not detach the mineral.",
+      );
+    } finally {
+      setDetachPending(false);
+    }
+  };
+
+  const submit = async () => {
+    if (!moving) return;
+    setPending(true);
+    try {
+      const result = await reassign({
+        mineralId: moving.mineral._id,
+        assignment: { mode: "existing", userId: targetId as Id<"users"> },
+        note: note.trim() || undefined,
+      });
+      toast.success(
+        result.notified
+          ? "Mineral moved. The new owner has been emailed."
+          : "Mineral moved. No owner email was sent.",
+      );
+      setMovingId(null);
+      setTargetId("");
+      setNote("");
+      setConfirmOpen(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not move the mineral.",
+      );
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <section className="rounded-xl border border-line p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Minerals &amp; shipments
+          </h3>
+          <p className="mt-1 text-[0.64rem] leading-5 text-muted-foreground">
+            {minerals.length} assigned · {outstanding} with a consignment on
+            record
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-ice/40 px-2.5 py-1 text-[0.58rem] font-medium text-muted-foreground">
+            <Gem className="size-3" />
+            Owner controls
+          </span>
+          {unowned.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 rounded-[4px] bg-transparent px-2.5 text-[0.62rem]"
+              onClick={() => {
+                setAttaching((current) => !current);
+                setAttachId("");
+                setAttachNote("");
+              }}
+            >
+              <Plus className="size-3" />
+              Attach mineral
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {rows === undefined ? (
+        <p className="mt-3 flex items-center gap-2 text-[0.68rem] text-muted-foreground">
+          <Loader2 className="size-3.5 animate-spin" /> Loading minerals
+        </p>
+      ) : minerals.length === 0 ? (
+        <p className="mt-3 rounded-lg border border-dashed border-line px-4 py-4 text-[0.68rem] text-muted-foreground">
+          No minerals are assigned to this account yet. Attach an unassigned
+          mineral above, or record a new one in the mineral register, and it will
+          appear here and on the customer's dashboard.
+        </p>
+      ) : (
+        <ul className="mt-3 divide-y divide-line rounded-lg border border-line">
+          {minerals.map(({ mineral, policy, shipment }) => (
+            <li key={mineral._id} className="px-4 py-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-ink">{mineral.name}</p>
+                  <p className="mt-0.5 text-[0.6rem] text-muted-foreground">
+                    {mineral.reference} · {mineral.category} ·{" "}
+                    {formatMoney(mineral.declaredValue, mineral.currency)}
+                  </p>
+                  <p className="mt-0.5 text-[0.6rem] text-muted-foreground">
+                    {policy
+                      ? `${policy.policyNumber} · ${MINERAL_COVERAGE[policy.coverage] ?? policy.coverage} · ends ${formatDate(policy.endDate)}`
+                      : "No policy recorded"}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {shipment ? (
+                    <span className="inline-flex items-center gap-1.5 text-[0.6rem] text-muted-foreground">
+                      <Truck className="size-3" />
+                      {shipment.reference} · {shipment.origin} →{" "}
+                      {shipment.destination}
+                    </span>
+                  ) : (
+                    <span className="text-[0.6rem] text-muted-foreground">
+                      No shipment
+                    </span>
+                  )}
+                  <StatusPill
+                    status={shipment?.status ?? mineral.status}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 rounded-[4px] bg-transparent px-2 text-[0.62rem]"
+                    onClick={() => {
+                      setMovingId(mineral._id);
+                      setTargetId("");
+                      setNote("");
+                      setAttaching(false);
+                    }}
+                  >
+                    <ArrowRightLeft className="size-3" />
+                    Move
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 rounded-[4px] px-2 text-[0.62rem] text-muted-foreground"
+                    onClick={() => {
+                      setDetachTarget({ id: mineral._id, name: mineral.name });
+                      setDetachNote("");
+                    }}
+                  >
+                    <UserMinus className="size-3" />
+                    Detach
+                  </Button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {moving && (
+        <div className="mt-3 space-y-2 rounded-lg border border-primary/25 bg-primary/[0.03] p-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[0.68rem] font-semibold text-ink">
+              Move {moving.mineral.name}
+              {moving.shipments.length > 0
+                ? ` and ${moving.shipments.length} consignment${moving.shipments.length === 1 ? "" : "s"}`
+                : ""}
+            </p>
+            <button
+              type="button"
+              onClick={() => setMovingId(null)}
+              className="text-[0.6rem] font-medium text-muted-foreground hover:text-ink"
+            >
+              Cancel
+            </button>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <select
+              aria-label="New owner"
+              value={targetId}
+              onChange={(event) => setTargetId(event.target.value)}
+              className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
+            >
+              <option value="">Choose the new owner…</option>
+              {targets.map((option) => (
+                <option key={option.userId} value={option.userId}>
+                  {option.name} · {option.email}
+                  {option.role === "broker" ? " (broker)" : ""}
+                </option>
+              ))}
+            </select>
+            <Input
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="Reason for the move (optional)"
+              aria-label="Reason for the move"
+              className="h-9 rounded-lg bg-card text-xs"
+            />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="max-w-sm text-[0.6rem] leading-5 text-muted-foreground">
+              The new owner is emailed immediately; this customer loses the
+              record in their dashboard.
+            </p>
+            <Button
+              size="sm"
+              className="h-8 rounded-[4px] px-3 text-[0.62rem]"
+              disabled={!targetId || pending}
+              onClick={() => setConfirmOpen(true)}
+            >
+              Move mineral
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {attaching && (
+        <div className="mt-3 space-y-2 rounded-lg border border-line bg-ice/20 p-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[0.68rem] font-semibold text-ink">
+              Attach an unassigned mineral
+            </p>
+            <button
+              type="button"
+              onClick={() => setAttaching(false)}
+              className="text-[0.6rem] font-medium text-muted-foreground hover:text-ink"
+            >
+              Cancel
+            </button>
+          </div>
+          <p className="text-[0.6rem] leading-5 text-muted-foreground">
+            {unowned.length} mineral{unowned.length === 1 ? "" : "s"} on the
+            register {unowned.length === 1 ? "has" : "have"} no owner. Choosing
+            one makes it part of this customer's vault, moves any existing
+            shipments with it and emails the customer.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <select
+              aria-label="Unassigned mineral"
+              value={attachId}
+              onChange={(event) => setAttachId(event.target.value)}
+              className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
+            >
+              <option value="">Choose a mineral…</option>
+              {unowned.map(({ mineral, shipment }) => (
+                <option key={mineral._id} value={mineral._id}>
+                  {mineral.name} · {mineral.reference}
+                  {shipment ? ` · ${shipment.reference}` : ""} ·{" "}
+                  {formatMoney(mineral.declaredValue, mineral.currency)}
+                </option>
+              ))}
+            </select>
+            <Input
+              value={attachNote}
+              onChange={(event) => setAttachNote(event.target.value)}
+              placeholder="Reason for attaching (optional)"
+              aria-label="Reason for attaching"
+              className="h-9 rounded-lg bg-card text-xs"
+            />
+          </div>
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              className="h-8 rounded-[4px] px-3 text-[0.62rem]"
+              disabled={!attachId || attachPending}
+              onClick={() => setAttachConfirmOpen(true)}
+            >
+              Attach mineral
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <AlertDialog
+        open={Boolean(detachTarget)}
+        onOpenChange={(open) => {
+          if (!open && !detachPending) {
+            setDetachTarget(null);
+            setDetachNote("");
+          }
+        }}
+      >
+        <AlertDialogContent className="rounded-[4px] border-line bg-background">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Detach this mineral?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {detachTarget?.name ?? "The mineral"} leaves this customer's vault
+              and returns to the unassigned pool. Its policy and shipments stay on
+              file, the customer is notified in their dashboard, and you can
+              attach it to another customer at any time.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            value={detachNote}
+            onChange={(event) => setDetachNote(event.target.value)}
+            placeholder="Reason for detaching (optional)"
+            aria-label="Reason for detaching"
+            className="h-9 rounded-lg bg-card text-xs"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-[4px]" disabled={detachPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-[4px]"
+              disabled={detachPending}
+              onClick={(event) => {
+                event.preventDefault();
+                void submitDetach();
+              }}
+            >
+              {detachPending && <Loader2 className="size-3.5 animate-spin" />}
+              Detach mineral
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={attachConfirmOpen} onOpenChange={setAttachConfirmOpen}>
+        <AlertDialogContent className="rounded-[4px] border-line bg-background">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Attach this mineral?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {attachCandidate?.mineral.name ?? "The mineral"} becomes part of
+              this customer's vault, along with every shipment recorded against
+              it. The customer is emailed immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-[4px]" disabled={attachPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-[4px]"
+              disabled={attachPending}
+              onClick={(event) => {
+                event.preventDefault();
+                void submitAttach();
+              }}
+            >
+              {attachPending && <Loader2 className="size-3.5 animate-spin" />}
+              Attach mineral
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent className="rounded-[4px] border-line bg-background">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Move this record to another customer?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {moving?.mineral.name ?? "The mineral"} will be owned by{" "}
+              {target ? `${target.name} · ${target.email}` : "the new owner"},
+              and every shipment attached to it moves too.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-[4px]" disabled={pending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-[4px]"
+              disabled={pending}
+              onClick={(event) => {
+                event.preventDefault();
+                void submit();
+              }}
+            >
+              {pending && <Loader2 className="size-3.5 animate-spin" />}
+              Move mineral
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
   );
 }
 
