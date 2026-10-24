@@ -94,11 +94,20 @@ to ship the backend.
   reach a backend instead of rendering the configuration screen.
 
 The dashboard checks the deployment on load, independently of the Convex
-client: it fetches the public `setup:status` over the Convex HTTP API and, when
-the host answers but runs no function, the deployment is paused, or it cannot
-be reached, shows a banner above the dashboard naming the cause with a *Check
-again* button. A reachable host is not a working backend, and the client's own
-"Server Error" does not say which of those it is.
+client: it fetches the public `setup:health` over the Convex HTTP API and, when
+the probe fails or the deployment is paused, shows a banner above the dashboard
+naming the cause with a _Check again_ button. The probe is argument-free and
+needs no session, because production redacts every failure to a bare
+`Server Error` - probing a signed-in query would make a healthy deployment
+answer exactly like one that runs nothing. A failed probe is retried before it
+is reported, and a failing tab re-checks when it becomes visible again.
+
+`bun run smoke:live` checks the published site after a release: that the served
+bundle targets `DEFAULT_CONVEX_URL`, that `setup:health` answers, that a missing
+`/assets/*` file is a `404` rather than `index.html`, and that `/dashboard` still
+serves the app. The `Smoke the live site` workflow runs it on every push to
+`main`, every six hours, and on demand; set `SMOKE_WAIT_SECONDS` to let it wait
+for a deploy to land, and `SMOKE_BASE_URL` to point it somewhere else.
 
 Routes are code-split, so a tab left open across a deploy asks for a chunk the
 new build replaced. Missing `/assets/*` files are kept out of the SPA rewrite,

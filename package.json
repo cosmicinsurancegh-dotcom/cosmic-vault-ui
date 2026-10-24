@@ -21,6 +21,7 @@
     "test:load:abuse": "k6 run loadtest/quote-rate-limit.js",
     "format": "prettier --write .",
     "preview": "vite preview",
+    "smoke:live": "node scripts/smoke-live.mjs",
     "deploy:vercel": "bunx vercel --prod --yes",
     "deploy:vercel:preview": "bunx vercel --yes"
   },

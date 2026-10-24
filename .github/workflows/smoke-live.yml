@@ -1,0 +1,45 @@
+name: Smoke the live site
+
+# Runs `scripts/smoke-live.mjs` against production: the served bundle's Convex
+# target, the deployment's health function, missing-asset 404s, and the SPA
+# route. A push to `main` is what Vercel builds, so the job waits for the new
+# deployment to take over; the schedule catches drift between releases (a
+# paused deployment, an expired credential, a reverted build).
+#
+# Limitation: this checks that the live site is healthy, not which commit it was
+# built from. If Vercel has not finished building within the wait window, the
+# previous deployment can still satisfy every check - the scheduled run is the
+# backstop.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-live
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Live site smoke check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # No dependency install and no Bun: the check uses only Node's fetch.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Wait for the release, then check it
+        env:
+          # Vercel needs a minute or two; the script retries until this budget
+          # runs out and only then reports the failures.
+          SMOKE_WAIT_SECONDS: "600"
+        run: node scripts/smoke-live.mjs
