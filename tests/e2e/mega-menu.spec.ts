@@ -9,6 +9,16 @@ import { expect, expectRoute, test } from "./support/fixtures";
  */
 const MEMBER_PREFIX = "/dashboard";
 
+/**
+ * Public links that hand a signed-out visitor to the sign-in screen and keep
+ * their destination in `returnTo`, instead of rendering a public page at the
+ * linked path. The hand-off itself is covered by `auth-redirect.spec.ts`.
+ */
+const SIGN_IN_HANDOFF: Record<string, string> = {
+  "/claims/track": "/dashboard/claims",
+  "/claims/policy-documents": "/dashboard/documents",
+};
+
 const primaryNav = (page: Page) =>
   page.getByRole("navigation", { name: "Primary" });
 
@@ -30,7 +40,7 @@ test.describe("mega-menu", () => {
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: /stored in the vault/i,
+        name: /held\.\s*sealed\.\s*covered\./i,
       }),
     ).toBeVisible();
     await expect(page.getByRole("banner")).toBeVisible();
@@ -110,7 +120,18 @@ test.describe("mega-menu", () => {
           timeout: 30_000,
         });
 
-        if (destination.startsWith(MEMBER_PREFIX)) {
+        if (destination in SIGN_IN_HANDOFF) {
+          await expect
+            .poll(() => new URL(page.url()).pathname, {
+              message: `${label} should open the sign-in hand-off`,
+            })
+            .toBe("/auth");
+          expect(
+            new URL(page.url()).searchParams.get("returnTo"),
+            `${label} should keep its destination for after sign-in`,
+          ).toBe(SIGN_IN_HANDOFF[destination]);
+          await page.goto("/");
+        } else if (destination.startsWith(MEMBER_PREFIX)) {
           await expect
             .poll(() => new URL(page.url()).pathname, {
               message: `${label} should open the member application`,
