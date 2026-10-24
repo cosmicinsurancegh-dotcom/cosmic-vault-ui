@@ -110,6 +110,14 @@ documents and (for brokers) recorded customer consent. Staff decide with
 transaction, and issues policy documents (schedule, certificate, wording) and
 notifications. A confirmation page alone never activates a policy.
 
+**Issuing from the register** - `policies.create` issues cover directly for an
+existing customer on a published product (country, premium, start date). It
+records the approved application the policy must point at, writes the schedule,
+certificate and wording through `lib/policyDocuments`, raises the premium as a
+pending transaction so finance still sees the receivable, notifies the member
+(and the assigned broker) and audits the issuance as `policy.issued_directly`.
+It does not wait for a payment, so it is gated on `policies.manage` alone.
+
 **Servicing and renewal** - customers/brokers raise `policyRequests`
 (endorsement, cancellation, renewal, suspension). Staff decide; approval patches
 the policy, appends an endorsement record and issues an endorsement document. A
@@ -136,12 +144,23 @@ A branded assignment email goes out immediately.
 
 `minerals.updateShipmentStatus` records a `shipmentEvents` row, audit entry and
 status change, then emails the assigned member through the same notification
-pipeline. The email is a designed HTML template (`lib/shipmentEmail`) - navy
-header, status banner, four-step delivery tracker, shipment/policy details and a
-CTA into `/dashboard/minerals` - with a plain-text fallback. Delivery state is
-recorded on the notification exactly like every other email, so staff can retry
-failures. Members see their minerals, policy and shipment timeline at
-`/dashboard/minerals`; the staff register is `/dashboard/admin/minerals`.
+pipeline. The email is a designed HTML template (`lib/shipmentEmail`) - brand
+header, ice status hero, the shipping desk's route rail, the five-stage journey,
+shipment/policy details and a CTA into `/dashboard/minerals` - with a plain-text
+fallback. Delivery state is recorded on the notification exactly like every
+other email, so staff can retry failures. Members see their minerals, policy and
+shipment timeline at `/dashboard/minerals`; the staff register is
+`/dashboard/admin/minerals`.
+
+**Accounts** - staff create accounts without a password hand-off.
+`customers.invite` (`customers.manage`) writes the customer record, profile and
+reference; `brokers.invite` (`brokers.manage`) writes the broker account and
+brokerage profile; `staff.invite` (`staff.manage`, super admin only) writes an
+administrator or super admin with permissions. Each invitation marks the address
+as verified so Convex Auth links the invitation to the account created on first
+sign-in with an emailed code, writes an audit entry and queues a welcome email.
+An email that already has an account is refused - the directory, broker console
+and settings panel keep their existing promote/add path for those.
 
 **Brokers** - broker accounts are created/updated by staff; assignments are
 explicit (`customers.assignBroker`) and revocable. Brokers see only assigned
@@ -158,9 +177,14 @@ by `vault/shipmentEmail.ts` (the same module the dashboard preview uses), and th
 attempt is recorded in `shipmentEmails` with the provider result, so failures are
 visible instead of silent.
 
-- The template follows the reference tracking page: a warm canvas, forest-green
-  header and footer bands, a cream hero and a five-step rail showing completed,
-  current, skipped and expected stages with their timestamps.
+- The template wears the dashboard design system: a porcelain canvas, a white
+  4px card with hairline borders, electric-blue accents, ink-navy type, uppercase
+  micro-labels at wide tracking, pill status chips and tabular timestamps. It
+  borrows the shipping desk's route rail - a dashed track with a solid progress
+  fill, diamond waypoints and origin/position/destination stations - above the
+  five-stage journey, which still distinguishes completed, current, skipped and
+  expected stages. The footer is the dashboard's dark navy panel. Every value is
+  escaped and only http(s) links are rendered.
 - Delivery is gated on `vault.ship` (`shipmentEmails.sendGate`), rate-limited per
   operator, and the action never trusts a browser-supplied URL: links come from
   `SITE_URL`, only http(s) is allowed, and every interpolated value is escaped.
