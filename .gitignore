@@ -1,6 +1,12 @@
 .env.local
 node_modules
 dist
+
+# Bun is the only package manager; bun.lock is the only lockfile. These are
+# ignored so a stray npm/yarn/pnpm install cannot commit a second graph.
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 .vercel
 test-results
 playwright-report

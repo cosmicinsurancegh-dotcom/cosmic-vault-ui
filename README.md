@@ -34,6 +34,21 @@ results and known limitations are documented in [`docs/PLATFORM.md`](docs/PLATFO
 
 This project is set up already and running on a cloud environment, as well as a convex development in the sandbox.
 
+### Dependencies
+
+Bun is the only package manager and `bun.lock` the only lockfile. CI, Vercel
+(`vercel.json`) and every script use it, so run `bun install` - or
+`bun install --frozen-lockfile` to match CI exactly - and never `npm install`.
+
+The `packageManager` field pins the Bun version CI downloads, so both sides
+resolve the same graph; npm, yarn and pnpm lockfiles are ignored so a stray
+install cannot commit a second one. If you edit `package.json`, re-run
+`bun install` in the same commit, otherwise CI's frozen install fails.
+
+The `overrides` pin on `@jridgewell/sourcemap-codec` is load-bearing: Bun hoists
+that package where npm used to nest it, and without the pin Vitest's nested
+`magic-string` resolves a copy too old to start the runner.
+
 ## Testing
 
 - `bun run test` - Vitest unit tests for the Convex functions (`tests/*.test.ts`).

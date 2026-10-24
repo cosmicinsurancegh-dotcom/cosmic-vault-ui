@@ -47,9 +47,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No version input: setup-bun reads `packageManager` from package.json,
+      # so CI installs with the same Bun that wrote `bun.lock`.
       - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -106,9 +106,9 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      # No version input: setup-bun reads `packageManager` from package.json,
+      # so CI installs with the same Bun that wrote `bun.lock`.
       - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
