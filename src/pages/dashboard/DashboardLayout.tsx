@@ -109,6 +109,8 @@ type NavGroup = {
 };
 
 const RAIL_STORAGE_KEY = "cosmic-vault-dashboard-rail";
+const RAIL_EXPANDED_WIDTH = 272;
+const RAIL_COLLAPSED_WIDTH = 82;
 
 const CUSTOMER_NAV: NavGroup[] = [
   {
@@ -773,6 +775,22 @@ export default function DashboardLayout() {
     }
   }, [collapsed]);
 
+  /* The consent panel is fixed to the viewport and mounted above the router,
+     so it cannot measure this rail directly. Publishing the current width as
+     a CSS variable keeps the panel clear of the account card (and its sign-out
+     button) at the foot of the sidebar. It is cleared on leaving the
+     dashboard, where the panel returns to the viewport corner. */
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty(
+      "--dashboard-rail-width",
+      `${collapsed ? RAIL_COLLAPSED_WIDTH : RAIL_EXPANDED_WIDTH}px`,
+    );
+    return () => {
+      root.style.removeProperty("--dashboard-rail-width");
+    };
+  }, [collapsed]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const modifier = event.metaKey || event.ctrlKey;
@@ -822,7 +840,9 @@ export default function DashboardLayout() {
       <div className="flex min-h-screen bg-background">
         <motion.aside
           initial={false}
-          animate={{ width: collapsed ? 82 : 272 }}
+          animate={{
+            width: collapsed ? RAIL_COLLAPSED_WIDTH : RAIL_EXPANDED_WIDTH,
+          }}
           transition={
             reduceMotion
               ? { duration: 0 }

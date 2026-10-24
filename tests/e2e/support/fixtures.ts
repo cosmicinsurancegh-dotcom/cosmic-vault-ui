@@ -12,6 +12,25 @@ export const NOT_FOUND_TITLE = "Page not found · Cosmic Vault";
 export const NOT_FOUND_HEADING = "This page has drifted out of orbit.";
 
 /**
+ * The consent panel opens over the bottom-left corner after a short pause and
+ * covers the footer columns and the sidebar sign-out control. Scenarios here
+ * navigate like a returning visitor by default, so the suite records a
+ * decision up front and the panel stays closed. `localStorage` is written from
+ * an init script so it is in place before the app's first render. A spec that
+ * drives the panel itself opts out with `test.use({ consent: "unanswered" })`.
+ */
+export type ConsentState = "answered" | "unanswered";
+
+export const CONSENT_STORAGE_KEY = "cv.cookie-consent.v1";
+const CONSENT_RECORD = {
+  version: 1,
+  essential: true,
+  preferences: false,
+  analytics: false,
+  decidedAt: new Date().toISOString(),
+};
+
+/**
  * Console errors the app logs deliberately. A rejected sign-in is part of the
  * flow the suite drives, and `Auth.tsx` reports it with `console.error`. Every
  * other console error still fails the test.
@@ -30,9 +49,13 @@ const EXPECTED_CONSOLE_ERRORS = [
  * Base test that fails if the page throws while it is being driven,
  * so a crashed route can never hide behind a passing URL assertion.
  */
-export const test = base.extend<{ runtimeErrors: string[] }>({
+export const test = base.extend<{
+  runtimeErrors: string[];
+  consent: ConsentState;
+}>({
+  consent: ["answered", { option: true }],
   runtimeErrors: [
-    async ({ page }, use) => {
+    async ({ page, consent }, use) => {
       const errors: string[] = [];
       page.on("pageerror", (error) => {
         errors.push(`pageerror: ${error.message}`);
@@ -62,6 +85,23 @@ export const test = base.extend<{ runtimeErrors: string[] }>({
         if (document.head) disableSmoothScroll();
         else document.addEventListener("DOMContentLoaded", disableSmoothScroll);
       });
+
+      if (consent === "answered") {
+        await page.addInitScript(
+          ({ key, record }) => {
+            try {
+              window.localStorage.setItem(key, record);
+            } catch {
+              // Storage can be unavailable in a sandboxed frame; the panel
+              // would simply ask again, which no scenario here depends on.
+            }
+          },
+          {
+            key: CONSENT_STORAGE_KEY,
+            record: JSON.stringify(CONSENT_RECORD),
+          },
+        );
+      }
 
       await use(errors);
 

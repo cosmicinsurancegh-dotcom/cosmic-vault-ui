@@ -115,7 +115,7 @@ export function CookieConsent() {
               ? { duration: 0 }
               : { type: "spring", stiffness: 260, damping: 28, mass: 0.8 }
           }
-          className="fixed inset-x-3 bottom-3 z-[70] max-h-[calc(100svh-1.5rem)] w-auto max-w-[27.5rem] overflow-y-auto overscroll-contain rounded-[4px] border border-[#d4d9e1] bg-white p-5 text-[#0a1224] shadow-[0_34px_90px_-38px_rgba(8,18,39,0.45)] outline-none focus-visible:ring-2 focus-visible:ring-[#2b61eb]/40 sm:inset-x-auto sm:bottom-5 sm:left-5 sm:w-[27.5rem] sm:p-6"
+          className="fixed inset-x-3 bottom-3 z-[70] max-h-[calc(100svh-1.5rem)] w-auto max-w-[27.5rem] overflow-y-auto overscroll-contain rounded-[4px] border border-[#d4d9e1] bg-white p-5 text-[#0a1224] shadow-[0_34px_90px_-38px_rgba(8,18,39,0.45)] outline-none focus-visible:ring-2 focus-visible:ring-[#2b61eb]/40 sm:inset-x-auto sm:bottom-5 sm:left-5 sm:w-[27.5rem] sm:p-6 lg:left-[calc(var(--dashboard-rail-width,0px)+1.25rem)]"
         >
           <span
             aria-hidden="true"
