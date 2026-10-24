@@ -126,6 +126,37 @@ test.describe("staff permissions", () => {
     await expect(page.getByText("Access restricted")).toHaveCount(0);
   });
 
+  /**
+   * The payments route is shared between customers and staff. Its "my
+   * applications" and "my policy requests" queries are self-service only, so
+   * the page has to skip them for a staff viewer instead of letting the
+   * rejected query break the screen.
+   */
+  test("a staff member can open the shared payments route", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      window.__E2E_SESSION__ = {
+        _id: "e2e-ops-admin",
+        name: "Ops Admin",
+        email: "ops@example.com",
+        role: "admin",
+        permissions: ["payments.view"],
+      };
+      window.__E2E_FIXTURES__ = { "payments.mine": [] };
+    });
+    await page.goto("/dashboard/payments");
+
+    await expect
+      .poll(() => new URL(page.url()).pathname)
+      .toBe("/dashboard/payments");
+    await expect(
+      page.getByText("Every amount, accounted for.", { exact: false }),
+    ).toBeVisible();
+    await expect(page.getByText("Loading payments")).toHaveCount(0);
+    await expect(page.getByText("Preview runtime error")).toHaveCount(0);
+  });
+
   test("the mineral console is gated on policies.manage", async ({ page }) => {
     await startSignedIn(page, {
       _id: "e2e-limited-admin",

@@ -17,9 +17,11 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useDocumentDownload } from "@/hooks/use-document-download";
+import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatDate, formatMoney, formatDateTime } from "@/lib/format";
+import { isStaff } from "@/lib/permissions";
 import { useMutation, useQuery } from "convex/react";
 import {
   Copy,
@@ -38,9 +40,21 @@ import { toast } from "sonner";
 const FILTERS = ["all", "pending", "succeeded", "failed", "refunded", "disputed"];
 
 export function PaymentsPage() {
+  const { user } = useAuth();
   const transactions = useQuery(api.payments.mine);
-  const applications = useQuery(api.applications.mine);
-  const myRequests = useQuery(api.policies.myRequests);
+  /* "My" applications and policy requests are self-service views: the server
+     rejects staff for them. Staff still reach this route, so the two queries
+     are skipped until the viewer is known to be a customer or a broker -
+     otherwise the rejection throws during render and the page never loads. */
+  const selfService = Boolean(user) && !isStaff(user?.role);
+  const applications = useQuery(
+    api.applications.mine,
+    selfService ? {} : "skip",
+  );
+  const myRequests = useQuery(
+    api.policies.myRequests,
+    selfService ? {} : "skip",
+  );
   const publicInfo = useQuery(api.settings.publicInfo);
   const initiatePremium = useMutation(api.payments.initiatePremium);
   const initiateRenewal = useMutation(api.payments.initiatePolicyRenewal);
@@ -51,18 +65,21 @@ export function PaymentsPage() {
      not change under the reader while the query refreshes. */
   const [openedAt] = useState(() => Date.now());
 
-  if (transactions === undefined || applications === undefined || myRequests === undefined) {
+  if (
+    transactions === undefined ||
+    (selfService && (applications === undefined || myRequests === undefined))
+  ) {
     return <LoadingState label="Loading payments" />;
   }
 
   const filtered = status === "all" ? transactions : transactions.filter((tx) => tx.status === status);
-  const awaitingPayment = applications.filter(
+  const awaitingPayment = (applications ?? []).filter(
     (application) => application.status === "approved" && !application.policyId,
   );
   const pendingPremium = transactions.filter(
     (tx) => tx.type === "premium" && tx.status === "pending",
   );
-  const renewalOffers = myRequests.filter(
+  const renewalOffers = (myRequests ?? []).filter(
     (request) => request.kind === "renewal" && request.status === "pending",
   );
   const awaitingIds = new Set(awaitingPayment.map((application) => application._id));

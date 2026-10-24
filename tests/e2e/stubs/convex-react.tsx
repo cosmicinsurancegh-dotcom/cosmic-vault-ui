@@ -33,7 +33,22 @@ export function useConvexAuth() {
   return { isLoading: false, isAuthenticated: session !== null };
 }
 
-export function useQuery(reference: E2ERef | undefined) {
+/**
+ * Records the reference so a spec can see what a screen actually asked for. A
+ * `"skip"` argument means no request is made (the real client does not
+ * subscribe either), so the reference is not recorded for that state.
+ */
+function recordQuery(reference: E2ERef | undefined, args: unknown) {
+  if (typeof window === "undefined" || !reference) return;
+  if (args === "skip") return;
+  const calls = (window.__E2E_QUERY_CALLS__ ??= []);
+  if (!calls.includes(reference.__e2eQuery)) {
+    calls.push(reference.__e2eQuery);
+  }
+}
+
+export function useQuery(reference: E2ERef | undefined, args?: unknown) {
+  recordQuery(reference, args);
   const session = useSyncExternalStore(
     subscribeToSession,
     getSession,

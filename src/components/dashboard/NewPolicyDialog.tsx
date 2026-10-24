@@ -53,10 +53,16 @@ export function NewPolicyDialog({
   onIssued?: (policyId: Id<"policies">, policyNumber: string) => void;
 }) {
   const [search, setSearch] = useState("");
-  const customers = useQuery(api.policies.customerOptions, {
-    search: search.trim() || undefined,
-  });
-  const products = useQuery(api.policies.productOptions, {});
+  /* Both lists are staff-only queries. The register mounts this dialog for the
+     whole visit, so asking for them while it is closed would run two gated
+     queries (and their scans) on every page load - and a rejection there takes
+     the register down with it, because a failed Convex query throws during
+     render. They are asked for once the dialog is actually opened. */
+  const customers = useQuery(
+    api.policies.customerOptions,
+    open ? { search: search.trim() || undefined } : "skip",
+  );
+  const products = useQuery(api.policies.productOptions, open ? {} : "skip");
   const create = useMutation(api.policies.create);
 
   const [selected, setSelected] = useState<CustomerOption | null>(null);

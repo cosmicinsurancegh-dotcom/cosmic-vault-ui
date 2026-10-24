@@ -124,8 +124,31 @@ test.describe("admin creation flows", () => {
   test("a policy can be started from the register", async ({ page }) => {
     await startAs(page, { role: "super_admin", permissions: [] });
     await page.goto("/dashboard/admin/policies");
+    // Wait for the register itself, so the check below reads the queries the
+    // page mounted rather than an empty list captured before it rendered.
+    await expect(
+      page.getByRole("button", { name: "New policy" }),
+    ).toBeVisible();
+
+    // The register must not ask for the issue-policy option lists until the
+    // dialog is open: they are staff-gated queries, and a rejection while the
+    // dialog is closed takes the whole register down with it.
+    const requestedOnLoad = await page.evaluate(
+      () => window.__E2E_QUERY_CALLS__ ?? [],
+    );
+    expect(requestedOnLoad).not.toContain("policies.customerOptions");
+    expect(requestedOnLoad).not.toContain("policies.productOptions");
 
     await page.getByRole("button", { name: "New policy" }).click();
+
+    await expect
+      .poll(() => page.evaluate(() => window.__E2E_QUERY_CALLS__ ?? []))
+      .toEqual(
+        expect.arrayContaining([
+          "policies.customerOptions",
+          "policies.productOptions",
+        ]),
+      );
     await expect(
       page.getByRole("heading", { name: "Issue a policy" }),
     ).toBeVisible();

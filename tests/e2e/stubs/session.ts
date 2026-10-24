@@ -28,6 +28,13 @@ declare global {
      * for every other screen.
      */
     __E2E_FIXTURES__?: Record<string, unknown> | null;
+    /**
+     * Every query reference the app has subscribed to since the page loaded,
+     * in the order it first asked for each one. A spec uses this to prove a
+     * screen does (or does not) request data in a given state, which the
+     * "loading" return value alone cannot show.
+     */
+    __E2E_QUERY_CALLS__?: string[];
   }
 }
 
