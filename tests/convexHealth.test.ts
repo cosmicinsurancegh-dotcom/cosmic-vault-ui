@@ -32,7 +32,14 @@ describe("cleanProbeMessage", () => {
 });
 
 describe("classifyProbePayload", () => {
-  it("accepts a value", () => {
+  it("accepts the HTTP API's success body", () => {
+    // The exact answer from setup:health on the production deployment.
+    expect(
+      classifyProbePayload({ status: "success", value: { ok: true } }),
+    ).toEqual({ state: "ok" });
+  });
+
+  it("accepts the WebSocket protocol's spelling too", () => {
     expect(
       classifyProbePayload({ status: "value", value: { hasSuperAdmin: true } }),
     ).toEqual({ state: "ok" });
@@ -76,11 +83,6 @@ describe("classifyProbePayload", () => {
     });
   });
 
-  it("reports a healthy backend when the constant answers", () => {
-    expect(
-      classifyProbePayload({ status: "value", value: { ok: true } }),
-    ).toEqual({ state: "ok" });
-  });
 
   it("rejects bodies that are not Convex responses", () => {
     expect(classifyProbePayload(null).state).toBe("unreachable");
@@ -109,7 +111,7 @@ describe("probeConvexDeployment", () => {
     const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
       seen = { url: String(input), body: JSON.parse(String(init?.body)) };
       return new Response(
-        JSON.stringify({ status: "value", value: { hasSuperAdmin: false } }),
+        JSON.stringify({ status: "success", value: { ok: true } }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }) as typeof fetch;

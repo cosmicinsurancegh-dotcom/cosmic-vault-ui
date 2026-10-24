@@ -83,8 +83,8 @@ export const test = base.extend<{
           status: 200,
           contentType: "application/json",
           body: JSON.stringify({
-            status: "value",
-            value: { hasSuperAdmin: false },
+            status: "success",
+            value: { ok: true },
           }),
         }),
       );

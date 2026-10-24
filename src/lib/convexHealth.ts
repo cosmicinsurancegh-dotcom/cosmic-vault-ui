@@ -38,9 +38,10 @@ export function cleanProbeMessage(value: unknown): string {
 }
 
 /**
- * Classifies the JSON body of a probe call. Convex answers `{"status":"value",
- * "value":…}` on success and `{"status":"error","errorMessage":…}` otherwise;
- * the message is what separates a paused deployment from one that runs nothing.
+ * Classifies the JSON body of a probe call. The HTTP API answers
+ * `{"status":"success","value":…}` on success and `{"status":"error",
+ * "errorMessage":…}` otherwise; the message is what separates a paused
+ * deployment from one that runs nothing.
  */
 export function classifyProbePayload(payload: unknown): ConvexHealth {
   if (payload === null || typeof payload !== "object") {
@@ -51,7 +52,12 @@ export function classifyProbePayload(payload: unknown): ConvexHealth {
   }
 
   const body = payload as Record<string, unknown>;
-  if (body.status === "value") return { state: "ok" };
+  // The HTTP API answers `{"status":"success","value":…}`; "value" is the
+  // WebSocket protocol's spelling and is accepted too, so neither shape is
+  // mistaken for a broken backend.
+  if (body.status === "success" || body.status === "value") {
+    return { state: "ok" };
+  }
 
   if (body.status !== "error") {
     return {
