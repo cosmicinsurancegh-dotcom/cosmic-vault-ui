@@ -56,6 +56,30 @@ test.describe("backend health notice", () => {
     ).toBeVisible();
   });
 
+  test("does not pin a verdict on one failed probe", async ({ page }) => {
+    await startSignedIn(page);
+    // A deployment restarting or mid-deploy answers the first call with an
+    // error and the next one normally; the notice must not latch on the first.
+    let calls = 0;
+    await page.route("**/api/query", (route) => {
+      calls += 1;
+      const body =
+        calls === 1
+          ? { status: "error", errorMessage: "[Request ID: e2e-flaky] Server Error" }
+          : { status: "success", value: { ok: true } };
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      });
+    });
+
+    await page.goto("/dashboard");
+
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    expect(calls).toBeGreaterThan(1);
+  });
+
   test("names a paused deployment and says what to do", async ({ page }) => {
     await startSignedIn(page);
     await answerProbe(page, {

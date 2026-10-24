@@ -5,8 +5,13 @@ import {
 } from "@/lib/convexHealth";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Loader2, PauseCircle, RefreshCw, ServerCrash } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router";
+
+/** A backend restarts and deploys; one failed probe is not a verdict. */
+const PROBE_ATTEMPTS = 3;
+/** Long enough to outlast a deploy or a restart, short enough to stay unseen. */
+const PROBE_RETRY_MS = 1200;
 
 /**
  * Says why the dashboard cannot load, when the reason is the backend rather
@@ -27,18 +32,54 @@ export function BackendHealthNotice({ url }: { url: string }) {
   const [checking, setChecking] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
+  /* Retried, because a single probe can catch a deployment mid-restart or
+     mid-deploy; the banner is an alarming claim to pin on one response. */
   useEffect(() => {
     if (!onDashboard) return;
     let cancelled = false;
-    probeConvexDeployment(url).then((result) => {
-      if (cancelled) return;
-      setHealth(result);
-      setChecking(false);
-    });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const check = async () => {
+      for (let index = 0; index < PROBE_ATTEMPTS; index += 1) {
+        const result = await probeConvexDeployment(url);
+        if (cancelled) return;
+        if (result.state === "ok" || index === PROBE_ATTEMPTS - 1) {
+          setHealth(result);
+          setChecking(false);
+          return;
+        }
+        await new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, PROBE_RETRY_MS);
+        });
+        if (cancelled) return;
+      }
+    };
+
+    void check();
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
     };
   }, [attempt, onDashboard, url]);
+
+  /* A tab left open while the backend was down keeps showing that verdict;
+     re-check when the visitor comes back to it, but only while it is failing. */
+  const latest = useRef<ConvexHealth | null>(null);
+  useEffect(() => {
+    latest.current = health;
+  }, [health]);
+
+  useEffect(() => {
+    if (!onDashboard) return;
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      const current = latest.current;
+      if (!current || current.state === "ok") return;
+      setAttempt((value) => value + 1);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [onDashboard]);
 
   const retry = useCallback(() => {
     setChecking(true);
