@@ -107,7 +107,9 @@ bundle targets `DEFAULT_CONVEX_URL`, that `setup:health` answers, that a missing
 `/assets/*` file is a `404` rather than `index.html`, and that `/dashboard` still
 serves the app. The `Smoke the live site` workflow runs it on every push to
 `main`, every six hours, and on demand; set `SMOKE_WAIT_SECONDS` to let it wait
-for a deploy to land, and `SMOKE_BASE_URL` to point it somewhere else.
+for a deploy to land, and `SMOKE_BASE_URL` to check another origin. That origin
+must apply `vercel.json`'s rewrites - a plain static server answers a missing
+asset with `index.html` and fails that check by design.
 
 Routes are code-split, so a tab left open across a deploy asks for a chunk the
 new build replaced. Missing `/assets/*` files are kept out of the SPA rewrite,
