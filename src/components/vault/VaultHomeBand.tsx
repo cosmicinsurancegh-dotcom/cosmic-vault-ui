@@ -1,17 +1,81 @@
 import { Button } from "@/components/ui/button";
-import { formatMoneyValue } from "@/lib/format";
-import { seedDemoCollection } from "@/lib/vault/store";
-import { useVaultActor, useVaultData } from "@/lib/vault/useVault";
-import { ArrowUpRight, Gem, Loader2, PackagePlus, ShieldCheck, Truck } from "lucide-react";
+import { api } from "@/convex/_generated/api";
+import { SHIPMENT_STATUS_LABELS } from "@/convex/lib/shipments";
+import { formatMoney, formatMoneyList } from "@/lib/format";
+import { useQuery } from "convex/react";
+import {
+  ArrowUpRight,
+  Coins,
+  Gem,
+  Layers3,
+  Loader2,
+  Mountain,
+  ShieldCheck,
+  Truck,
+  type LucideIcon,
+} from "lucide-react";
+import { useMemo } from "react";
 import { Link } from "react-router";
-import { toast } from "sonner";
-import { MineralVisual } from "./MineralVisual";
 
+/** The live register has no mineral "type", so the icon follows the category. */
+function iconForCategory(category: string): LucideIcon {
+  const value = category.toLowerCase();
+  if (value.includes("gold")) return Layers3;
+  if (value.includes("silver") || value.includes("platinum")) return Coins;
+  if (value.includes("earth") || value.includes("ore")) return Mountain;
+  return Gem;
+}
+
+/**
+ * The vault band on a member's home, reading the same live minerals as
+ * `/dashboard/vault`: assigned holdings, the policy covering them, and the
+ * consignments still in motion. Nothing here is invented or stored locally.
+ */
 export function VaultHomeBand() {
-  const { actor } = useVaultActor();
-  const { ready, minerals, metrics } = useVaultData(actor);
+  const rows = useQuery(api.minerals.mine);
 
-  if (!ready) {
+  const stats = useMemo(() => {
+    const list = rows ?? [];
+    const insured = list.filter((row) => row.policy?.status === "active");
+    const declared = new Map<string, number>();
+    const covered = new Map<string, number>();
+    for (const row of list) {
+      declared.set(
+        row.mineral.currency,
+        (declared.get(row.mineral.currency) ?? 0) + row.mineral.declaredValue,
+      );
+    }
+    for (const row of insured) {
+      if (!row.policy) continue;
+      covered.set(
+        row.policy.currency,
+        (covered.get(row.policy.currency) ?? 0) + row.policy.coverageLimit,
+      );
+    }
+    return {
+      holdings: list.length,
+      insuredCount: insured.length,
+      declared: [...declared.entries()].map(([currency, amount]) => ({
+        currency,
+        amount,
+      })),
+      covered: [...covered.entries()].map(([currency, amount]) => ({
+        currency,
+        amount,
+      })),
+      inMotion: list.filter(
+        (row) =>
+          row.shipment &&
+          row.shipment.status !== "delivered" &&
+          row.shipment.status !== "cancelled",
+      ).length,
+      featured: [...list]
+        .sort((a, b) => b.mineral.declaredValue - a.mineral.declaredValue)
+        .slice(0, 3),
+    };
+  }, [rows]);
+
+  if (rows === undefined) {
     return (
       <div className="flex min-h-[166px] items-center justify-center gap-2 rounded-[4px] border border-line bg-card text-xs text-muted-foreground">
         <Loader2 className="size-4 animate-spin" />
@@ -20,7 +84,7 @@ export function VaultHomeBand() {
     );
   }
 
-  if (minerals.length === 0) {
+  if (stats.holdings === 0) {
     return (
       <section className="starfield relative overflow-hidden rounded-[4px] bg-[#071227] p-5 text-bone sm:p-6">
         <span className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.4),transparent_66%)]" />
@@ -49,19 +113,11 @@ export function VaultHomeBand() {
                 </Link>
               </Button>
               <Button
+                asChild
                 variant="outline"
                 className="h-9 rounded-[4px] border-white/15 bg-white/[0.04] px-4 text-bone hover:bg-white/[0.08] hover:text-bone"
-                onClick={() => {
-                  const count = seedDemoCollection(actor);
-                  toast.success(
-                    count
-                      ? `${count} demonstration records loaded.`
-                      : "A demonstration collection is already loaded.",
-                  );
-                }}
               >
-                <PackagePlus className="size-3.5" />
-                Load demonstration collection
+                <Link to="/dashboard/support">Talk to the vault desk</Link>
               </Button>
             </div>
           </div>
@@ -83,10 +139,6 @@ export function VaultHomeBand() {
     );
   }
 
-  const featured = [...minerals]
-    .sort((a, b) => b.estimatedValue - a.estimatedValue)
-    .slice(0, 3);
-
   return (
     <section className="starfield relative overflow-hidden rounded-[4px] bg-[#071227] p-5 text-bone sm:p-6">
       <span className="pointer-events-none absolute -right-20 -top-24 size-64 rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.38),transparent_66%)]" />
@@ -105,9 +157,9 @@ export function VaultHomeBand() {
             </span>
           </p>
           <h2 className="mt-2.5 text-[1.45rem] font-semibold leading-tight tracking-[-0.04em] sm:text-[1.65rem]">
-            {metrics.holdings} {metrics.holdings === 1 ? "object" : "objects"}.{" "}
+            {stats.holdings} {stats.holdings === 1 ? "object" : "objects"}.{" "}
             <span className="text-electric-soft">
-              {formatMoneyValue(metrics.totalInsuredValue, metrics.currency)}
+              {formatMoneyList(stats.covered, "Nothing")}
             </span>{" "}
             under cover.
           </h2>
@@ -118,18 +170,18 @@ export function VaultHomeBand() {
                 Insured
               </p>
               <p className="mt-1 text-base font-semibold tabular-nums">
-                {metrics.insuredCount}
+                {stats.insuredCount}
                 <span className="ml-1 text-[0.58rem] font-normal text-bone/45">
-                  of {metrics.holdings}
+                  of {stats.holdings}
                 </span>
               </p>
             </div>
             <div>
               <p className="text-[0.52rem] font-semibold uppercase tracking-[0.16em] text-bone/40">
-                Appraised
+                Declared
               </p>
               <p className="mt-1 text-base font-semibold tabular-nums">
-                {formatMoneyValue(metrics.totalAppraisedValue, metrics.currency)}
+                {formatMoneyList(stats.declared, "None")}
               </p>
             </div>
             <div>
@@ -138,9 +190,9 @@ export function VaultHomeBand() {
                 In motion
               </p>
               <p className="mt-1 text-base font-semibold tabular-nums">
-                {metrics.activeShipments}
+                {stats.inMotion}
                 <span className="ml-1 text-[0.58rem] font-normal text-bone/45">
-                  shipment{metrics.activeShipments === 1 ? "" : "s"}
+                  shipment{stats.inMotion === 1 ? "" : "s"}
                 </span>
               </p>
             </div>
@@ -166,28 +218,36 @@ export function VaultHomeBand() {
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          {featured.map((mineral) => (
-            <Link
-              key={mineral.id}
-              to="/dashboard/vault"
-              className="group relative overflow-hidden rounded-[4px] border border-white/10 transition-colors hover:border-white/25"
-            >
-              <MineralVisual
-                mineral={mineral}
-                className="aspect-[4/5]"
-                overlay
-                imageClassName="opacity-90"
-              />
-              <div className="absolute inset-x-2 bottom-2">
-                <p className="truncate text-[0.56rem] font-semibold text-bone">
-                  {mineral.name}
-                </p>
-                <p className="truncate text-[0.5rem] text-bone/55">
-                  {formatMoneyValue(mineral.estimatedValue, mineral.currency)}
-                </p>
-              </div>
-            </Link>
-          ))}
+          {stats.featured.map(({ mineral, shipment }) => {
+            const Icon = iconForCategory(mineral.category);
+            return (
+              <Link
+                key={mineral._id}
+                to="/dashboard/vault"
+                className="group relative overflow-hidden rounded-[4px] border border-white/10 transition-colors hover:border-white/25"
+              >
+                <div className="starfield relative flex aspect-[4/5] flex-col justify-between bg-gradient-to-br from-[#12284a] via-[#0a1526] to-[#050b15] p-2.5">
+                  <Icon className="size-4 text-electric-soft/80" strokeWidth={1.4} />
+                  <div className="min-w-0">
+                    <p className="truncate text-[0.56rem] font-semibold text-bone">
+                      {mineral.name}
+                    </p>
+                    <p className="truncate text-[0.5rem] text-bone/55">
+                      {formatMoney(mineral.declaredValue, mineral.currency)}
+                    </p>
+                    <p className="mt-1 truncate text-[0.46rem] uppercase tracking-[0.1em] text-bone/40">
+                      {mineral.category}
+                    </p>
+                    <p className="truncate text-[0.46rem] uppercase tracking-[0.1em] text-electric-soft/70">
+                      {shipment
+                        ? SHIPMENT_STATUS_LABELS[shipment.status]
+                        : "In vault"}
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>
