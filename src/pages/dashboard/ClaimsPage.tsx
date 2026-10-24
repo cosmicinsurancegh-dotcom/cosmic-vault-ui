@@ -22,13 +22,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useDocumentDownload } from "@/hooks/use-document-download";
 import { useUpload } from "@/hooks/use-upload";
 import { api } from "@/convex/_generated/api";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import { formatDate, formatDateTime, formatMoney, statusLabel, toMinor } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import {
   AlertTriangle,
-  Check,
   Download,
   FileText,
   LifeBuoy,
@@ -41,7 +39,6 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 
-type Claim = Doc<"claims">;
 const STATUSES = [
   "all",
   "submitted",

@@ -19,11 +19,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { formatDate, statusLabel } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { STAFF_PERMISSIONS, can } from "@/lib/permissions";
 import { useMutation, useQuery } from "convex/react";
 import { Loader2, Plus, Store, UserPlus } from "lucide-react";

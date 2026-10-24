@@ -30,8 +30,65 @@ import {
   ShieldCheck,
   UserPlus,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
+
+type SettingsForm = {
+  companyName: string;
+  supportEmail: string;
+  defaultCurrency: string;
+  commissionEnabled: boolean;
+  renewalNoticeDays: string;
+  claimSlaDays: string;
+  bankAccountName: string;
+  bankIban: string;
+  bankSortCode: string;
+  bankSwift: string;
+  allowedCurrencies: string[];
+};
+
+const EMPTY_SETTINGS_FORM: SettingsForm = {
+  companyName: "",
+  supportEmail: "",
+  defaultCurrency: "GBP",
+  commissionEnabled: false,
+  renewalNoticeDays: "30",
+  claimSlaDays: "10",
+  bankAccountName: "",
+  bankIban: "",
+  bankSortCode: "",
+  bankSwift: "",
+  allowedCurrencies: [],
+};
+
+/** The editable copy of a saved settings record. */
+function settingsForm(settings: {
+  companyName: string;
+  supportEmail: string;
+  defaultCurrency: string;
+  commissionEnabled: boolean;
+  renewalNoticeDays: number;
+  claimSlaDays: number;
+  bankAccountName?: string;
+  bankIban?: string;
+  bankSortCode?: string;
+  bankSwift?: string;
+  allowedCurrencies: string[];
+}): SettingsForm {
+  return {
+    companyName: settings.companyName,
+    supportEmail: settings.supportEmail,
+    defaultCurrency: settings.defaultCurrency,
+    commissionEnabled: settings.commissionEnabled,
+    renewalNoticeDays: String(settings.renewalNoticeDays),
+    claimSlaDays: String(settings.claimSlaDays),
+    bankAccountName: settings.bankAccountName ?? "",
+    bankIban: settings.bankIban ?? "",
+    bankSortCode: settings.bankSortCode ?? "",
+    bankSwift: settings.bankSwift ?? "",
+    allowedCurrencies: settings.allowedCurrencies,
+  };
+}
 
 export default function AdminSettingsPage() {
   const { user } = useAuth();
@@ -51,22 +108,14 @@ export default function AdminSettingsPage() {
   const retryEmail = useMutation(api.notifications.retryEmail);
   const seed = useMutation(api.setup.seedStarterCatalogue);
 
-  const [form, setForm] = useState({
-    companyName: "",
-    supportEmail: "",
-    defaultCurrency: "GBP",
-    commissionEnabled: false,
-    renewalNoticeDays: "30",
-    claimSlaDays: "10",
-    bankAccountName: "",
-    bankIban: "",
-    bankSortCode: "",
-    bankSwift: "",
-    allowedCurrencies: [] as string[],
-  });
+  /* A cached query can already hold the record on the first render, so the
+     initial state comes from it when it is there. */
+  const [form, setForm] = useState<SettingsForm>(() =>
+    settings ? settingsForm(settings) : EMPTY_SETTINGS_FORM,
+  );
   const [templates, setTemplates] = useState<
     { key: string; subject: string; body: string }[]
-  >([]);
+  >(() => settings?.emailTemplates ?? []);
   const [staffEmail, setStaffEmail] = useState("");
   const [staffRole, setStaffRole] = useState<"admin" | "super_admin">("admin");
   const [staffReason, setStaffReason] = useState("");
@@ -79,23 +128,16 @@ export default function AdminSettingsPage() {
   const [permissionDraft, setPermissionDraft] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
 
-  useEffect(() => {
-    if (!settings) return;
-    setForm({
-      companyName: settings.companyName,
-      supportEmail: settings.supportEmail,
-      defaultCurrency: settings.defaultCurrency,
-      commissionEnabled: settings.commissionEnabled,
-      renewalNoticeDays: String(settings.renewalNoticeDays),
-      claimSlaDays: String(settings.claimSlaDays),
-      bankAccountName: settings.bankAccountName ?? "",
-      bankIban: settings.bankIban ?? "",
-      bankSortCode: settings.bankSortCode ?? "",
-      bankSwift: settings.bankSwift ?? "",
-      allowedCurrencies: settings.allowedCurrencies,
-    });
+  /* The query resolves after the first render, so the editable copy is seeded
+     from the record as soon as it arrives. Adjusting it here rather than in an
+     effect means React re-renders before painting, instead of showing an empty
+     form for a frame and then cascading a second one. */
+  const [seededSettings, setSeededSettings] = useState(settings);
+  if (settings && settings !== seededSettings) {
+    setSeededSettings(settings);
+    setForm(settingsForm(settings));
     setTemplates(settings.emailTemplates);
-  }, [settings]);
+  }
 
   if (!allowed) {
     return (

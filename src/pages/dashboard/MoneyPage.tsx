@@ -15,13 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useDocumentDownload } from "@/hooks/use-document-download";
 import { api } from "@/convex/_generated/api";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import { formatDate, formatMoney, formatDateTime } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import {
   Copy,
@@ -37,7 +35,6 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 
-type Transaction = Doc<"transactions">;
 const FILTERS = ["all", "pending", "succeeded", "failed", "refunded", "disputed"];
 
 export function PaymentsPage() {
@@ -50,6 +47,9 @@ export function PaymentsPage() {
   const [status, setStatus] = useState("all");
   const [selectedId, setSelectedId] = useState<Id<"transactions"> | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  /* Overdue is judged against the moment the page opened, so the banner does
+     not change under the reader while the query refreshes. */
+  const [openedAt] = useState(() => Date.now());
 
   if (transactions === undefined || applications === undefined || myRequests === undefined) {
     return <LoadingState label="Loading payments" />;
@@ -70,7 +70,7 @@ export function PaymentsPage() {
     (tx) => !tx.applicationId || !awaitingIds.has(tx.applicationId),
   );
   const overdue = pendingPremium.filter(
-    (tx) => tx.dueDate !== undefined && tx.dueDate < Date.now(),
+    (tx) => tx.dueDate !== undefined && tx.dueDate < openedAt,
   );
 
   return (

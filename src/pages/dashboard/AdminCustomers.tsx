@@ -27,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { formatDate, formatDateTime, formatMoney, statusLabel } from "@/lib/format";
+import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import { STAFF_PERMISSIONS, can } from "@/lib/permissions";
 import { useMutation, useQuery } from "convex/react";
 import { Loader2, Search, ShieldCheck, UserPlus, Users } from "lucide-react";

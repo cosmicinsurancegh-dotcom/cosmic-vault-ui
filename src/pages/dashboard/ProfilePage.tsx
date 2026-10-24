@@ -24,8 +24,78 @@ import { formatDate } from "@/lib/format";
 import { normalizeRole } from "@/lib/permissions";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { KeyRound, Loader2, ShieldCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
+
+type ProfileForm = {
+  fullName: string;
+  phone: string;
+  dateOfBirth: string;
+  country: string;
+  city: string;
+  addressLine: string;
+  postalCode: string;
+  currency: string;
+  locale: string;
+  timezone: string;
+  preferredLanguage: string;
+  marketingOptIn: boolean;
+};
+
+const EMPTY_PROFILE_FORM: ProfileForm = {
+  fullName: "",
+  phone: "",
+  dateOfBirth: "",
+  country: "GB",
+  city: "",
+  addressLine: "",
+  postalCode: "",
+  currency: "GBP",
+  locale: "en-GB",
+  timezone: "Europe/London",
+  preferredLanguage: "en",
+  marketingOptIn: false,
+};
+
+/** The editable copy of a saved customer profile. */
+function profileForm(profile: {
+  fullName: string;
+  phone?: string;
+  dateOfBirth?: string;
+  country: string;
+  city?: string;
+  addressLine?: string;
+  postalCode?: string;
+  currency: string;
+  locale: string;
+  timezone: string;
+  preferredLanguage: string;
+  marketingOptIn: boolean;
+}): ProfileForm {
+  return {
+    fullName: profile.fullName,
+    phone: profile.phone ?? "",
+    dateOfBirth: profile.dateOfBirth ?? "",
+    country: profile.country,
+    city: profile.city ?? "",
+    addressLine: profile.addressLine ?? "",
+    postalCode: profile.postalCode ?? "",
+    currency: profile.currency,
+    locale: profile.locale,
+    timezone: profile.timezone,
+    preferredLanguage: profile.preferredLanguage,
+    marketingOptIn: profile.marketingOptIn,
+  };
+}
+
+function brokerContact(
+  profile: { contactName: string; phone?: string } | null | undefined,
+) {
+  return {
+    contactName: profile?.contactName ?? "",
+    phone: profile?.phone ?? "",
+  };
+}
 
 export default function ProfilePage() {
   const me = useQuery(api.customers.me);
@@ -40,21 +110,14 @@ export default function ProfilePage() {
   const role = normalizeRole(me?.user?.role);
   const profile = me?.profile;
 
-  const [form, setForm] = useState({
-    fullName: "",
-    phone: "",
-    dateOfBirth: "",
-    country: "GB",
-    city: "",
-    addressLine: "",
-    postalCode: "",
-    currency: "GBP",
-    locale: "en-GB",
-    timezone: "Europe/London",
-    preferredLanguage: "en",
-    marketingOptIn: false,
-  });
-  const [brokerForm, setBrokerForm] = useState({ contactName: "", phone: "" });
+  /* A cached query can already hold the record on the first render, so the
+     initial state comes from it when it is there. */
+  const [form, setForm] = useState<ProfileForm>(() =>
+    profile ? profileForm(profile) : EMPTY_PROFILE_FORM,
+  );
+  const [brokerForm, setBrokerForm] = useState(() =>
+    brokerContact(brokerProfile?.profile),
+  );
   const [request, setRequest] = useState("");
   const [pending, setPending] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
@@ -87,31 +150,21 @@ export default function ProfilePage() {
     }
   };
 
-  useEffect(() => {
-    if (!profile) return;
-    setForm({
-      fullName: profile.fullName,
-      phone: profile.phone ?? "",
-      dateOfBirth: profile.dateOfBirth ?? "",
-      country: profile.country,
-      city: profile.city ?? "",
-      addressLine: profile.addressLine ?? "",
-      postalCode: profile.postalCode ?? "",
-      currency: profile.currency,
-      locale: profile.locale,
-      timezone: profile.timezone,
-      preferredLanguage: profile.preferredLanguage,
-      marketingOptIn: profile.marketingOptIn,
-    });
-  }, [profile]);
+  /* The queries resolve after the first render. Seed each editable copy as soon
+     as its record arrives - during render, guarded by the record identity - so
+     React re-renders before painting rather than showing empty fields and then
+     cascading a second render from an effect. */
+  const [seededProfile, setSeededProfile] = useState(profile);
+  if (profile && profile !== seededProfile) {
+    setSeededProfile(profile);
+    setForm(profileForm(profile));
+  }
 
-  useEffect(() => {
-    if (!brokerProfile?.profile) return;
-    setBrokerForm({
-      contactName: brokerProfile.profile.contactName,
-      phone: brokerProfile.profile.phone ?? "",
-    });
-  }, [brokerProfile]);
+  const [seededBroker, setSeededBroker] = useState(brokerProfile);
+  if (brokerProfile?.profile && brokerProfile !== seededBroker) {
+    setSeededBroker(brokerProfile);
+    setBrokerForm(brokerContact(brokerProfile.profile));
+  }
 
   if (me === undefined || reference === undefined) {
     return <LoadingState label="Loading profile" />;

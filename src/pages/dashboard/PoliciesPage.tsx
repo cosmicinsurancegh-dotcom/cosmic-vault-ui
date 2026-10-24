@@ -21,23 +21,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { useDocumentDownload } from "@/hooks/use-document-download";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import { formatDate, formatDateTime, formatMoney, statusLabel } from "@/lib/format";
 import { normalizeRole } from "@/lib/permissions";
 import { useMutation, useQuery } from "convex/react";
-import {
-  ArrowUpRight,
-  Download,
-  FileText,
-  Loader2,
-  ScrollText,
-  ShieldCheck,
-} from "lucide-react";
+import { Download, FileText, Loader2, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 
-type Policy = Doc<"policies">;
 const STATUS_FILTERS = ["all", "active", "suspended", "expired", "cancelled"];
 
 export default function PoliciesPage() {

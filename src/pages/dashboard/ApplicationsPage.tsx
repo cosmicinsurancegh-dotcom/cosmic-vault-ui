@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { useUpload } from "@/hooks/use-upload";
 import { api } from "@/convex/_generated/api";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import { formatDate, formatDateTime, formatMoney, statusLabel } from "@/lib/format";
 import { normalizeRole } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -30,8 +30,6 @@ import { ArrowUpRight, Check, ClipboardList, FileText, Loader2, Send, Upload } f
 import { useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
-
-type Application = Doc<"applications"> & { customerName?: string };
 
 export default function ApplicationsPage() {
   const { user } = useAuth();

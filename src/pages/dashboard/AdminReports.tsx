@@ -15,7 +15,7 @@ import { api } from "@/convex/_generated/api";
 import { downloadCsv } from "@/lib/format";
 import { STAFF_PERMISSIONS, can } from "@/lib/permissions";
 import { useQuery } from "convex/react";
-import { Download, FileSpreadsheet, Loader2 } from "lucide-react";
+import { Download, FileSpreadsheet } from "lucide-react";
 import { useMemo, useState } from "react";
 
 const REPORTS = [
@@ -35,9 +35,12 @@ export default function AdminReportsPage() {
   const { user } = useAuth();
   const allowed = can(user?.role, user?.permissions, STAFF_PERMISSIONS.REPORTS_VIEW);
   const [report, setReport] = useState("policies");
-  const [from, setFrom] = useState(
-    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-  );
+  const [from, setFrom] = useState(() => {
+    // The register opens on the last 30 days, fixed at mount.
+    const start = new Date();
+    start.setTime(start.getTime() - 30 * 24 * 60 * 60 * 1000);
+    return start.toISOString().slice(0, 10);
+  });
   const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
   const [productId, setProductId] = useState("");
   const [country, setCountry] = useState("all");
