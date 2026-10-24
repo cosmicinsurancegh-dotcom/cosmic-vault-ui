@@ -5,6 +5,7 @@ import { CookieConsent } from "@/components/site/CookieConsent";
 import { MissingConvexConfig } from "@/components/site/MissingConvexConfig";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { PUBLIC_ROUTES } from "@/lib/publicRoutes";
+import { installChunkReloadOnPreloadError } from "@/lib/chunkReload";
 import { isConvexDeploymentUrl, resolveConvexUrl } from "@/lib/convexUrl";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
@@ -228,6 +229,10 @@ function RouteSyncer() {
 
   return null;
 }
+
+// A tab left open across a deploy asks for a route chunk the new build
+// replaced; one reload picks up the current index and its hashes.
+installChunkReloadOnPreloadError(window);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

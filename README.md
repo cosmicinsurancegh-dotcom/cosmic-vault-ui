@@ -97,6 +97,13 @@ be reached, shows a banner above the dashboard naming the cause with a *Check
 again* button. A reachable host is not a working backend, and the client's own
 "Server Error" does not say which of those it is.
 
+Routes are code-split, so a tab left open across a deploy asks for a chunk the
+new build replaced. Missing `/assets/*` files are kept out of the SPA rewrite,
+so they fail as `404` rather than returning `index.html` (a `.js` URL answering
+`text/html`, cached as immutable, is what produced the browser's "not a valid
+JavaScript MIME type" error), and the app reloads once when Vite reports a
+preload error.
+
 Both jobs install with `bun install --frozen-lockfile`, so `bun.lock` must be
 current before a deploy.
 
