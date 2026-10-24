@@ -1,522 +1,545 @@
-import { EmptyState, PageHeader } from "@/components/dashboard/PlatformUI";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { AdminMineralDialog } from "@/components/vault/AdminMineralDialog";
+import { Label } from "@/components/ui/label";
 import {
-  InVaultChip,
-  ShipmentAlertChip,
-  ShipmentRoute,
-} from "@/components/vault/ShipmentRoute";
-import { shipmentMode } from "@/components/vault/shipmentMode";
-import { StatusLegend } from "@/components/vault/StatusBadges";
-import { VaultPulse } from "@/components/vault/VaultPulse";
-import { VaultSkeleton } from "@/components/vault/VaultSkeleton";
+  EmptyState,
+  LoadingState,
+  MetricTile,
+  PageHeader,
+  Panel,
+  PanelHeader,
+  StatusPill,
+} from "@/components/dashboard/PlatformUI";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import {
+  SHIPMENT_STATUSES,
+  SHIPMENT_STATUS_LABELS,
+  type ShipmentStatus,
+} from "@/convex/lib/shipments";
+import { useAuth } from "@/hooks/use-auth";
 import { formatDate } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { STAFF_PERMISSIONS, can } from "@/lib/permissions";
+import { useMutation, useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import {
-  describeShipmentEmailOutcome,
-  useShipmentStatusPublisher,
-} from "@/lib/vault/useShipmentEmail";
-import {
-  useVaultActor,
-  useVaultData,
-  useVaultMineral,
-} from "@/lib/vault/useVault";
-import type { Mineral, ShippingStatus } from "@/lib/vault/types";
-import {
-  SHIPPING_STATUSES,
-  SHIPPING_STATUS_META,
-  formatWeight,
-} from "@/lib/vault/types";
-import {
-  ArrowUpRight,
-  ChevronDown,
-  ClipboardCopy,
-  Clock3,
-  Gem,
+  AlertTriangle,
+  ArrowRightLeft,
   Loader2,
-  MapPin,
   PackageCheck,
   Search,
-  Sparkles,
   Truck,
-  Warehouse,
+  UserRoundPlus,
 } from "lucide-react";
-import { motion, useReducedMotion } from "framer-motion";
 import { useMemo, useState } from "react";
-import { Navigate, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
-type Filter = ShippingStatus | "all" | "in_vault";
+type RegisterRow = FunctionReturnType<typeof api.minerals.list>[number];
+type ShipmentRow = RegisterRow & { shipment: NonNullable<RegisterRow["shipment"]> };
 
-const KEBAB =
-  "absolute right-3 top-4 grid size-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:right-5 lg:top-1/2 lg:-translate-y-1/2";
-
-function etaLabel(mineral: Mineral) {
-  if (!mineral.shipping) return "";
-  if (mineral.shipping.currentStatus === "shipped") return "Delivered";
-  const days = Math.ceil(
-    (mineral.shipping.estimatedDelivery - Date.now()) / (24 * 60 * 60 * 1000),
-  );
-  if (days < 0) return `${Math.abs(days)}d overdue`;
-  if (days === 0) return "Due today";
-  if (days === 1) return "Due tomorrow";
-  return `In ${days} days`;
+function hasShipment(row: RegisterRow): row is ShipmentRow {
+  return row.shipment !== null;
 }
 
+/**
+ * Staff shipment control, backed by the live mineral register.
+ *
+ * A consignment belongs to a mineral, so assigning one to an account moves the
+ * mineral and every shipment attached to it. The server records the change in
+ * the audit log, emails the new owner and notifies the previous one.
+ */
 export default function AdminShipmentsPage() {
   const navigate = useNavigate();
-  const reduceMotion = useReducedMotion();
-  const { actor, isLoading, canSwitchDemoRole, setDemoOperations } =
-    useVaultActor();
-  const { ready, minerals, metrics } = useVaultData(actor);
-  const publishStatus = useShipmentStatusPublisher(actor);
-  const [status, setStatus] = useState<Filter>("all");
-  const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [initialTab, setInitialTab] = useState<"shipping" | "details">(
-    "shipping",
+  const { user, isLoading: authLoading } = useAuth();
+  const canManage = can(
+    user?.role,
+    user?.permissions,
+    STAFF_PERMISSIONS.POLICIES_MANAGE,
   );
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const selectedMineral = useVaultMineral(actor, selectedId);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<ShipmentStatus | "all">("all");
+  const [assigningId, setAssigningId] = useState<Id<"minerals"> | null>(null);
+  const [targetId, setTargetId] = useState("");
+  const [note, setNote] = useState("");
+  const [pending, setPending] = useState(false);
+  const [updatingId, setUpdatingId] = useState<Id<"shipments"> | null>(null);
 
-  const counts = {
-    pending: minerals.filter(
-      (mineral) => mineral.shipping?.currentStatus === "pending",
-    ).length,
-    in_progress: minerals.filter(
-      (mineral) => mineral.shipping?.currentStatus === "in_progress",
-    ).length,
-    on_hold: minerals.filter(
-      (mineral) => mineral.shipping?.currentStatus === "on_hold",
-    ).length,
-    in_transit: minerals.filter(
-      (mineral) => mineral.shipping?.currentStatus === "in_transit",
-    ).length,
-    shipped: minerals.filter(
-      (mineral) => mineral.shipping?.currentStatus === "shipped",
-    ).length,
-  };
-  const inVault = minerals.filter((mineral) => !mineral.shipping).length;
-  const activeCount =
-    counts.pending + counts.in_progress + counts.on_hold + counts.in_transit;
+  const rows = useQuery(api.minerals.list, canManage ? {} : "skip");
+  const options = useQuery(
+    api.minerals.assigneeOptions,
+    canManage ? {} : "skip",
+  );
+  const reassign = useMutation(api.minerals.reassign);
+  const updateStatus = useMutation(api.minerals.updateShipmentStatus);
 
-  const rows = useMemo(() => {
+  const shipments = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return minerals
-      .filter((mineral) => {
-        if (status === "in_vault") {
-          if (mineral.shipping) return false;
-        } else if (status !== "all") {
-          if (mineral.shipping?.currentStatus !== status) return false;
-        }
+    return (rows ?? [])
+      .filter(hasShipment)
+      .filter((row) => status === "all" || row.shipment.status === status)
+      .filter((row) => {
         if (!query) return true;
         return [
-          mineral.name,
-          mineral.ownerName,
-          mineral.ownerEmail,
-          mineral.vaultId,
-          mineral.shipping?.trackingNumber ?? "",
-          mineral.shipping?.carrier ?? "",
-          mineral.shipping?.destination.city ?? "",
+          row.shipment.reference,
+          row.shipment.trackingNumber ?? "",
+          row.shipment.carrier,
+          row.shipment.origin,
+          row.shipment.destination,
+          row.mineral.name,
+          row.mineral.reference,
+          row.assignee?.name ?? "",
+          row.assignee?.email ?? "",
         ]
           .join(" ")
           .toLowerCase()
           .includes(query);
       })
-      .sort((a, b) => {
-        if (!a.shipping && !b.shipping)
-          return a.ownerName.localeCompare(b.ownerName);
-        if (!a.shipping) return 1;
-        if (!b.shipping) return -1;
-        return a.shipping.estimatedDelivery - b.shipping.estimatedDelivery;
-      });
-  }, [minerals, search, status]);
+      .sort(
+        (a, b) =>
+          (a.shipment.estimatedArrivalAt ?? a.shipment.createdAt) -
+          (b.shipment.estimatedArrivalAt ?? b.shipment.createdAt),
+      );
+  }, [rows, search, status]);
 
-  if (isLoading || !ready) return <VaultSkeleton cards={2} />;
-  if (actor.role !== "admin") return <Navigate to="/dashboard/vault" replace />;
+  const metrics = useMemo(() => {
+    const all = (rows ?? []).filter(hasShipment);
+    return {
+      total: all.length,
+      active: all.filter(
+        (row) =>
+          row.shipment.status !== "delivered" &&
+          row.shipment.status !== "cancelled",
+      ).length,
+      attention: all.filter(
+        (row) =>
+          row.shipment.status === "customs_hold" ||
+          row.shipment.status === "delayed",
+      ).length,
+      unassigned: all.filter((row) => !row.mineral.assignedUserId).length,
+    };
+  }, [rows]);
+
+  const assigning =
+    (rows ?? []).filter(hasShipment).find(
+      (row) => row.mineral._id === assigningId,
+    ) ?? null;
+  const targets = (options ?? []).filter(
+    (option) => option.userId !== assigning?.mineral.assignedUserId,
+  );
+
+  const closeAssign = () => {
+    if (pending) return;
+    setAssigningId(null);
+    setTargetId("");
+    setNote("");
+  };
+
+  const submitAssign = async () => {
+    if (!assigning || !targetId) return;
+    setPending(true);
+    try {
+      const result = await reassign({
+        mineralId: assigning.mineral._id,
+        assignment: {
+          mode: "existing" as const,
+          userId: targetId as Id<"users">,
+        },
+        note: note.trim() || undefined,
+      });
+      toast.success(
+        result.notified
+          ? "Consignment assigned. The new owner has been emailed."
+          : "Consignment assigned. No owner email was sent.",
+        {
+          description: `${assigning.shipment.reference} and every shipment on ${assigning.mineral.name} moved with the record.`,
+        },
+      );
+      setAssigningId(null);
+      setTargetId("");
+      setNote("");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not assign the consignment.",
+      );
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const changeStatus = async ({
+    mineral,
+    shipment,
+  }: Pick<ShipmentRow, "mineral" | "shipment">, next: ShipmentStatus) => {
+    if (next === shipment.status) return;
+    setUpdatingId(shipment._id);
+    try {
+      const result = await updateStatus({ shipmentId: shipment._id, status: next });
+      const label = SHIPMENT_STATUS_LABELS[next].toLowerCase();
+      if (result.notified) {
+        toast.success(`${mineral.name} is now ${label}.`, {
+          description: "The owner has been emailed.",
+        });
+      } else {
+        toast.warning(`${mineral.name} is now ${label}.`, {
+          description: "No owner is assigned, so no email was sent.",
+        });
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not update the shipment status.",
+      );
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  if (authLoading) return <LoadingState label="Loading shipments" />;
+
+  if (!canManage) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Vault operations"
+          title="Every consignment, under control."
+          description="Shipment control reads the live mineral register and is limited to staff who can manage mineral records."
+        />
+        <Panel>
+          <EmptyState
+            icon={Truck}
+            title="Access restricted"
+            description="Ask a super admin to grant you the 'Issue & service policies' permission to view and assign consignments."
+          />
+        </Panel>
+      </div>
+    );
+  }
+
+  if (rows === undefined || options === undefined) {
+    return <LoadingState label="Loading shipments" />;
+  }
 
   return (
     <div className="space-y-6">
-      {canSwitchDemoRole && (
-        <div className="flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/[0.035] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-2.5">
-            <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-[4px] border border-primary/20 bg-card text-primary">
-              <Sparkles className="size-3.5" />
-            </span>
-            <div>
-              <p className="text-[0.72rem] font-semibold text-ink">
-                Operations preview · shipment control
-              </p>
-              <p className="mt-0.5 text-[0.64rem] leading-5 text-muted-foreground">
-                Changes publish immediately to the member tracking view.
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 shrink-0 rounded-[4px] bg-card px-3 text-[0.65rem]"
-            onClick={() => {
-              setDemoOperations(false);
-              navigate("/dashboard/shipments");
-            }}
-          >
-            Member tracking
-            <ArrowUpRight className="size-3" />
-          </Button>
-        </div>
-      )}
-
       <PageHeader
         eyebrow={
           <>
             Vault operations
             <span className="size-1 rounded-[4px] bg-primary/60" />
             Shipment control
-            <span className="size-1 rounded-[4px] bg-primary/60" />
-            Live
           </>
         }
         title="Every consignment, under control."
-        description="Initiate a shipment, change its tracking status, and leave a clear note for the member. Only staff can move a consignment between states."
+        description="Assign a consignment to the customer or broker who owns it, and move it through its journey. Assigning moves the mineral and every shipment attached to it, emails the new owner and notifies the previous one."
         actions={
-          <>
-            <Button
-              variant="outline"
-              className="h-10 rounded-[4px] bg-card px-4"
-              onClick={() => navigate("/dashboard/admin/vault")}
-            >
-              <Gem className="size-3.5" />
-              Vault register
-            </Button>
-            <Button
-              className="h-10 rounded-[4px] px-4"
-              onClick={() => {
-                setInitialTab("shipping");
-                setSelectedId(
-                  minerals.find((mineral) => !mineral.shipping)?.id ?? null,
-                );
-              }}
-              disabled={inVault === 0}
-            >
-              <PackageCheck className="size-3.5" />
-              Initiate shipment
-            </Button>
-          </>
+          <Button
+            variant="outline"
+            className="h-10 rounded-[4px] bg-card px-4"
+            onClick={() => navigate("/dashboard/admin/minerals")}
+          >
+            <PackageCheck className="size-3.5" />
+            Mineral register
+          </Button>
         }
       />
 
-      <VaultPulse
-        items={[
-          {
-            label: "Active consignments",
-            value: activeCount,
-            helper: `${counts.in_transit} in transit`,
-            icon: Truck,
-          },
-          {
-            label: "Pending",
-            value: counts.pending,
-            helper: "Awaiting collection or packing",
-            icon: PackageCheck,
-          },
-          {
-            label: "On hold",
-            value: counts.on_hold,
-            helper: counts.on_hold
-              ? "Requires an operational check"
-              : "Nothing held",
-            icon: MapPin,
-            tone: counts.on_hold ? "warning" : "default",
-          },
-          {
-            label: "Delivered",
-            value: counts.shipped,
-            helper: `${inVault} still in the vault`,
-            icon: Warehouse,
-            tone: "positive",
-          },
-        ]}
-      />
-
-      <div className="rounded-[4px] border border-line bg-card p-3">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="relative min-w-[220px] flex-1 lg:max-w-md">
-            <Search className="absolute left-3.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              aria-label="Search consignments"
-              placeholder="Search mineral, owner, tracking number, carrier"
-              className="h-9 rounded-full bg-card pl-9 text-xs"
-            />
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {(
-              [
-                { key: "all", label: "All" },
-                ...SHIPPING_STATUSES.map((item) => ({
-                  key: item,
-                  label: SHIPPING_STATUS_META[item].label,
-                })),
-                { key: "in_vault", label: "In vault" },
-              ] as { key: Filter; label: string }[]
-            ).map((option) => {
-              const count =
-                option.key === "all"
-                  ? minerals.filter((mineral) => mineral.shipping).length
-                  : option.key === "in_vault"
-                    ? inVault
-                    : counts[option.key];
-              return (
-                <button
-                  key={option.key}
-                  type="button"
-                  onClick={() => setStatus(option.key)}
-                  aria-pressed={status === option.key}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-[0.62rem] font-medium leading-none transition-colors",
-                    status === option.key
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-line bg-card text-muted-foreground hover:border-primary/30 hover:text-ink",
-                  )}
-                >
-                  {option.label} ({count})
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-line/70 pt-2">
-          <StatusLegend />
-          <p className="text-[0.6rem] text-muted-foreground">
-            {metrics.activeShipments} active · quick changes publish immediately
-          </p>
-        </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricTile
+          label="Consignments"
+          value={metrics.total}
+          helper="Shipments on record"
+          icon={Truck}
+        />
+        <MetricTile
+          label="Active"
+          value={metrics.active}
+          helper="Not delivered or cancelled"
+          icon={PackageCheck}
+        />
+        <MetricTile
+          label="Needs attention"
+          value={metrics.attention}
+          helper="Held at customs or delayed"
+          icon={AlertTriangle}
+        />
+        <MetricTile
+          label="Unassigned"
+          value={metrics.unassigned}
+          helper="No owner to email yet"
+          icon={UserRoundPlus}
+        />
       </div>
 
-      {rows.length === 0 ? (
-        <div className="rounded-[4px] border border-line bg-card">
+      <Panel>
+        <PanelHeader
+          title="Consignments"
+          description="Every shipment in the register, newest journey first. Assign a record to the member it belongs to or change its published status."
+          action={
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search shipment, mineral, owner"
+                aria-label="Search consignments"
+                className="h-9 w-full rounded-lg bg-card pl-8 text-xs sm:w-64"
+              />
+            </div>
+          }
+        />
+
+        <div className="flex flex-wrap gap-1.5 border-b border-line px-5 py-3">
+          {(["all", ...SHIPMENT_STATUSES] as (ShipmentStatus | "all")[]).map(
+            (option) => {
+              const count =
+                option === "all"
+                  ? (rows ?? []).filter(hasShipment).length
+                  : (rows ?? []).filter(hasShipment).filter(
+                      (row) => row.shipment.status === option,
+                    ).length;
+              const label =
+                option === "all" ? "All" : SHIPMENT_STATUS_LABELS[option];
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setStatus(option)}
+                  aria-pressed={status === option}
+                  className={
+                    status === option
+                      ? "rounded-full border border-primary bg-primary px-3 py-1.5 text-[0.62rem] font-medium leading-none text-primary-foreground"
+                      : "rounded-full border border-line bg-card px-3 py-1.5 text-[0.62rem] font-medium leading-none text-muted-foreground transition-colors hover:border-primary/30 hover:text-ink"
+                  }
+                >
+                  {label} ({count})
+                </button>
+              );
+            },
+          )}
+        </div>
+
+        {shipments.length === 0 ? (
           <EmptyState
             icon={Truck}
-            title="No consignments match."
-            description="Change the status filter, or search a different owner, mineral or tracking number."
+            title={
+              search.trim() || status !== "all"
+                ? "No consignments match."
+                : "No consignments recorded yet."
+            }
+            description={
+              search.trim() || status !== "all"
+                ? "Change the status filter, or search a different shipment, mineral or owner."
+                : "A shipment is recorded with its mineral in the mineral register, then it appears here for assignment and tracking."
+            }
             action={
-              <Button
-                size="sm"
-                variant="outline"
-                className="rounded-[4px] bg-transparent"
-                onClick={() => {
-                  setStatus("all");
-                  setSearch("");
-                }}
-              >
-                Show every consignment
-              </Button>
+              search.trim() || status !== "all" ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-[4px] bg-transparent"
+                  onClick={() => {
+                    setStatus("all");
+                    setSearch("");
+                  }}
+                >
+                  Show every consignment
+                </Button>
+              ) : undefined
             }
           />
-        </div>
-      ) : (
-        <section className="overflow-hidden rounded-[4px] border border-line bg-card">
-          {rows.map((mineral, index) => {
-            const shipment = mineral.shipping;
-            const { Icon: ModeIcon, label: modeLabel } = shipment
-              ? shipmentMode(shipment)
-              : { Icon: Warehouse, label: "In vault" };
-
-            return (
-              <motion.article
-                key={mineral.id}
-                initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.3,
-                  delay: Math.min(index * 0.035, 0.2),
-                }}
-                className="relative grid gap-4 border-b border-line px-4 py-5 pr-14 transition-colors last:border-b-0 hover:bg-ice/30 sm:px-6 sm:pr-16 lg:grid-cols-[minmax(0,290px)_minmax(0,1fr)] lg:items-center lg:gap-8"
+        ) : (
+          <div className="divide-y divide-line">
+            {shipments.map(({ mineral, shipment, assignee }) => (
+              <article
+                key={shipment._id}
+                className="grid gap-4 px-5 py-4 transition-colors hover:bg-ice/30 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)_auto] lg:items-center lg:gap-6"
               >
-                <div className="flex min-w-0 items-start gap-3">
-                  <span
-                    className={cn(
-                      "grid size-11 shrink-0 place-items-center rounded-full",
-                      shipment
-                        ? "bg-primary text-primary-foreground shadow-[0_10px_20px_-12px_var(--electric)]"
-                        : "border border-line bg-ice text-muted-foreground",
-                    )}
-                    title={modeLabel}
-                  >
-                    <ModeIcon className="size-5" strokeWidth={2} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[0.5rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                      {shipment ? "Shipping ID" : "Mineral"}
-                    </p>
-                    {shipment ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard?.writeText(
-                            shipment.trackingNumber,
-                          );
-                          toast.success("Tracking number copied.");
-                        }}
-                        title="Copy tracking number"
-                        className="mt-0.5 flex max-w-full items-center gap-1.5 text-[0.78rem] font-semibold tracking-[-0.01em] text-ink transition-colors hover:text-primary"
-                      >
-                        <span className="truncate">
-                          {shipment.trackingNumber}
-                        </span>
-                        <ClipboardCopy className="size-3 shrink-0 text-muted-foreground" />
-                      </button>
+                <div className="min-w-0">
+                  <p className="text-[0.5rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Shipment
+                  </p>
+                  <p className="mt-0.5 truncate text-[0.8rem] font-semibold tracking-[-0.01em] text-ink">
+                    {shipment.reference}
+                  </p>
+                  <p className="mt-0.5 truncate text-[0.62rem] text-muted-foreground">
+                    {mineral.name} · {mineral.reference}
+                  </p>
+                  <p className="mt-1 flex flex-wrap items-center gap-1.5 truncate text-[0.6rem] text-muted-foreground">
+                    {assignee ? (
+                      <>
+                        <UserRoundPlus className="size-3" />
+                        {assignee.name} · {assignee.email}
+                      </>
                     ) : (
-                      <p className="mt-0.5 truncate text-[0.78rem] font-semibold tracking-[-0.01em] text-ink">
-                        {mineral.name}
-                      </p>
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[0.58rem] font-semibold text-amber-700 dark:text-amber-400">
+                        <UserRoundPlus className="size-3" />
+                        Unassigned
+                      </span>
                     )}
-                    <p className="mt-0.5 truncate text-[0.6rem] text-muted-foreground">
-                      {shipment ? mineral.name : mineral.type} ·{" "}
-                      {formatWeight(mineral.weight, mineral.unit)}
-                    </p>
-                    <p className="mt-0.5 truncate text-[0.58rem] text-muted-foreground/80">
-                      {mineral.ownerName} · {mineral.vaultId}
-                    </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      {shipment ? (
-                        <>
-                          <span className="relative inline-flex">
-                            <select
-                              aria-label={`Update tracking status for ${mineral.name}`}
-                              title="Change the published tracking status"
-                              value={shipment.currentStatus}
-                              disabled={updatingId === mineral.id}
-                              onChange={async (event) => {
-                                const next = event.target
-                                  .value as ShippingStatus;
-                                const note = `Status updated to ${SHIPPING_STATUS_META[next].label} by vault operations.`;
-                                const message = `${mineral.name} is now ${SHIPPING_STATUS_META[next].label}.`;
-                                setUpdatingId(mineral.id);
-                                try {
-                                  const outcome = await publishStatus(
-                                    mineral,
-                                    next,
-                                    note,
-                                  );
-                                  const description =
-                                    describeShipmentEmailOutcome(outcome);
-                                  if (
-                                    outcome.kind === "sent" ||
-                                    outcome.kind === "demo"
-                                  ) {
-                                    toast.success(message, { description });
-                                  } else {
-                                    toast.warning(message, { description });
-                                  }
-                                } catch (error) {
-                                  toast.error(
-                                    error instanceof Error
-                                      ? error.message
-                                      : "Could not update the status.",
-                                  );
-                                } finally {
-                                  setUpdatingId(null);
-                                }
-                              }}
-                              className={cn(
-                                "h-6 max-w-[9.5rem] cursor-pointer appearance-none truncate rounded-full border pl-2.5 pr-6 text-[0.6rem] font-semibold leading-none outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
-                                SHIPPING_STATUS_META[shipment.currentStatus]
-                                  .tone,
-                              )}
-                            >
-                              {SHIPPING_STATUSES.map((item) => (
-                                <option
-                                  key={item}
-                                  value={item}
-                                  className="bg-card text-ink"
-                                >
-                                  {SHIPPING_STATUS_META[item].label}
-                                </option>
-                              ))}
-                            </select>
-                            <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 size-3 -translate-y-1/2 opacity-60" />
-                          </span>
-                          {updatingId === mineral.id ? (
-                            <Loader2 className="size-3 animate-spin text-muted-foreground" />
-                          ) : (
-                            <ShipmentAlertChip shipment={shipment} />
-                          )}
-                        </>
-                      ) : (
-                        <InVaultChip />
-                      )}
-                    </div>
-                    <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-muted/70 px-2.5 py-1 text-[0.58rem] font-medium leading-none text-muted-foreground">
-                      <Clock3 className="size-3" />
-                      {shipment
-                        ? shipment.currentStatus === "shipped"
-                          ? `Delivered · ${formatDate(
-                              shipment.deliveredAt ??
-                                shipment.estimatedDelivery,
-                            )}`
-                          : `Est. delivery · ${formatDate(
-                              shipment.estimatedDelivery,
-                            )} · ${etaLabel(mineral)}`
-                        : mineral.storageLocation}
-                    </span>
-                  </div>
+                  </p>
                 </div>
 
-                <div className="min-w-0 lg:border-l lg:border-line/70 lg:pl-8">
-                  {shipment ? (
-                    <>
-                      <ShipmentRoute shipment={shipment} />
-                      <p className="mt-3 truncate text-[0.55rem] text-muted-foreground lg:hidden">
-                        {shipment.carrier} · {shipment.service}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="min-w-0 text-[0.62rem] leading-5 text-muted-foreground">
-                      No consignment exists. Initiate one from the packing bench
-                      and the member sees it here as soon as it is published.
-                    </p>
+                <div className="min-w-0">
+                  <p className="truncate text-[0.72rem] font-medium text-ink">
+                    {shipment.origin} → {shipment.destination}
+                  </p>
+                  <p className="mt-0.5 truncate text-[0.6rem] text-muted-foreground">
+                    {shipment.carrier}
+                    {shipment.trackingNumber
+                      ? ` · ${shipment.trackingNumber}`
+                      : ""}
+                    {shipment.estimatedArrivalAt
+                      ? ` · ETA ${formatDate(shipment.estimatedArrivalAt)}`
+                      : ""}
+                  </p>
+                  <p className="mt-0.5 truncate text-[0.58rem] text-muted-foreground/80">
+                    {shipment.currentLocation
+                      ? `Last seen · ${shipment.currentLocation}`
+                      : "No location recorded"}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                  <StatusPill status={shipment.status} />
+                  <select
+                    aria-label={`Update shipment status for ${mineral.name}`}
+                    value={shipment.status}
+                    disabled={updatingId === shipment._id}
+                    onChange={(event) =>
+                      changeStatus(
+                        { mineral, shipment },
+                        event.target.value as ShipmentStatus,
+                      )
+                    }
+                    className="h-8 cursor-pointer rounded-lg border border-line bg-card px-2 text-[0.62rem] text-ink disabled:opacity-60"
+                  >
+                    {SHIPMENT_STATUSES.map((item) => (
+                      <option key={item} value={item}>
+                        {SHIPMENT_STATUS_LABELS[item]}
+                      </option>
+                    ))}
+                  </select>
+                  {updatingId === shipment._id && (
+                    <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
                   )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 rounded-[4px] bg-transparent px-2.5 text-[0.62rem]"
+                    onClick={() => {
+                      setAssigningId(mineral._id);
+                      setTargetId("");
+                      setNote("");
+                    }}
+                  >
+                    <ArrowRightLeft className="size-3" />
+                    {assignee ? "Reassign" : "Assign"}
+                  </Button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setInitialTab("shipping");
-                    setSelectedId(mineral.id);
-                  }}
-                  aria-label={`Manage ${mineral.name}`}
-                  title={shipment ? "Manage consignment" : "Start shipment"}
-                  className={KEBAB}
-                >
-                  <ArrowUpRight className="size-4" />
-                </button>
-              </motion.article>
-            );
-          })}
-        </section>
-      )}
+              </article>
+            ))}
+          </div>
+        )}
+      </Panel>
 
       <p className="px-1 text-[0.6rem] leading-5 text-muted-foreground">
-        Status changes are appended to the shipment history with the acting
-        staff member and a timestamp. The member sees the same update on their
-        tracking page and is emailed the new step, the note and the revised
-        route as soon as it is published.
+        Ownership is held on the mineral, so assigning a consignment moves the
+        mineral and every shipment attached to it. The change is written to the
+        audit log, the new owner is emailed and the previous owner is notified in
+        their dashboard. Status changes append to the shipment history and email
+        the owner the new step.
       </p>
 
-      {selectedMineral && (
-        <AdminMineralDialog
-          key={`${selectedMineral.id}-${initialTab}`}
-          mineral={selectedMineral}
-          actor={actor}
-          open={Boolean(selectedMineral)}
-          initialTab={initialTab}
-          onOpenChange={(open) => !open && setSelectedId(null)}
-        />
-      )}
+      <Dialog
+        open={Boolean(assigning)}
+        onOpenChange={(open) => {
+          if (!open) closeAssign();
+        }}
+      >
+        <DialogContent className="rounded-[4px] border-line bg-background sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Assign this consignment</DialogTitle>
+            <DialogDescription>
+              {assigning
+                ? `${assigning.shipment.reference} · ${assigning.mineral.name} (${assigning.mineral.reference}). The mineral and all of its shipments move together.`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="assign-owner">New owner</Label>
+              <select
+                id="assign-owner"
+                aria-label="New owner"
+                value={targetId}
+                onChange={(event) => setTargetId(event.target.value)}
+                className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
+              >
+                <option value="">Choose a customer or broker…</option>
+                {targets.map((option) => (
+                  <option key={option.userId} value={option.userId}>
+                    {option.name} · {option.email}
+                    {option.role === "broker" ? " (broker)" : ""}
+                  </option>
+                ))}
+              </select>
+              {targets.length === 0 && (
+                <p className="text-[0.62rem] text-muted-foreground">
+                  No other accounts are available to assign this record to.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="assign-note">Reason (optional)</Label>
+              <Input
+                id="assign-note"
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="Recorded in the audit log"
+                aria-label="Reason for the assignment"
+                className="h-9 rounded-lg bg-card text-xs"
+              />
+            </div>
+
+            <p className="rounded-lg border border-line bg-ice/20 px-3 py-2 text-[0.62rem] leading-5 text-muted-foreground">
+              The new owner is emailed immediately and this record appears in
+              their dashboard. The previous owner is told in-app that it moved.
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                className="h-9 rounded-[4px] bg-transparent px-3 text-[0.65rem]"
+                onClick={closeAssign}
+                disabled={pending}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="h-9 rounded-[4px] px-3 text-[0.65rem]"
+                disabled={!targetId || pending}
+                onClick={submitAssign}
+              >
+                {pending && <Loader2 className="size-3.5 animate-spin" />}
+                Assign to this account
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
