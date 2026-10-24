@@ -1,37 +1,34 @@
 import {
   EmptyState,
+  LoadingState,
+  MetricTile,
   PageHeader,
   Panel,
+  StatusPill,
+  Timeline,
 } from "@/components/dashboard/PlatformUI";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MineralCard } from "@/components/vault/MineralCard";
-import { MineralDetailDialog } from "@/components/vault/MineralDetailDialog";
-import { VaultActivityFeed } from "@/components/vault/VaultActivityFeed";
-import { VaultPulse } from "@/components/vault/VaultPulse";
-import { VaultSkeleton } from "@/components/vault/VaultSkeleton";
+import { api } from "@/convex/_generated/api";
+import {
+  SHIPMENT_STATUSES,
+  SHIPMENT_STATUS_LABELS,
+  type ShipmentStatus,
+} from "@/convex/lib/shipments";
+import { useAuth } from "@/hooks/use-auth";
 import {
   downloadCsv,
   formatDate,
-  formatMoneyValue,
+  formatMoney,
+  formatMoneyList,
 } from "@/lib/format";
-import { seedDemoCollection } from "@/lib/vault/store";
-import { useVaultActor, useVaultData, useVaultMineral } from "@/lib/vault/useVault";
-import type { Mineral } from "@/lib/vault/types";
+import { useQuery } from "convex/react";
 import {
-  INSURANCE_STATUS_META,
-  MINERAL_TYPES,
-  SHIPPING_STATUSES,
-  SHIPPING_STATUS_META,
-  formatWeight,
-  insuranceStatus,
-} from "@/lib/vault/types";
-import {
-  ArrowUpRight,
   CalendarClock,
   Download,
   Gem,
   Headset,
+  MapPin,
   Plus,
   RefreshCw,
   Search,
@@ -43,18 +40,19 @@ import {
   Wallet,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router";
+import { Link } from "react-router";
 import { toast } from "sonner";
 
 type SortKey = "value_desc" | "value_asc" | "deposit_desc" | "name_asc";
 
-const EMPTY_FILTERS = {
-  search: "",
-  type: "all",
-  insurance: "all",
-  shipping: "all",
-  sort: "value_desc" as SortKey,
+const COVERAGE_LABELS: Record<string, string> = {
+  all_risk: "All risk",
+  cargo_transit: "Cargo & transit",
+  storage: "Storage",
+  liability: "Liability",
 };
+
+const RENEWAL_WINDOW = 90 * 24 * 60 * 60 * 1000;
 
 function greeting() {
   const hour = new Date().getHours();
@@ -63,259 +61,182 @@ function greeting() {
   return "Good evening";
 }
 
-function isRenewalDue(policy: Mineral["insurancePolicy"]) {
-  return (
-    policy?.status === "active" &&
-    policy.endDate < Date.now() + 90 * 24 * 60 * 60 * 1000
-  );
-}
-
-function DemoBar({
-  onSwitch,
-}: {
-  onSwitch: () => void;
-}) {
-  return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/[0.035] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-start gap-2.5">
-        <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-[4px] border border-primary/20 bg-card text-primary">
-          <Sparkles className="size-3.5" />
-        </span>
-        <div>
-          <p className="text-[0.72rem] font-semibold text-ink">
-            Demonstration vault · member view
-          </p>
-          <p className="mt-0.5 text-[0.64rem] leading-5 text-muted-foreground">
-            Fictional records for Noor Haddad. Switch to the operations view to see
-            the same data as an administrator.
-          </p>
-        </div>
-      </div>
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-8 shrink-0 rounded-[4px] bg-card px-3 text-[0.65rem]"
-        onClick={onSwitch}
-      >
-        Operations view
-        <ArrowUpRight className="size-3" />
-      </Button>
-    </div>
-  );
-}
-
-function CoverHealth({
-  minerals,
-  onFilterUninsured,
-}: {
-  minerals: Mineral[];
-  onFilterUninsured: () => void;
-}) {
-  const insured = minerals.filter((mineral) => insuranceStatus(mineral) === "active");
-  const pending = minerals.filter((mineral) => insuranceStatus(mineral) === "pending");
-  const uninsured = minerals.filter((mineral) => !mineral.insurancePolicy);
-  const renewals = minerals
-    .filter((mineral) => isRenewalDue(mineral.insurancePolicy))
-    .sort(
-      (a, b) =>
-        (a.insurancePolicy?.endDate ?? 0) - (b.insurancePolicy?.endDate ?? 0),
-    );
-  const percent = minerals.length
-    ? Math.round((insured.length / minerals.length) * 100)
-    : 0;
-
-  return (
-    <Panel>
-      <div className="px-5 pt-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-[0.95rem] font-semibold tracking-[-0.02em] text-ink">
-              Cover health
-            </h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Active policies across the collection.
-            </p>
-          </div>
-          <span className="rounded-[4px] border border-line bg-ice/50 px-2 py-0.5 text-[0.56rem] font-semibold tabular-nums text-ink">
-            {percent}%
-          </span>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between text-[0.6rem] text-muted-foreground">
-          <span>
-            <span className="font-semibold text-ink">{insured.length}</span> of{" "}
-            {minerals.length} insured
-          </span>
-          <span>{formatMoneyValue(
-            insured.reduce(
-              (total, mineral) => total + (mineral.insurancePolicy?.coverageAmount ?? 0),
-              0,
-            ),
-            minerals[0]?.currency ?? "GBP",
-          )}</span>
-        </div>
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-[4px] bg-ink/[0.07] dark:bg-white/10">
-          <div
-            className="h-full rounded-[4px] bg-emerald-500 transition-[width] duration-700"
-            style={{ width: `${Math.max(3, percent)}%` }}
-          />
-        </div>
-      </div>
-
-      <div className="mt-4 divide-y divide-line border-t border-line">
-        <div className="flex items-center justify-between px-5 py-2.5">
-          <span className="inline-flex items-center gap-2 text-[0.66rem] text-muted-foreground">
-            <ShieldAlert className="size-3.5 text-amber-600 dark:text-amber-400" />
-            Awaiting cover
-          </span>
-          <span className="text-[0.68rem] font-semibold tabular-nums text-ink">
-            {uninsured.length + pending.length}
-          </span>
-        </div>
-        <div className="flex items-center justify-between px-5 py-2.5">
-          <span className="inline-flex items-center gap-2 text-[0.66rem] text-muted-foreground">
-            <CalendarClock className="size-3.5 text-primary" />
-            Renewals in 90 days
-          </span>
-          <span className="text-[0.68rem] font-semibold tabular-nums text-ink">
-            {renewals.length}
-          </span>
-        </div>
-        {renewals[0] && (
-          <div className="px-5 py-2.5">
-            <p className="text-[0.6rem] text-muted-foreground">
-              Next:{" "}
-              <span className="font-medium text-ink">
-                {renewals[0].name}
-              </span>{" "}
-              · {formatDate(renewals[0].insurancePolicy?.endDate)}
-            </p>
-          </div>
-        )}
-      </div>
-
-      {uninsured.length > 0 && (
-        <div className="border-t border-line px-5 py-3">
-          <button
-            type="button"
-            onClick={onFilterUninsured}
-            className="inline-flex items-center gap-1 text-[0.63rem] font-semibold text-primary"
-          >
-            Review {uninsured.length === 1 ? "the uninsured piece" : "uninsured pieces"}
-            <ArrowUpRight className="size-3" />
-          </button>
-        </div>
-      )}
-    </Panel>
-  );
-}
-
+/**
+ * The member's vault, reading the minerals staff have assigned to them.
+ *
+ * Ownership travels with the record: the mineral, its insurance policy and its
+ * shipment are the same records vault operations see, so an assignment or a
+ * status change shows up here immediately.
+ */
 export default function VaultPage() {
-  const navigate = useNavigate();
-  const { actor, isLoading, canSwitchDemoRole, setDemoOperations } = useVaultActor();
-  const { ready, minerals, metrics, activities } = useVaultData(actor);
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selectedMineral = useVaultMineral(actor, selectedId);
+  const { user } = useAuth();
+  const rows = useQuery(api.minerals.mine);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
+  const [insurance, setInsurance] = useState("all");
+  const [shipping, setShipping] = useState<ShipmentStatus | "all" | "in_vault">(
+    "all",
+  );
+  const [sort, setSort] = useState<SortKey>("value_desc");
+  // Captured once so the renewal window cannot shift between renders.
+  const [renewalCutoff] = useState(() => Date.now() + RENEWAL_WINDOW);
+
+  const categories = useMemo(
+    () =>
+      [...new Set((rows ?? []).map((row) => row.mineral.category))].sort(
+        (a, b) => a.localeCompare(b),
+      ),
+    [rows],
+  );
 
   const filtered = useMemo(() => {
-    const query = filters.search.trim().toLowerCase();
-    const rows = minerals.filter((mineral) => {
-      if (query) {
-        const haystack = [
-          mineral.name,
-          mineral.type,
-          mineral.category,
-          mineral.vaultId,
-          mineral.certificateNumber,
-          mineral.storageLocation,
-          mineral.ownerName,
-        ]
-          .join(" ")
-          .toLowerCase();
-        if (!haystack.includes(query)) return false;
-      }
-      if (filters.type !== "all" && mineral.type !== filters.type) return false;
-      if (filters.insurance !== "all") {
-        const status = insuranceStatus(mineral);
-        if (filters.insurance === "insured" && status !== "active") return false;
-        if (filters.insurance === "uninsured" && status !== "uninsured") return false;
-        if (filters.insurance === "pending" && status !== "pending") return false;
-      }
-      if (filters.shipping !== "all") {
-        if (filters.shipping === "in_vault" && mineral.shipping) return false;
+    const query = search.trim().toLowerCase();
+    return (rows ?? [])
+      .filter((row) => {
+        if (category !== "all" && row.mineral.category !== category)
+          return false;
+        if (insurance === "insured" && row.policy?.status !== "active")
+          return false;
+        if (insurance === "uninsured" && row.policy) return false;
+        if (insurance === "pending" && row.policy?.status !== "draft")
+          return false;
+        if (shipping === "in_vault" && row.shipment) return false;
         if (
-          filters.shipping !== "in_vault" &&
-          mineral.shipping?.currentStatus !== filters.shipping
+          shipping !== "all" &&
+          shipping !== "in_vault" &&
+          row.shipment?.status !== shipping
         ) {
           return false;
         }
-      }
-      return true;
-    });
+        if (!query) return true;
+        return [
+          row.mineral.name,
+          row.mineral.reference,
+          row.mineral.category,
+          row.policy?.policyNumber ?? "",
+          row.policy?.provider ?? "",
+          row.shipment?.reference ?? "",
+          row.shipment?.trackingNumber ?? "",
+          row.shipment?.currentLocation ?? "",
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(query);
+      })
+      .sort((a, b) => {
+        if (sort === "value_asc")
+          return a.mineral.declaredValue - b.mineral.declaredValue;
+        if (sort === "deposit_desc")
+          return b.mineral.createdAt - a.mineral.createdAt;
+        if (sort === "name_asc")
+          return a.mineral.name.localeCompare(b.mineral.name);
+        return b.mineral.declaredValue - a.mineral.declaredValue;
+      });
+  }, [category, insurance, rows, search, shipping, sort]);
 
-    return rows.sort((a, b) => {
-      if (filters.sort === "value_asc") return a.estimatedValue - b.estimatedValue;
-      if (filters.sort === "deposit_desc") return b.depositDate - a.depositDate;
-      if (filters.sort === "name_asc") return a.name.localeCompare(b.name);
-      return b.estimatedValue - a.estimatedValue;
-    });
-  }, [filters, minerals]);
+  const stats = useMemo(() => {
+    const list = rows ?? [];
+    const insured = list.filter((row) => row.policy?.status === "active");
+    const declared = new Map<string, number>();
+    const covered = new Map<string, number>();
+    for (const row of list) {
+      declared.set(
+        row.mineral.currency,
+        (declared.get(row.mineral.currency) ?? 0) + row.mineral.declaredValue,
+      );
+    }
+    for (const row of insured) {
+      if (!row.policy) continue;
+      covered.set(
+        row.policy.currency,
+        (covered.get(row.policy.currency) ?? 0) + row.policy.coverageLimit,
+      );
+    }
+    return {
+      holdings: list.length,
+      insuredCount: insured.length,
+      uninsured: list.filter((row) => !row.policy).length,
+      declared: [...declared.entries()].map(([currency, amount]) => ({
+        currency,
+        amount,
+      })),
+      covered: [...covered.entries()].map(([currency, amount]) => ({
+        currency,
+        amount,
+      })),
+      renewals: list.filter(
+        (row) =>
+          row.policy?.status === "active" &&
+          row.policy.endDate < renewalCutoff,
+      ),
+      inMotion: list.filter(
+        (row) =>
+          row.shipment &&
+          row.shipment.status !== "delivered" &&
+          row.shipment.status !== "cancelled",
+      ).length,
+    };
+  }, [renewalCutoff, rows]);
 
-  if (isLoading || !ready) return <VaultSkeleton />;
-  if (actor.role === "admin") {
-    return <Navigate to="/dashboard/admin/vault" replace />;
-  }
+  const recentEvents = useMemo(
+    () =>
+      (rows ?? [])
+        .flatMap((row) =>
+          row.events.map((event) => ({ ...event, mineral: row.mineral })),
+        )
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, 6),
+    [rows],
+  );
 
-  const firstName = (actor.name || "there").split(" ")[0];
+  const firstName = (user?.name ?? "there").split(" ")[0];
   const activeFilters =
-    filters.search.trim() !== "" ||
-    filters.type !== "all" ||
-    filters.insurance !== "all" ||
-    filters.shipping !== "all" ||
-    filters.sort !== "value_desc";
-  const uninsured = minerals.filter((mineral) => !mineral.insurancePolicy);
+    search.trim() !== "" ||
+    category !== "all" ||
+    insurance !== "all" ||
+    shipping !== "all";
+  const nextRenewal = stats.renewals.sort(
+    (a, b) => (a.policy?.endDate ?? 0) - (b.policy?.endDate ?? 0),
+  )[0];
+
+  if (rows === undefined) return <LoadingState label="Loading your vault" />;
 
   const downloadInventory = () => {
     downloadCsv(
       "cosmic-vault-inventory.csv",
       [
-        { key: "vaultId", label: "Vault ID" },
-        { key: "certificate", label: "Certificate" },
+        { key: "reference", label: "Reference" },
         { key: "name", label: "Mineral" },
-        { key: "type", label: "Type" },
         { key: "category", label: "Category" },
-        { key: "weight", label: "Weight" },
-        { key: "dimensions", label: "Dimensions" },
-        { key: "purity", label: "Purity" },
-        { key: "grade", label: "Grade" },
-        { key: "value", label: "Appraised value" },
+        { key: "quantity", label: "Quantity" },
+        { key: "value", label: "Declared value" },
         { key: "currency", label: "Currency" },
-        { key: "location", label: "Storage location" },
-        { key: "deposited", label: "Deposited" },
-        { key: "insurance", label: "Insurance status" },
         { key: "policy", label: "Policy" },
+        { key: "coverage", label: "Coverage" },
+        { key: "coverLimit", label: "Cover limit" },
+        { key: "policyStatus", label: "Policy status" },
+        { key: "shipment", label: "Shipment" },
         { key: "shipping", label: "Shipping status" },
+        { key: "updated", label: "Updated" },
       ],
-      filtered.map((mineral) => ({
-        vaultId: mineral.vaultId,
-        certificate: mineral.certificateNumber,
-        name: mineral.name,
-        type: mineral.type,
-        category: mineral.category,
-        weight: formatWeight(mineral.weight, mineral.unit),
-        dimensions: mineral.dimensions,
-        purity: mineral.purity,
-        grade: mineral.grade,
-        value: mineral.estimatedValue,
-        currency: mineral.currency,
-        location: mineral.storageLocation,
-        deposited: formatDate(mineral.depositDate),
-        insurance: INSURANCE_STATUS_META[insuranceStatus(mineral)].label,
-        policy: mineral.insurancePolicy?.policyNumber ?? "None",
-        shipping: mineral.shipping
-          ? SHIPPING_STATUS_META[mineral.shipping.currentStatus].longLabel
+      filtered.map((row) => ({
+        reference: row.mineral.reference,
+        name: row.mineral.name,
+        category: row.mineral.category,
+        quantity: `${row.mineral.quantity} ${row.mineral.unit}`,
+        value: row.mineral.declaredValue,
+        currency: row.mineral.currency,
+        policy: row.policy?.policyNumber ?? "None",
+        coverage: row.policy
+          ? (COVERAGE_LABELS[row.policy.coverage] ?? row.policy.coverage)
+          : "",
+        coverLimit: row.policy?.coverageLimit ?? "",
+        policyStatus: row.policy?.status ?? "",
+        shipment: row.shipment?.reference ?? "",
+        shipping: row.shipment
+          ? SHIPMENT_STATUS_LABELS[row.shipment.status]
           : "In vault",
+        updated: formatDate(row.mineral.updatedAt),
       })),
     );
     toast.success("Inventory downloaded.");
@@ -323,15 +244,6 @@ export default function VaultPage() {
 
   return (
     <div className="space-y-6">
-      {canSwitchDemoRole && (
-        <DemoBar
-          onSwitch={() => {
-            setDemoOperations(true);
-            navigate("/dashboard/admin/vault");
-          }}
-        />
-      )}
-
       <PageHeader
         eyebrow={
           <>
@@ -353,7 +265,7 @@ export default function VaultPage() {
           </>
         }
         title={`${greeting()}, ${firstName}.`}
-        description="Every object you own, the policy protecting it, and every movement it makes. Held under dual control in the Cosmic Vault, with a person accountable for each record."
+        description="Every mineral assigned to you, the policy protecting it, and every movement it makes. Records are maintained by vault operations under dual control."
         actions={
           <>
             <Button
@@ -375,37 +287,32 @@ export default function VaultPage() {
         }
       />
 
-      <VaultPulse
-        items={[
-          {
-            label: "Holdings",
-            value: metrics.holdings,
-            helper: `${metrics.insuredCount} insured · ${metrics.uninsuredCount} uninsured`,
-            icon: Gem,
-          },
-          {
-            label: "Appraised value",
-            value: formatMoneyValue(metrics.totalAppraisedValue, metrics.currency),
-            helper: "Latest recorded appraisal",
-            icon: Wallet,
-          },
-          {
-            label: "Insured value",
-            value: formatMoneyValue(metrics.totalInsuredValue, metrics.currency),
-            helper: `${metrics.insuredCount} active ${
-              metrics.insuredCount === 1 ? "policy" : "policies"
-            }`,
-            icon: ShieldCheck,
-          },
-          {
-            label: "In motion",
-            value: metrics.activeShipments,
-            helper: `${metrics.pendingShipments} pending · ${metrics.onHoldShipments} on hold`,
-            icon: Truck,
-            tone: metrics.onHoldShipments > 0 ? "warning" : "default",
-          },
-        ]}
-      />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricTile
+          label="Holdings"
+          value={stats.holdings}
+          helper={`${stats.insuredCount} insured · ${stats.uninsured} without cover`}
+          icon={Gem}
+        />
+        <MetricTile
+          label="Declared value"
+          value={formatMoneyList(stats.declared, "None")}
+          helper="Latest recorded appraisal"
+          icon={Wallet}
+        />
+        <MetricTile
+          label="Insured value"
+          value={formatMoneyList(stats.covered, "None")}
+          helper={`${stats.insuredCount} active ${stats.insuredCount === 1 ? "policy" : "policies"}`}
+          icon={ShieldCheck}
+        />
+        <MetricTile
+          label="In motion"
+          value={stats.inMotion}
+          helper="Consignments not yet delivered"
+          icon={Truck}
+        />
+      </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.9fr)_minmax(280px,1fr)]">
         <div className="min-w-0 space-y-4">
@@ -414,40 +321,31 @@ export default function VaultPage() {
               <div className="relative min-w-[200px] flex-1">
                 <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  value={filters.search}
-                  onChange={(event) =>
-                    setFilters((current) => ({ ...current, search: event.target.value }))
-                  }
-                  placeholder="Search name, vault ID, certificate, or location"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search mineral, reference, policy or tracking"
                   aria-label="Search minerals"
                   className="h-9 rounded-[4px] bg-card pl-9 text-xs"
                 />
               </div>
               <div className="flex flex-wrap gap-2">
                 <select
-                  aria-label="Filter by mineral type"
-                  value={filters.type}
-                  onChange={(event) =>
-                    setFilters((current) => ({ ...current, type: event.target.value }))
-                  }
-                  className="h-9 rounded-[4px] border border-line bg-card px-2.5 text-xs text-ink"
+                  aria-label="Filter by category"
+                  value={category}
+                  onChange={(event) => setCategory(event.target.value)}
+                  className="h-9 max-w-[160px] rounded-[4px] border border-line bg-card px-2.5 text-xs text-ink"
                 >
-                  <option value="all">All types</option>
-                  {MINERAL_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
+                  <option value="all">All categories</option>
+                  {categories.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
                     </option>
                   ))}
                 </select>
                 <select
                   aria-label="Filter by insurance status"
-                  value={filters.insurance}
-                  onChange={(event) =>
-                    setFilters((current) => ({
-                      ...current,
-                      insurance: event.target.value,
-                    }))
-                  }
+                  value={insurance}
+                  onChange={(event) => setInsurance(event.target.value)}
                   className="h-9 rounded-[4px] border border-line bg-card px-2.5 text-xs text-ink"
                 >
                   <option value="all">All insurance</option>
@@ -457,37 +355,31 @@ export default function VaultPage() {
                 </select>
                 <select
                   aria-label="Filter by shipping status"
-                  value={filters.shipping}
+                  value={shipping}
                   onChange={(event) =>
-                    setFilters((current) => ({
-                      ...current,
-                      shipping: event.target.value,
-                    }))
+                    setShipping(
+                      event.target.value as ShipmentStatus | "all" | "in_vault",
+                    )
                   }
                   className="h-9 rounded-[4px] border border-line bg-card px-2.5 text-xs text-ink"
                 >
                   <option value="all">All shipping</option>
                   <option value="in_vault">In vault</option>
-                  {SHIPPING_STATUSES.map((status) => (
+                  {SHIPMENT_STATUSES.map((status) => (
                     <option key={status} value={status}>
-                      {SHIPPING_STATUS_META[status].label}
+                      {SHIPMENT_STATUS_LABELS[status]}
                     </option>
                   ))}
                 </select>
                 <select
                   aria-label="Sort minerals"
-                  value={filters.sort}
-                  onChange={(event) =>
-                    setFilters((current) => ({
-                      ...current,
-                      sort: event.target.value as SortKey,
-                    }))
-                  }
+                  value={sort}
+                  onChange={(event) => setSort(event.target.value as SortKey)}
                   className="h-9 rounded-[4px] border border-line bg-card px-2.5 text-xs text-ink"
                 >
                   <option value="value_desc">Value · high to low</option>
                   <option value="value_asc">Value · low to high</option>
-                  <option value="deposit_desc">Newest deposit</option>
+                  <option value="deposit_desc">Newest first</option>
                   <option value="name_asc">Name · A to Z</option>
                 </select>
               </div>
@@ -495,13 +387,18 @@ export default function VaultPage() {
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-line/70 px-0.5 pt-2">
               <p className="inline-flex items-center gap-1.5 text-[0.6rem] text-muted-foreground">
                 <SlidersHorizontal className="size-3" />
-                {filtered.length} of {minerals.length} records
+                {filtered.length} of {rows.length} records
                 {activeFilters ? " · filtered" : ""}
               </p>
               {activeFilters && (
                 <button
                   type="button"
-                  onClick={() => setFilters(EMPTY_FILTERS)}
+                  onClick={() => {
+                    setSearch("");
+                    setCategory("all");
+                    setInsurance("all");
+                    setShipping("all");
+                  }}
                   className="inline-flex items-center gap-1 text-[0.6rem] font-medium text-primary"
                 >
                   <RefreshCw className="size-3" />
@@ -511,33 +408,16 @@ export default function VaultPage() {
             </div>
           </div>
 
-          {minerals.length === 0 ? (
+          {rows.length === 0 ? (
             <Panel>
               <EmptyState
                 icon={Gem}
-                title="The vault is ready for its first piece."
-                description="A vault specialist will arrange intake, identity checks and an independent appraisal before anything is accepted into custody."
+                title="No minerals assigned yet."
+                description="When vault operations record a mineral under your account, it appears here with its insurance policy and shipment. We email you when that happens."
                 action={
-                  <div className="flex flex-wrap justify-center gap-2">
-                    <Button asChild size="sm" className="rounded-[4px]">
-                      <Link to="/dashboard/support">Arrange a deposit</Link>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="rounded-[4px] bg-transparent"
-                      onClick={() => {
-                        const count = seedDemoCollection(actor);
-                        toast.success(
-                          count
-                            ? `${count} demonstration records loaded.`
-                            : "A demonstration collection is already loaded.",
-                        );
-                      }}
-                    >
-                      Load demonstration collection
-                    </Button>
-                  </div>
+                  <Button asChild size="sm" className="rounded-[4px]">
+                    <Link to="/dashboard/support">Talk to the vault desk</Link>
+                  </Button>
                 }
               />
             </Panel>
@@ -552,7 +432,12 @@ export default function VaultPage() {
                     size="sm"
                     variant="outline"
                     className="rounded-[4px] bg-transparent"
-                    onClick={() => setFilters(EMPTY_FILTERS)}
+                    onClick={() => {
+                      setSearch("");
+                      setCategory("all");
+                      setInsurance("all");
+                      setShipping("all");
+                    }}
                   >
                     Clear filters
                   </Button>
@@ -561,46 +446,232 @@ export default function VaultPage() {
             </Panel>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
-              {filtered.map((mineral, index) => (
-                <MineralCard
-                  key={mineral.id}
-                  mineral={mineral}
-                  index={index}
-                  onOpen={(next) => setSelectedId(next.id)}
-                />
+              {filtered.map(({ mineral, policy, shipment, events }) => (
+                <Panel key={mineral._id} className="overflow-hidden">
+                  <div className="flex flex-wrap items-start justify-between gap-2 border-b border-line px-5 py-4">
+                    <div className="min-w-0">
+                      <p className="text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        {mineral.reference} · {mineral.category}
+                      </p>
+                      <h2 className="mt-1 truncate text-[0.95rem] font-semibold tracking-[-0.02em] text-ink">
+                        {mineral.name}
+                      </h2>
+                      <p className="mt-0.5 text-[0.62rem] text-muted-foreground">
+                        {mineral.quantity.toLocaleString("en-GB")}{" "}
+                        {mineral.unit} ·{" "}
+                        {formatMoney(mineral.declaredValue, mineral.currency)}
+                      </p>
+                    </div>
+                    <StatusPill status={policy?.status ?? mineral.status} />
+                  </div>
+
+                  <div className="space-y-4 px-5 py-4">
+                    <div>
+                      <p className="text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        Insurance
+                      </p>
+                      {policy ? (
+                        <div className="mt-1.5 space-y-0.5">
+                          <p className="text-xs font-medium text-ink">
+                            {policy.policyNumber}
+                          </p>
+                          <p className="text-[0.62rem] leading-5 text-muted-foreground">
+                            {policy.provider} ·{" "}
+                            {COVERAGE_LABELS[policy.coverage] ??
+                              policy.coverage}{" "}
+                            · cover limit{" "}
+                            {formatMoney(
+                              policy.coverageLimit,
+                              policy.currency,
+                            )}
+                          </p>
+                          <p className="text-[0.58rem] uppercase tracking-[0.08em] text-muted-foreground">
+                            In force {formatDate(policy.startDate)} —{" "}
+                            {formatDate(policy.endDate)}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="mt-1.5 flex items-center gap-1.5 text-[0.62rem] text-muted-foreground">
+                          <ShieldAlert className="size-3.5 text-amber-600 dark:text-amber-400" />
+                          No policy has been recorded for this mineral.
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        Shipment
+                      </p>
+                      {shipment ? (
+                        <div className="mt-1.5 space-y-1">
+                          <p className="flex flex-wrap items-center gap-2 text-xs text-ink">
+                            <StatusPill status={shipment.status} />
+                            <span className="text-[0.62rem] text-muted-foreground">
+                              {shipment.reference}
+                            </span>
+                          </p>
+                          <p className="flex items-center gap-1.5 text-[0.62rem] text-muted-foreground">
+                            <MapPin className="size-3.5 shrink-0" />
+                            {shipment.origin} → {shipment.destination}
+                          </p>
+                          <p className="flex flex-wrap items-center gap-x-2 text-[0.6rem] text-muted-foreground">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Truck className="size-3.5 shrink-0" />
+                              {shipment.carrier}
+                            </span>
+                            {shipment.trackingNumber && (
+                              <span>· {shipment.trackingNumber}</span>
+                            )}
+                            {shipment.estimatedArrivalAt && (
+                              <span className="inline-flex items-center gap-1">
+                                · <CalendarClock className="size-3" />{" "}
+                                {formatDate(shipment.estimatedArrivalAt)}
+                              </span>
+                            )}
+                          </p>
+                          {events.length > 0 && (
+                            <div className="mt-2 border-t border-line/70 pt-2">
+                              <Timeline
+                                items={events.slice(0, 2).map((event) => ({
+                                  title: SHIPMENT_STATUS_LABELS[event.status],
+                                  body: [event.location, event.note]
+                                    .filter(Boolean)
+                                    .join(" · "),
+                                  at: event.createdAt,
+                                }))}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="mt-1.5 text-[0.62rem] text-muted-foreground">
+                          Held in the vault. No consignment has been arranged.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {shipment && (
+                    <div className="border-t border-line px-5 py-3">
+                      <Link
+                        to="/dashboard/shipments"
+                        className="inline-flex items-center gap-1 text-[0.62rem] font-semibold text-primary"
+                      >
+                        Track this consignment
+                      </Link>
+                    </div>
+                  )}
+                </Panel>
               ))}
             </div>
           )}
         </div>
 
         <div className="min-w-0 space-y-4">
-          <VaultActivityFeed
-            activities={activities}
-            limit={7}
-            onOpenMineral={(id) => setSelectedId(id)}
-            href="/dashboard/shipments"
-          />
-          <CoverHealth
-            minerals={minerals}
-            onFilterUninsured={() =>
-              setFilters((current) => ({ ...current, insurance: "uninsured" }))
-            }
-          />
-
-          {uninsured.length > 0 && (
-            <div className="rounded-[4px] border border-amber-500/30 bg-amber-500/[0.05] p-4">
-              <p className="flex items-center gap-2 text-[0.68rem] font-semibold text-ink">
-                <ShieldAlert className="size-4 text-amber-600 dark:text-amber-400" />
-                {uninsured.length === 1
-                  ? "One piece needs cover"
-                  : `${uninsured.length} pieces need cover`}
+          <Panel>
+            <div className="px-5 pt-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-[0.95rem] font-semibold tracking-[-0.02em] text-ink">
+                    Cover health
+                  </h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Active policies across your collection.
+                  </p>
+                </div>
+                <span className="rounded-[4px] border border-line bg-ice/50 px-2 py-0.5 text-[0.56rem] font-semibold tabular-nums text-ink">
+                  {rows.length
+                    ? Math.round((stats.insuredCount / rows.length) * 100)
+                    : 0}
+                  %
+                </span>
+              </div>
+              <p className="mt-4 text-[0.62rem] text-muted-foreground">
+                <span className="font-semibold text-ink">
+                  {stats.insuredCount}
+                </span>{" "}
+                of {rows.length} insured
               </p>
-              <p className="mt-1.5 text-[0.64rem] leading-5 text-muted-foreground">
-                {uninsured.map((mineral) => mineral.name).join(", ")}. Open the record
-                to compare recommended policies.
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-[4px] bg-ink/[0.07] dark:bg-white/10">
+                <div
+                  className="h-full rounded-[4px] bg-emerald-500"
+                  style={{
+                    width: `${rows.length ? Math.max(3, Math.round((stats.insuredCount / rows.length) * 100)) : 0}%`,
+                  }}
+                />
+              </div>
+            </div>
+            <div className="mt-4 divide-y divide-line border-t border-line">
+              <div className="flex items-center justify-between px-5 py-2.5">
+                <span className="inline-flex items-center gap-2 text-[0.66rem] text-muted-foreground">
+                  <ShieldAlert className="size-3.5 text-amber-600 dark:text-amber-400" />
+                  Without cover
+                </span>
+                <span className="text-[0.68rem] font-semibold tabular-nums text-ink">
+                  {stats.uninsured}
+                </span>
+              </div>
+              <div className="flex items-center justify-between px-5 py-2.5">
+                <span className="inline-flex items-center gap-2 text-[0.66rem] text-muted-foreground">
+                  <CalendarClock className="size-3.5 text-primary" />
+                  Renewals in 90 days
+                </span>
+                <span className="text-[0.68rem] font-semibold tabular-nums text-ink">
+                  {stats.renewals.length}
+                </span>
+              </div>
+              {nextRenewal?.policy && (
+                <div className="px-5 py-2.5">
+                  <p className="text-[0.6rem] text-muted-foreground">
+                    Next:{" "}
+                    <span className="font-medium text-ink">
+                      {nextRenewal.mineral.name}
+                    </span>{" "}
+                    · {formatDate(nextRenewal.policy.endDate)}
+                  </p>
+                </div>
+              )}
+            </div>
+            {stats.uninsured > 0 && (
+              <div className="border-t border-line px-5 py-3">
+                <button
+                  type="button"
+                  onClick={() => setInsurance("uninsured")}
+                  className="inline-flex items-center gap-1 text-[0.63rem] font-semibold text-primary"
+                >
+                  Review uninsured pieces
+                </button>
+              </div>
+            )}
+          </Panel>
+
+          <Panel>
+            <div className="px-5 pt-5">
+              <h2 className="text-[0.95rem] font-semibold tracking-[-0.02em] text-ink">
+                Recent movement
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                The latest updates from vault operations.
               </p>
             </div>
-          )}
+            <div className="mt-4 border-t border-line px-5 py-4">
+              {recentEvents.length === 0 ? (
+                <p className="text-[0.62rem] leading-5 text-muted-foreground">
+                  No shipment updates yet. Changes appear here as they happen.
+                </p>
+              ) : (
+                <Timeline
+                  items={recentEvents.map((event) => ({
+                    title: `${event.mineral.name} · ${SHIPMENT_STATUS_LABELS[event.status]}`,
+                    body: [event.location, event.note]
+                      .filter(Boolean)
+                      .join(" · "),
+                    at: event.createdAt,
+                  }))}
+                />
+              )}
+            </div>
+          </Panel>
 
           <div className="starfield relative overflow-hidden rounded-[4px] bg-[#071227] p-5 text-bone">
             <span className="pointer-events-none absolute -right-12 -top-16 size-44 rounded-full bg-[radial-gradient(circle_at_center,rgba(76,125,255,0.4),transparent_66%)]" />
@@ -616,27 +687,16 @@ export default function VaultPage() {
               className="relative mt-3 inline-flex items-center gap-1 text-[0.66rem] font-semibold text-electric-soft transition-colors hover:text-bone"
             >
               Open support
-              <ArrowUpRight className="size-3" />
             </Link>
           </div>
-
-          {minerals.some((mineral) => mineral.isDemo) && (
-            <p className="px-1 text-[0.58rem] leading-4 text-muted-foreground">
-              Demonstration data is clearly labelled and stored only in this browser.
-            </p>
-          )}
         </div>
       </div>
 
-      {selectedMineral && (
-        <MineralDetailDialog
-          key={selectedMineral.id}
-          mineral={selectedMineral}
-          actor={actor}
-          open={Boolean(selectedMineral)}
-          onOpenChange={(open) => !open && setSelectedId(null)}
-        />
-      )}
+      <p className="px-1 text-[0.58rem] leading-4 text-muted-foreground">
+        <Sparkles className="mr-1 inline size-3" />
+        Records are maintained by vault operations. Assignment, insurance and
+        tracking changes are recorded in the audit log.
+      </p>
     </div>
   );
 }
