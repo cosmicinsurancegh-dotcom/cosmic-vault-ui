@@ -46,6 +46,8 @@ export const sendUpdate = action({
     service: v.string(),
     origin: v.string(),
     destination: v.string(),
+    originCity: v.string(),
+    destinationCity: v.string(),
     estimatedDelivery: v.number(),
     status: shipmentStatusValidator,
     note: v.optional(v.string()),

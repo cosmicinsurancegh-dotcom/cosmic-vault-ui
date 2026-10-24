@@ -28,6 +28,8 @@ export type ShipmentEmailActionArgs = {
   service: string;
   origin: string;
   destination: string;
+  originCity: string;
+  destinationCity: string;
   estimatedDelivery: number;
   status: ShipmentEmailStatus;
   note?: string;
@@ -85,6 +87,9 @@ export function shipmentEmailArgs(
     service: shipment.service,
     origin: formatAddress(shipment.origin),
     destination: formatAddress(shipment.destination),
+    // The route rail shows the city, not the full street address.
+    originCity: shipment.origin.city,
+    destinationCity: shipment.destination.city,
     estimatedDelivery: shipment.estimatedDelivery,
     status,
     note: eventNote,

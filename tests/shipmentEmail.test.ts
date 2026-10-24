@@ -173,6 +173,28 @@ describe("shipment update email", () => {
     expect(args.destination).toContain(mineral.shipping!.destination.city);
   });
 
+  it("wears the dashboard design system and the shipping desk's route", () => {
+    const mineral = demoMineral("in_transit");
+    const args = shipmentEmailArgs(mineral, "in_transit", "")!;
+    const email = previewShipmentEmail(args, { appOrigin: ORIGIN });
+
+    // Electric blue primary, porcelain canvas, 4px corners - the dashboard
+    // tokens - and none of the old forest-green reference palette.
+    expect(email.html).toContain("#1D74F5");
+    expect(email.html).toContain("#F2F6FC");
+    expect(email.html).toContain("border-radius:4px");
+    expect(email.html).not.toContain("#0F3729");
+    expect(email.html).not.toContain("#F5C93B");
+
+    // The route rail carries the two city labels the member recognises.
+    expect(email.html).toContain("Consignment route");
+    expect(email.html).toContain(mineral.shipping!.origin.city);
+    expect(email.html).toContain(mineral.shipping!.destination.city);
+    expect(email.text).toContain(
+      `Route: ${mineral.shipping!.origin.city} to ${mineral.shipping!.destination.city}`,
+    );
+  });
+
   it("returns nothing for a mineral that is still in the vault", () => {
     const inVault = DEMO_MINERALS.find((item) => !item.shipping);
     expect(inVault).toBeDefined();

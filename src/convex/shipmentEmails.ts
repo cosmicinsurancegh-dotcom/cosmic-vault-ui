@@ -50,6 +50,8 @@ const sendArgs = {
   service: v.string(),
   origin: v.string(),
   destination: v.string(),
+  originCity: v.string(),
+  destinationCity: v.string(),
   estimatedDelivery: v.number(),
   status: shipmentStatusValidator,
   note: v.optional(v.string()),
@@ -119,6 +121,8 @@ export const queue = internalMutation({
       service: requiredText(args.service, "Service", 120),
       origin: requiredText(args.origin, "Origin", 400),
       destination: requiredText(args.destination, "Destination", 400),
+      originCity: requiredText(args.originCity, "Origin city", 80),
+      destinationCity: requiredText(args.destinationCity, "Destination city", 80),
       estimatedDelivery: requireTimestamp(
         args.estimatedDelivery,
         "Estimated delivery",

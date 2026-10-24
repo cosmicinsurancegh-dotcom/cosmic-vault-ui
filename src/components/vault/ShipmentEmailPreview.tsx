@@ -114,7 +114,7 @@ export function ShipmentEmailPreview({
           </DialogHeader>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto bg-ice/30 p-3 sm:p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-ice/40 p-3 sm:p-4">
           {email ? (
             <iframe
               title={`Shipment update email for ${mineral.name}`}
