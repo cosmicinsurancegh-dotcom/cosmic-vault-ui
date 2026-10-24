@@ -47,7 +47,17 @@ import { formatDate, formatMoney, toMinor } from "@/lib/format";
 import { STAFF_PERMISSIONS, can } from "@/lib/permissions";
 import { useMutation, useQuery } from "convex/react";
 import { motion } from "framer-motion";
-import { Gem, Loader2, Plus, Search, Truck, UserRoundPlus } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Gem,
+  Loader2,
+  Plus,
+  Search,
+  Truck,
+  UserRoundPlus,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -58,6 +68,17 @@ const COVERAGES = [
   { value: "all_risk", label: "All risk" },
   { value: "storage", label: "Storage" },
   { value: "liability", label: "Liability" },
+] as const;
+
+/**
+ * The create flow runs one step at a time: the mineral itself, then its policy,
+ * its first shipment and finally the member who owns it.
+ */
+const CREATE_STEPS = [
+  { key: "mineral", label: "Mineral" },
+  { key: "policy", label: "Policy" },
+  { key: "shipment", label: "Shipment" },
+  { key: "member", label: "Member" },
 ] as const;
 
 function today() {
@@ -348,29 +369,47 @@ function CreateMineralDialog({
   const assignees = useQuery(api.minerals.assigneeOptions, {});
   const [form, setForm] = useState(emptyForm);
   const [pending, setPending] = useState(false);
+  const [step, setStep] = useState(0);
 
   const set = <K extends keyof ReturnType<typeof emptyForm>>(
     key: K,
     value: ReturnType<typeof emptyForm>[K],
   ) => setForm((current) => ({ ...current, [key]: value }));
 
-  const ready =
-    canManage &&
-    form.name.trim().length > 1 &&
-    form.category.trim().length > 0 &&
-    Number(form.quantity) > 0 &&
-    form.declaredValue.trim().length > 0 &&
-    form.policyNumber.trim().length > 0 &&
-    form.provider.trim().length > 0 &&
-    form.coverageLimit.trim().length > 0 &&
-    form.startDate.length > 0 &&
-    form.endDate.length > 0 &&
-    form.carrier.trim().length > 0 &&
-    form.origin.trim().length > 0 &&
-    form.destination.trim().length > 0 &&
-    (form.assignmentMode === "existing"
-      ? form.userId.length > 0
-      : form.newName.trim().length > 1 && form.newEmail.trim().length > 3);
+  const stepChecks: Record<
+    (typeof CREATE_STEPS)[number]["key"],
+    () => boolean
+  > = {
+    mineral: () =>
+      form.name.trim().length > 1 &&
+      form.category.trim().length > 0 &&
+      Number(form.quantity) > 0 &&
+      form.declaredValue.trim().length > 0,
+    policy: () =>
+      form.policyNumber.trim().length > 0 &&
+      form.provider.trim().length > 0 &&
+      form.coverageLimit.trim().length > 0 &&
+      form.startDate.length > 0 &&
+      form.endDate.length > 0,
+    shipment: () =>
+      form.carrier.trim().length > 0 &&
+      form.origin.trim().length > 0 &&
+      form.destination.trim().length > 0,
+    member: () =>
+      form.assignmentMode === "existing"
+        ? form.userId.length > 0
+        : form.newName.trim().length > 1 && form.newEmail.trim().length > 3,
+  };
+
+  const lastStep = CREATE_STEPS.length - 1;
+  const stepReady = (index: number) =>
+    canManage && stepChecks[CREATE_STEPS[index].key]();
+  const ready = CREATE_STEPS.every((_, index) => stepReady(index));
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next && !pending) setStep(0);
+    onOpenChange(next);
+  };
 
   const submit = async () => {
     setPending(true);
@@ -420,6 +459,7 @@ function CreateMineralDialog({
       });
       toast.success("Mineral recorded. The assigned member has been emailed.");
       setForm(emptyForm());
+      setStep(0);
       onOpenChange(false);
     } catch (error) {
       toast.error(
@@ -433,428 +473,534 @@ function CreateMineralDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-[4px] border-line bg-background sm:max-w-[760px]">
         <DialogHeader>
           <DialogTitle>Add a mineral</DialogTitle>
           <DialogDescription>
-            Record the mineral, its policy and its first shipment, then assign
-            it to a member. Choose an existing account or create one from an
-            email address.
+            Four short steps: the mineral, its policy, its first shipment and
+            the member who owns it. Move back at any point before saving.
           </DialogDescription>
         </DialogHeader>
 
+        <div className="space-y-2">
+          <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {CREATE_STEPS.map((entry, index) => {
+              const complete = index < step && stepReady(index);
+              const current = index === step;
+              const reachable = CREATE_STEPS.every(
+                (_, earlier) => earlier >= index || stepReady(earlier),
+              );
+              return (
+                <li key={entry.key}>
+                  <button
+                    type="button"
+                    aria-current={current ? "step" : undefined}
+                    disabled={!reachable || pending}
+                    onClick={() => setStep(index)}
+                    className={`flex w-full items-center gap-2 rounded-[4px] border px-2.5 py-1.5 text-[0.68rem] font-medium transition-colors disabled:cursor-not-allowed ${
+                      current
+                        ? "border-primary/40 bg-primary/5 text-ink"
+                        : complete || reachable
+                          ? "border-line text-muted-foreground hover:bg-muted/60"
+                          : "border-line text-muted-foreground/50"
+                    }`}
+                  >
+                    <span
+                      className={`grid size-5 shrink-0 place-items-center rounded-full border text-[0.6rem] ${
+                        complete
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : current
+                            ? "border-primary text-primary"
+                            : "border-line"
+                      }`}
+                    >
+                      {complete ? (
+                        <Check className="size-3" />
+                      ) : (
+                        (index + 1).toString()
+                      )}
+                    </span>
+                    <span className="truncate">{entry.label}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+          <div className="h-0.5 w-full overflow-hidden rounded-full bg-line">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-300"
+              style={{
+                width: `${((step + 1) / CREATE_STEPS.length) * 100}%`,
+              }}
+            />
+          </div>
+        </div>
+
         <div className="space-y-3">
-          <section className="space-y-3 rounded-xl border border-line p-4">
-            <h3 className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              1 · Mineral
-            </h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="m-name">Mineral name</Label>
-                <Input
-                  id="m-name"
-                  value={form.name}
-                  onChange={(event) => set("name", event.target.value)}
-                  placeholder="Gold bullion, 999.9"
-                  className="h-9 rounded-lg bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="m-category">Category</Label>
-                <Input
-                  id="m-category"
-                  value={form.category}
-                  onChange={(event) => set("category", event.target.value)}
-                  placeholder="Precious metals"
-                  className="h-9 rounded-lg bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="m-quantity">Quantity</Label>
-                <div className="flex gap-2">
+          {step === 0 && (
+            <section className="space-y-3 rounded-xl border border-line p-4">
+              <h3 className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Mineral details
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="m-name">Mineral name</Label>
                   <Input
-                    id="m-quantity"
-                    inputMode="decimal"
-                    value={form.quantity}
-                    onChange={(event) => set("quantity", event.target.value)}
+                    id="m-name"
+                    value={form.name}
+                    onChange={(event) => set("name", event.target.value)}
+                    placeholder="Gold bullion, 999.9"
                     className="h-9 rounded-lg bg-card"
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="m-category">Category</Label>
+                  <Input
+                    id="m-category"
+                    value={form.category}
+                    onChange={(event) => set("category", event.target.value)}
+                    placeholder="Precious metals"
+                    className="h-9 rounded-lg bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="m-quantity">Quantity</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="m-quantity"
+                      inputMode="decimal"
+                      value={form.quantity}
+                      onChange={(event) => set("quantity", event.target.value)}
+                      className="h-9 rounded-lg bg-card"
+                    />
+                    <select
+                      aria-label="Unit"
+                      value={form.unit}
+                      onChange={(event) => set("unit", event.target.value)}
+                      className="h-9 w-24 rounded-lg border border-line bg-card px-2 text-xs text-ink"
+                    >
+                      {UNITS.map((unit) => (
+                        <option key={unit} value={unit}>
+                          {unit}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="m-value">Declared value</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="m-value"
+                      inputMode="decimal"
+                      value={form.declaredValue}
+                      onChange={(event) =>
+                        set("declaredValue", event.target.value)
+                      }
+                      placeholder="250000"
+                      className="h-9 rounded-lg bg-card"
+                    />
+                    <select
+                      aria-label="Currency"
+                      value={form.currency}
+                      onChange={(event) => set("currency", event.target.value)}
+                      className="h-9 w-24 rounded-lg border border-line bg-card px-2 text-xs text-ink"
+                    >
+                      {(currencies.length > 0 ? currencies : ["GBP"]).map(
+                        (currency) => (
+                          <option key={currency} value={currency}>
+                            {currency}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="m-description">Description (optional)</Label>
+                  <Textarea
+                    id="m-description"
+                    value={form.description}
+                    onChange={(event) => set("description", event.target.value)}
+                    rows={2}
+                    className="rounded-lg bg-card text-xs"
+                  />
+                </div>
+              </div>
+            </section>
+          )}
+
+          {step === 1 && (
+            <section className="space-y-3 rounded-xl border border-line p-4">
+              <h3 className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Policy details
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-number">Policy number</Label>
+                  <Input
+                    id="p-number"
+                    value={form.policyNumber}
+                    onChange={(event) =>
+                      set("policyNumber", event.target.value)
+                    }
+                    placeholder="CV-MIN-ROLL-2026-014"
+                    className="h-9 rounded-lg bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-provider">Provider</Label>
+                  <Input
+                    id="p-provider"
+                    value={form.provider}
+                    onChange={(event) => set("provider", event.target.value)}
+                    placeholder="Cosmic Vault Insurance"
+                    className="h-9 rounded-lg bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-coverage">Cover type</Label>
                   <select
-                    aria-label="Unit"
-                    value={form.unit}
-                    onChange={(event) => set("unit", event.target.value)}
-                    className="h-9 w-24 rounded-lg border border-line bg-card px-2 text-xs text-ink"
+                    id="p-coverage"
+                    value={form.coverage}
+                    onChange={(event) =>
+                      set(
+                        "coverage",
+                        event.target.value as typeof form.coverage,
+                      )
+                    }
+                    className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
                   >
-                    {UNITS.map((unit) => (
-                      <option key={unit} value={unit}>
-                        {unit}
+                    {COVERAGES.map((coverage) => (
+                      <option key={coverage.value} value={coverage.value}>
+                        {coverage.label}
                       </option>
                     ))}
                   </select>
                 </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="m-value">Declared value</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="m-value"
-                    inputMode="decimal"
-                    value={form.declaredValue}
-                    onChange={(event) =>
-                      set("declaredValue", event.target.value)
-                    }
-                    placeholder="250000"
-                    className="h-9 rounded-lg bg-card"
-                  />
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-status">Policy status</Label>
                   <select
-                    aria-label="Currency"
-                    value={form.currency}
-                    onChange={(event) => set("currency", event.target.value)}
-                    className="h-9 w-24 rounded-lg border border-line bg-card px-2 text-xs text-ink"
+                    id="p-status"
+                    value={form.policyStatus}
+                    onChange={(event) =>
+                      set(
+                        "policyStatus",
+                        event.target.value as typeof form.policyStatus,
+                      )
+                    }
+                    className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
                   >
-                    {(currencies.length > 0 ? currencies : ["GBP"]).map(
-                      (currency) => (
-                        <option key={currency} value={currency}>
-                          {currency}
-                        </option>
-                      ),
-                    )}
+                    <option value="active">Active</option>
+                    <option value="draft">Draft</option>
+                    <option value="expired">Expired</option>
+                    <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-limit">Cover limit ({form.currency})</Label>
+                  <Input
+                    id="p-limit"
+                    inputMode="decimal"
+                    value={form.coverageLimit}
+                    onChange={(event) =>
+                      set("coverageLimit", event.target.value)
+                    }
+                    className="h-9 rounded-lg bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-premium">Premium ({form.currency})</Label>
+                  <Input
+                    id="p-premium"
+                    inputMode="decimal"
+                    value={form.premium}
+                    onChange={(event) => set("premium", event.target.value)}
+                    className="h-9 rounded-lg bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-start">Cover starts</Label>
+                  <Input
+                    id="p-start"
+                    type="date"
+                    value={form.startDate}
+                    onChange={(event) => set("startDate", event.target.value)}
+                    className="h-9 rounded-lg bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-end">Cover ends</Label>
+                  <Input
+                    id="p-end"
+                    type="date"
+                    value={form.endDate}
+                    onChange={(event) => set("endDate", event.target.value)}
+                    className="h-9 rounded-lg bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="p-notes">Policy notes (optional)</Label>
+                  <Textarea
+                    id="p-notes"
+                    value={form.policyNotes}
+                    onChange={(event) => set("policyNotes", event.target.value)}
+                    rows={2}
+                    className="rounded-lg bg-card text-xs"
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="m-description">Description (optional)</Label>
-                <Textarea
-                  id="m-description"
-                  value={form.description}
-                  onChange={(event) => set("description", event.target.value)}
-                  rows={2}
-                  className="rounded-lg bg-card text-xs"
-                />
-              </div>
-            </div>
-          </section>
+            </section>
+          )}
 
-          <section className="space-y-3 rounded-xl border border-line p-4">
-            <h3 className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              2 · Policy
-            </h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="p-number">Policy number</Label>
-                <Input
-                  id="p-number"
-                  value={form.policyNumber}
-                  onChange={(event) => set("policyNumber", event.target.value)}
-                  placeholder="CV-MIN-ROLL-2026-014"
-                  className="h-9 rounded-lg bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-provider">Provider</Label>
-                <Input
-                  id="p-provider"
-                  value={form.provider}
-                  onChange={(event) => set("provider", event.target.value)}
-                  placeholder="Cosmic Vault Insurance"
-                  className="h-9 rounded-lg bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-coverage">Cover type</Label>
-                <select
-                  id="p-coverage"
-                  value={form.coverage}
-                  onChange={(event) =>
-                    set("coverage", event.target.value as typeof form.coverage)
-                  }
-                  className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
-                >
-                  {COVERAGES.map((coverage) => (
-                    <option key={coverage.value} value={coverage.value}>
-                      {coverage.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-status">Policy status</Label>
-                <select
-                  id="p-status"
-                  value={form.policyStatus}
-                  onChange={(event) =>
-                    set(
-                      "policyStatus",
-                      event.target.value as typeof form.policyStatus,
-                    )
-                  }
-                  className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
-                >
-                  <option value="active">Active</option>
-                  <option value="draft">Draft</option>
-                  <option value="expired">Expired</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-limit">Cover limit ({form.currency})</Label>
-                <Input
-                  id="p-limit"
-                  inputMode="decimal"
-                  value={form.coverageLimit}
-                  onChange={(event) => set("coverageLimit", event.target.value)}
-                  className="h-9 rounded-lg bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-premium">Premium ({form.currency})</Label>
-                <Input
-                  id="p-premium"
-                  inputMode="decimal"
-                  value={form.premium}
-                  onChange={(event) => set("premium", event.target.value)}
-                  className="h-9 rounded-lg bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-start">Cover starts</Label>
-                <Input
-                  id="p-start"
-                  type="date"
-                  value={form.startDate}
-                  onChange={(event) => set("startDate", event.target.value)}
-                  className="h-9 rounded-lg bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-end">Cover ends</Label>
-                <Input
-                  id="p-end"
-                  type="date"
-                  value={form.endDate}
-                  onChange={(event) => set("endDate", event.target.value)}
-                  className="h-9 rounded-lg bg-card"
-                />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="p-notes">Policy notes (optional)</Label>
-                <Textarea
-                  id="p-notes"
-                  value={form.policyNotes}
-                  onChange={(event) => set("policyNotes", event.target.value)}
-                  rows={2}
-                  className="rounded-lg bg-card text-xs"
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="space-y-3 rounded-xl border border-line p-4">
-            <h3 className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              3 · Shipment
-            </h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="s-carrier">Carrier</Label>
-                <Input
-                  id="s-carrier"
-                  value={form.carrier}
-                  onChange={(event) => set("carrier", event.target.value)}
-                  placeholder="Brink's Global Services"
-                  className="h-9 rounded-lg bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="s-tracking">Tracking number (optional)</Label>
-                <Input
-                  id="s-tracking"
-                  value={form.trackingNumber}
-                  onChange={(event) =>
-                    set("trackingNumber", event.target.value)
-                  }
-                  className="h-9 rounded-lg bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="s-origin">Origin</Label>
-                <Input
-                  id="s-origin"
-                  value={form.origin}
-                  onChange={(event) => set("origin", event.target.value)}
-                  placeholder="Zurich, CH"
-                  className="h-9 rounded-lg bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="s-destination">Destination</Label>
-                <Input
-                  id="s-destination"
-                  value={form.destination}
-                  onChange={(event) => set("destination", event.target.value)}
-                  placeholder="London, GB"
-                  className="h-9 rounded-lg bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="s-departure">Departure</Label>
-                <Input
-                  id="s-departure"
-                  type="date"
-                  value={form.departureAt}
-                  onChange={(event) => set("departureAt", event.target.value)}
-                  className="h-9 rounded-lg bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="s-eta">Estimated arrival</Label>
-                <Input
-                  id="s-eta"
-                  type="date"
-                  value={form.estimatedArrivalAt}
-                  onChange={(event) =>
-                    set("estimatedArrivalAt", event.target.value)
-                  }
-                  className="h-9 rounded-lg bg-card"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="s-status">Starting status</Label>
-                <select
-                  id="s-status"
-                  value={form.shipmentStatus}
-                  onChange={(event) =>
-                    set("shipmentStatus", event.target.value as ShipmentStatus)
-                  }
-                  className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
-                >
-                  {SHIPMENT_STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {SHIPMENT_STATUS_LABELS[status]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="s-location">Current location (optional)</Label>
-                <Input
-                  id="s-location"
-                  value={form.currentLocation}
-                  onChange={(event) =>
-                    set("currentLocation", event.target.value)
-                  }
-                  className="h-9 rounded-lg bg-card"
-                />
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="s-notes">Shipment notes (optional)</Label>
-                <Textarea
-                  id="s-notes"
-                  value={form.shipmentNotes}
-                  onChange={(event) => set("shipmentNotes", event.target.value)}
-                  rows={2}
-                  className="rounded-lg bg-card text-xs"
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="space-y-3 rounded-xl border border-line p-4">
-            <h3 className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              4 · Assign to a member
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => set("assignmentMode", "existing")}
-                className={
-                  form.assignmentMode === "existing"
-                    ? "rounded-[4px] bg-primary px-3 py-1.5 text-[0.68rem] font-medium text-primary-foreground"
-                    : "rounded-[4px] border border-line px-3 py-1.5 text-[0.68rem] font-medium text-muted-foreground"
-                }
-              >
-                Choose an existing account
-              </button>
-              <button
-                type="button"
-                onClick={() => set("assignmentMode", "new")}
-                className={
-                  form.assignmentMode === "new"
-                    ? "rounded-[4px] bg-primary px-3 py-1.5 text-[0.68rem] font-medium text-primary-foreground"
-                    : "rounded-[4px] border border-line px-3 py-1.5 text-[0.68rem] font-medium text-muted-foreground"
-                }
-              >
-                Create a new member
-              </button>
-            </div>
-
-            {form.assignmentMode === "existing" ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="a-user">Member</Label>
-                <select
-                  id="a-user"
-                  value={form.userId}
-                  onChange={(event) => set("userId", event.target.value)}
-                  className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
-                >
-                  <option value="">Choose a customer or broker…</option>
-                  {(assignees ?? []).map((assignee) => (
-                    <option key={assignee.userId} value={assignee.userId}>
-                      {assignee.name} · {assignee.email}
-                      {assignee.role === "broker" ? " (broker)" : ""}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[0.62rem] text-muted-foreground">
-                  Only customer and broker accounts can own a mineral.
-                </p>
-              </div>
-            ) : (
+          {step === 2 && (
+            <section className="space-y-3 rounded-xl border border-line p-4">
+              <h3 className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Shipment details
+              </h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="a-name">Full name</Label>
+                  <Label htmlFor="s-carrier">Carrier</Label>
                   <Input
-                    id="a-name"
-                    value={form.newName}
-                    onChange={(event) => set("newName", event.target.value)}
+                    id="s-carrier"
+                    value={form.carrier}
+                    onChange={(event) => set("carrier", event.target.value)}
+                    placeholder="Brink's Global Services"
                     className="h-9 rounded-lg bg-card"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="a-email">Email</Label>
+                  <Label htmlFor="s-tracking">Tracking number (optional)</Label>
                   <Input
-                    id="a-email"
-                    type="email"
-                    value={form.newEmail}
-                    onChange={(event) => set("newEmail", event.target.value)}
+                    id="s-tracking"
+                    value={form.trackingNumber}
+                    onChange={(event) =>
+                      set("trackingNumber", event.target.value)
+                    }
                     className="h-9 rounded-lg bg-card"
                   />
                 </div>
-                <p className="text-[0.62rem] leading-5 text-muted-foreground sm:col-span-2">
-                  The account is created now and becomes sign-in capable when
-                  the member signs in with this email using a one-time code. If
-                  the email already belongs to a member, that account is reused.
-                </p>
+                <div className="space-y-1.5">
+                  <Label htmlFor="s-origin">Origin</Label>
+                  <Input
+                    id="s-origin"
+                    value={form.origin}
+                    onChange={(event) => set("origin", event.target.value)}
+                    placeholder="Zurich, CH"
+                    className="h-9 rounded-lg bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="s-destination">Destination</Label>
+                  <Input
+                    id="s-destination"
+                    value={form.destination}
+                    onChange={(event) => set("destination", event.target.value)}
+                    placeholder="London, GB"
+                    className="h-9 rounded-lg bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="s-departure">Departure</Label>
+                  <Input
+                    id="s-departure"
+                    type="date"
+                    value={form.departureAt}
+                    onChange={(event) => set("departureAt", event.target.value)}
+                    className="h-9 rounded-lg bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="s-eta">Estimated arrival</Label>
+                  <Input
+                    id="s-eta"
+                    type="date"
+                    value={form.estimatedArrivalAt}
+                    onChange={(event) =>
+                      set("estimatedArrivalAt", event.target.value)
+                    }
+                    className="h-9 rounded-lg bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="s-status">Starting status</Label>
+                  <select
+                    id="s-status"
+                    value={form.shipmentStatus}
+                    onChange={(event) =>
+                      set(
+                        "shipmentStatus",
+                        event.target.value as ShipmentStatus,
+                      )
+                    }
+                    className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
+                  >
+                    {SHIPMENT_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {SHIPMENT_STATUS_LABELS[status]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="s-location">
+                    Current location (optional)
+                  </Label>
+                  <Input
+                    id="s-location"
+                    value={form.currentLocation}
+                    onChange={(event) =>
+                      set("currentLocation", event.target.value)
+                    }
+                    className="h-9 rounded-lg bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="s-notes">Shipment notes (optional)</Label>
+                  <Textarea
+                    id="s-notes"
+                    value={form.shipmentNotes}
+                    onChange={(event) =>
+                      set("shipmentNotes", event.target.value)
+                    }
+                    rows={2}
+                    className="rounded-lg bg-card text-xs"
+                  />
+                </div>
               </div>
-            )}
-          </section>
+            </section>
+          )}
+
+          {step === 3 && (
+            <section className="space-y-3 rounded-xl border border-line p-4">
+              <h3 className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Assign to a member
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => set("assignmentMode", "existing")}
+                  className={
+                    form.assignmentMode === "existing"
+                      ? "rounded-[4px] bg-primary px-3 py-1.5 text-[0.68rem] font-medium text-primary-foreground"
+                      : "rounded-[4px] border border-line px-3 py-1.5 text-[0.68rem] font-medium text-muted-foreground"
+                  }
+                >
+                  Choose an existing account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => set("assignmentMode", "new")}
+                  className={
+                    form.assignmentMode === "new"
+                      ? "rounded-[4px] bg-primary px-3 py-1.5 text-[0.68rem] font-medium text-primary-foreground"
+                      : "rounded-[4px] border border-line px-3 py-1.5 text-[0.68rem] font-medium text-muted-foreground"
+                  }
+                >
+                  Create a new member
+                </button>
+              </div>
+
+              {form.assignmentMode === "existing" ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="a-user">Member</Label>
+                  <select
+                    id="a-user"
+                    value={form.userId}
+                    onChange={(event) => set("userId", event.target.value)}
+                    className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
+                  >
+                    <option value="">Choose a customer or broker…</option>
+                    {(assignees ?? []).map((assignee) => (
+                      <option key={assignee.userId} value={assignee.userId}>
+                        {assignee.name} · {assignee.email}
+                        {assignee.role === "broker" ? " (broker)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[0.62rem] text-muted-foreground">
+                    Only customer and broker accounts can own a mineral.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="a-name">Full name</Label>
+                    <Input
+                      id="a-name"
+                      value={form.newName}
+                      onChange={(event) => set("newName", event.target.value)}
+                      className="h-9 rounded-lg bg-card"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="a-email">Email</Label>
+                    <Input
+                      id="a-email"
+                      type="email"
+                      value={form.newEmail}
+                      onChange={(event) => set("newEmail", event.target.value)}
+                      className="h-9 rounded-lg bg-card"
+                    />
+                  </div>
+                  <p className="text-[0.62rem] leading-5 text-muted-foreground sm:col-span-2">
+                    The account is created now and becomes sign-in capable when
+                    the member signs in with this email using a one-time code.
+                    If the email already belongs to a member, that account is
+                    reused.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
         </div>
 
-        <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
+        {!stepReady(step) && (
+          <p className="text-[0.62rem] leading-5 text-muted-foreground">
+            Complete the required fields on this step to continue.
+          </p>
+        )}
+
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Button
             variant="outline"
             className="rounded-[4px]"
-            onClick={() => onOpenChange(false)}
+            disabled={pending}
+            onClick={() => handleOpenChange(false)}
           >
             Cancel
           </Button>
-          <Button
-            className="rounded-[4px]"
-            disabled={pending || !ready}
-            onClick={submit}
-          >
-            {pending && <Loader2 className="size-4 animate-spin" />} Add mineral
-          </Button>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+            {step > 0 && (
+              <Button
+                variant="outline"
+                className="rounded-[4px]"
+                disabled={pending}
+                onClick={() => setStep((current) => current - 1)}
+              >
+                <ArrowLeft className="size-4" /> Back
+              </Button>
+            )}
+            {step < lastStep ? (
+              <Button
+                className="rounded-[4px]"
+                disabled={!stepReady(step)}
+                onClick={() => setStep((current) => current + 1)}
+              >
+                Next <ArrowRight className="size-4" />
+              </Button>
+            ) : (
+              <Button
+                className="rounded-[4px]"
+                disabled={pending || !ready}
+                onClick={submit}
+              >
+                {pending && <Loader2 className="size-4 animate-spin" />} Add
+                mineral
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
