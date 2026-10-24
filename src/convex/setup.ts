@@ -546,6 +546,21 @@ export const status = query({
   },
 });
 
+/**
+ * Liveness probe for the dashboard's health banner.
+ *
+ * It must not require a session: the banner asks the deployment over the Convex
+ * HTTP API with no credentials, so an auth-gated query answers it with the same
+ * masked "Server Error" that production returns for every failure - a healthy
+ * deployment then looks exactly like one that runs nothing. Returning a
+ * constant makes a value response mean "functions are running", which is the
+ * only question the banner asks.
+ */
+export const health = query({
+  args: {},
+  handler: async () => ({ ok: true as const }),
+});
+
 /** Safe for any signed-in user: seeds fixed reference configuration only. */
 export const ensureBasics = mutation({
   args: {},

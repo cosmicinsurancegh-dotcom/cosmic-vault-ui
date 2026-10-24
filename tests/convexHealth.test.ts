@@ -67,13 +67,19 @@ describe("classifyProbePayload", () => {
       classifyProbePayload({
         status: "error",
         errorMessage:
-          "[Request ID: abc] Could not find public function for 'setup:status'. Did you forget to run `npx convex dev` or `npx convex deploy`?",
+          "[Request ID: abc] Could not find public function for 'setup:health'. Did you forget to run `npx convex dev` or `npx convex deploy`?",
       }),
     ).toEqual({
       state: "unavailable",
       detail:
-        "Could not find public function for 'setup:status'. Did you forget to run `npx convex dev` or `npx convex deploy`?",
+        "Could not find public function for 'setup:health'. Did you forget to run `npx convex dev` or `npx convex deploy`?",
     });
+  });
+
+  it("reports a healthy backend when the constant answers", () => {
+    expect(
+      classifyProbePayload({ status: "value", value: { ok: true } }),
+    ).toEqual({ state: "ok" });
   });
 
   it("rejects bodies that are not Convex responses", () => {
@@ -113,7 +119,7 @@ describe("probeConvexDeployment", () => {
     ).resolves.toEqual({ state: "ok" });
     expect(seen).toEqual({
       url: "https://x.convex.cloud/api/query",
-      body: { path: "setup:status", args: {}, format: "json" },
+      body: { path: "setup:health", args: {}, format: "json" },
     });
   });
 

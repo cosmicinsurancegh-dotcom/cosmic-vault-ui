@@ -18,7 +18,7 @@ import { useLocation } from "react-router";
  *
  * A Convex query cannot report this: the query is what failed, and the client
  * surfaces a bare "Server Error" with no cause. So the check calls the
- * deployment's public `setup:status` over HTTP (see `@/lib/convexHealth`).
+ * deployment's public `setup:health` over HTTP (see `@/lib/convexHealth`).
  */
 export function BackendHealthNotice({ url }: { url: string }) {
   const location = useLocation();

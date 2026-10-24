@@ -3,18 +3,20 @@
  * Convex client.
  *
  * The failure this exists for: the host answers, `/version` responds, and every
- * function call fails with a bare `[Request ID: …] Server Error`. A query cannot
- * report that - the query is the thing that failed - so the check is a plain
- * `fetch` of the public `setup:status` function, whose response is classified
- * here. That keeps the result independent of the client, the auth session and
- * the router.
+ * function call fails. A query cannot report that - the query is the thing that
+ * failed - so the check is a plain `fetch` of the deployment's health query,
+ * whose response is classified here. That keeps the result independent of the
+ * client, the auth session and the router.
  *
- * The probe is read-only and public: `setup:status` takes no arguments and
- * requires no session.
+ * `setup:health` takes no arguments and requires no session on purpose.
+ * Production redacts every failure to a bare `[Request ID: …] Server Error`, so
+ * probing a function that needs a signed-in viewer makes a healthy deployment
+ * indistinguishable from one that runs nothing; an argument-free constant has
+ * no way to fail on its own, which makes a value response meaningful.
  */
 
 /** Function used as the probe. Public, argument-free, and present in every release. */
-export const HEALTH_PROBE_FUNCTION = "setup:status";
+export const HEALTH_PROBE_FUNCTION = "setup:health";
 
 /** Convex prefixes server errors with the request id; it is noise in the UI. */
 const REQUEST_ID_PREFIX = /^\[Request ID: [^\]]+\]\s*/;
@@ -84,7 +86,7 @@ export function probeUrl(deploymentUrl: string): string {
 }
 
 /**
- * Calls `setup:status` over HTTP and classifies the answer. Never throws: a
+ * Calls `setup:health` over HTTP and classifies the answer. Never throws: a
  * failed check is itself a result the dashboard can explain.
  */
 export async function probeConvexDeployment(
