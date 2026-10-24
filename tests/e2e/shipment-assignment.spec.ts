@@ -174,7 +174,7 @@ test.describe("staff shipment control", () => {
       .click();
 
     await expect(
-      page.getByText("Consignment assigned. The new owner has been emailed."),
+      page.getByText("Assigned. The new owner has been emailed."),
     ).toBeVisible();
     await expect(dialog).toHaveCount(0);
 

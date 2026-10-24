@@ -1,13 +1,6 @@
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { AssignMineralDialog } from "@/components/vault/AssignMineralDialog";
 import {
   EmptyState,
   LoadingState,
@@ -67,17 +60,9 @@ export default function AdminShipmentsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<ShipmentStatus | "all">("all");
   const [assigningId, setAssigningId] = useState<Id<"minerals"> | null>(null);
-  const [targetId, setTargetId] = useState("");
-  const [note, setNote] = useState("");
-  const [pending, setPending] = useState(false);
   const [updatingId, setUpdatingId] = useState<Id<"shipments"> | null>(null);
 
   const rows = useQuery(api.minerals.list, canManage ? {} : "skip");
-  const options = useQuery(
-    api.minerals.assigneeOptions,
-    canManage ? {} : "skip",
-  );
-  const reassign = useMutation(api.minerals.reassign);
   const updateStatus = useMutation(api.minerals.updateShipmentStatus);
 
   const shipments = useMemo(() => {
@@ -131,50 +116,6 @@ export default function AdminShipmentsPage() {
     (rows ?? []).filter(hasShipment).find(
       (row) => row.mineral._id === assigningId,
     ) ?? null;
-  const targets = (options ?? []).filter(
-    (option) => option.userId !== assigning?.mineral.assignedUserId,
-  );
-
-  const closeAssign = () => {
-    if (pending) return;
-    setAssigningId(null);
-    setTargetId("");
-    setNote("");
-  };
-
-  const submitAssign = async () => {
-    if (!assigning || !targetId) return;
-    setPending(true);
-    try {
-      const result = await reassign({
-        mineralId: assigning.mineral._id,
-        assignment: {
-          mode: "existing" as const,
-          userId: targetId as Id<"users">,
-        },
-        note: note.trim() || undefined,
-      });
-      toast.success(
-        result.notified
-          ? "Consignment assigned. The new owner has been emailed."
-          : "Consignment assigned. No owner email was sent.",
-        {
-          description: `${assigning.shipment.reference} and every shipment on ${assigning.mineral.name} moved with the record.`,
-        },
-      );
-      setAssigningId(null);
-      setTargetId("");
-      setNote("");
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Could not assign the consignment.",
-      );
-    } finally {
-      setPending(false);
-    }
-  };
 
   const changeStatus = async ({
     mineral,
@@ -226,7 +167,7 @@ export default function AdminShipmentsPage() {
     );
   }
 
-  if (rows === undefined || options === undefined) {
+  if (rows === undefined) {
     return <LoadingState label="Loading shipments" />;
   }
 
@@ -437,11 +378,7 @@ export default function AdminShipmentsPage() {
                     size="sm"
                     variant="outline"
                     className="h-8 rounded-[4px] bg-transparent px-2.5 text-[0.62rem]"
-                    onClick={() => {
-                      setAssigningId(mineral._id);
-                      setTargetId("");
-                      setNote("");
-                    }}
+                    onClick={() => setAssigningId(mineral._id)}
                   >
                     <ArrowRightLeft className="size-3" />
                     {assignee ? "Reassign" : "Assign"}
@@ -461,85 +398,17 @@ export default function AdminShipmentsPage() {
         the owner the new step.
       </p>
 
-      <Dialog
+      <AssignMineralDialog
+        key={assigning?.mineral._id ?? "none"}
         open={Boolean(assigning)}
-        onOpenChange={(open) => {
-          if (!open) closeAssign();
-        }}
-      >
-        <DialogContent className="rounded-[4px] border-line bg-background sm:max-w-[520px]">
-          <DialogHeader>
-            <DialogTitle>Assign this consignment</DialogTitle>
-            <DialogDescription>
-              {assigning
-                ? `${assigning.shipment.reference} · ${assigning.mineral.name} (${assigning.mineral.reference}). The mineral and all of its shipments move together.`
-                : ""}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="assign-owner">New owner</Label>
-              <select
-                id="assign-owner"
-                aria-label="New owner"
-                value={targetId}
-                onChange={(event) => setTargetId(event.target.value)}
-                className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
-              >
-                <option value="">Choose a customer or broker…</option>
-                {targets.map((option) => (
-                  <option key={option.userId} value={option.userId}>
-                    {option.name} · {option.email}
-                    {option.role === "broker" ? " (broker)" : ""}
-                  </option>
-                ))}
-              </select>
-              {targets.length === 0 && (
-                <p className="text-[0.62rem] text-muted-foreground">
-                  No other accounts are available to assign this record to.
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="assign-note">Reason (optional)</Label>
-              <Input
-                id="assign-note"
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                placeholder="Recorded in the audit log"
-                aria-label="Reason for the assignment"
-                className="h-9 rounded-lg bg-card text-xs"
-              />
-            </div>
-
-            <p className="rounded-lg border border-line bg-ice/20 px-3 py-2 text-[0.62rem] leading-5 text-muted-foreground">
-              The new owner is emailed immediately and this record appears in
-              their dashboard. The previous owner is told in-app that it moved.
-            </p>
-
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                className="h-9 rounded-[4px] bg-transparent px-3 text-[0.65rem]"
-                onClick={closeAssign}
-                disabled={pending}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="h-9 rounded-[4px] px-3 text-[0.65rem]"
-                disabled={!targetId || pending}
-                onClick={submitAssign}
-              >
-                {pending && <Loader2 className="size-3.5 animate-spin" />}
-                Assign to this account
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={(open) => !open && setAssigningId(null)}
+        mineralId={assigning?.mineral._id ?? null}
+        mineralName={assigning?.mineral.name ?? ""}
+        mineralReference={assigning?.mineral.reference ?? ""}
+        currentAssigneeId={assigning?.mineral.assignedUserId}
+        shipmentCount={assigning ? 1 : 0}
+        title="Assign this consignment"
+      />
     </div>
   );
 }
