@@ -959,7 +959,7 @@ function CustomerMineralsSection({
               disabled={!attachId || attachPending}
               onClick={() => setAttachConfirmOpen(true)}
             >
-              Attach mineral
+              Attach to this customer
             </Button>
           </div>
         </div>
@@ -1064,7 +1064,7 @@ function CustomerMineralsSection({
               }}
             >
               {pending && <Loader2 className="size-3.5 animate-spin" />}
-              Move mineral
+              Move record
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

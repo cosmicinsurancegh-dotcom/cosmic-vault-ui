@@ -65,11 +65,27 @@ export function useQuery(reference: E2ERef | undefined, args?: unknown) {
   return undefined;
 }
 
-const noop = async () => undefined;
-
-export function useMutation() {
-  return useMemo(() => noop, []);
+/**
+ * Records the call and answers with a success envelope. Specs assert on
+ * `window.__E2E_MUTATIONS__` to prove a screen sent the right arguments; the
+ * real write path is covered by the Convex unit tests. `notified` and
+ * `isNewAccount` are read by the mineral assignment flows.
+ */
+export function useMutation(reference?: E2ERef) {
+  return useMemo(() => {
+    return async (args?: unknown) => {
+      if (typeof window !== "undefined" && reference) {
+        (window.__E2E_MUTATIONS__ ??= []).push({
+          ref: reference.__e2eQuery,
+          args,
+        });
+      }
+      return { notified: true, isNewAccount: false };
+    };
+  }, [reference]);
 }
+
+const noop = async () => undefined;
 
 export function useAction() {
   return useMemo(() => noop, []);

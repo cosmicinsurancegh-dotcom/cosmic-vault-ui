@@ -35,6 +35,12 @@ declare global {
      * "loading" return value alone cannot show.
      */
     __E2E_QUERY_CALLS__?: string[];
+    /**
+     * Every mutation the app has called since the page loaded, with the
+     * reference name and arguments. Mutations are otherwise no-ops, so a spec
+     * uses this to prove the screen sent the right request.
+     */
+    __E2E_MUTATIONS__?: { ref: string; args: unknown }[];
   }
 }
 
