@@ -88,7 +88,10 @@ to ship the backend.
   environment.
 - **Frontend** - Vercel builds `main` on push. The browser's Convex URL is
   `DEFAULT_CONVEX_URL` in `src/lib/convexUrl.ts` (production) unless the Vercel
-  project sets `VITE_CONVEX_URL`, which would override it.
+  project sets a `VITE_CONVEX_URL` that really is a Convex deployment. A value
+  that is not - the site's own origin, say - is swapped for `DEFAULT_CONVEX_URL`
+  during the build with a warning in the build log, so the published bundle can
+  reach a backend instead of rendering the configuration screen.
 
 The dashboard checks the deployment on load, independently of the Convex
 client: it fetches the public `setup:status` over the Convex HTTP API and, when

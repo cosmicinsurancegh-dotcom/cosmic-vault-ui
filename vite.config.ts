@@ -3,6 +3,23 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig } from "vite";
+import { DEFAULT_CONVEX_URL, isConvexDeploymentUrl } from "./src/lib/convexUrl";
+
+/**
+ * Vercel supplies `VITE_CONVEX_URL` itself, and a value that is not a Convex
+ * deployment - the site's own origin, say - makes the client refuse to connect
+ * and render the configuration screen: a reachable site with no working
+ * dashboard. Substituting this project's deployment here keeps the published
+ * build usable and leaves the mistake in the build log, while a corrected
+ * environment variable always wins. The app's own check is unchanged.
+ */
+const configuredConvexUrl = process.env.VITE_CONVEX_URL;
+if (configuredConvexUrl && !isConvexDeploymentUrl(configuredConvexUrl)) {
+  console.warn(
+    `[vite] VITE_CONVEX_URL="${configuredConvexUrl}" is not a Convex deployment; building against ${DEFAULT_CONVEX_URL}.`,
+  );
+  process.env.VITE_CONVEX_URL = DEFAULT_CONVEX_URL;
+}
 
 // https://vite.dev/config/
 export default defineConfig({
