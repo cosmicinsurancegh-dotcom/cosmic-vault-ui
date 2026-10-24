@@ -14,6 +14,10 @@ import { writeAudit } from "./lib/audit";
 import { validateUpload } from "./lib/files";
 import { notifyStaff, notifyUser } from "./lib/notify";
 import { ensureCustomerProfile } from "./lib/people";
+import {
+  buildPolicyDocuments,
+  writePolicyDocuments,
+} from "./lib/policyDocuments";
 import { priceProduct, validateAnswers } from "./lib/pricing";
 import { addMonths, DAY, reference, requiredText } from "./lib/refs";
 import type { Doc, Id as DocId } from "./_generated/dataModel";
@@ -714,58 +718,24 @@ export const issuePolicy = mutation({
       updatedAt: now,
     });
 
-    const money = (amount: number) =>
-      `${(amount / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })} ${application.currency}`;
-    const schedule = [
-      `POLICY SCHEDULE - ${policyNumber}`,
-      "",
-      `Product: ${product.name} (version ${product.version})`,
-      `Policyholder: ${customer?.fullName ?? "Policyholder"}`,
-      `Insured country: ${application.country}`,
-      `Term: ${new Date(startDate).toISOString().slice(0, 10)} to ${new Date(endDate).toISOString().slice(0, 10)}`,
-      `Premium: ${money(application.premium)}`,
-      `Coverage limit: ${money(product.coverageLimit)}`,
-      `Excess: ${money(product.excess)}`,
-      "",
-      "Benefits:",
-      ...product.benefits.map((benefit) => `• ${benefit}`),
-      "",
-      "Exclusions:",
-      ...product.exclusions.map((exclusion) => `• ${exclusion}`),
-      "",
-      `Wording version: ${product.wordingVersion}`,
-      "",
-      "This schedule must be read with the policy wording.",
-    ].join("\n");
-    const certificate = [
-      `CERTIFICATE OF INSURANCE - ${policyNumber}`,
-      "",
-      `This certifies that ${customer?.fullName ?? "the policyholder"} is insured under ${product.name} from ${new Date(startDate).toISOString().slice(0, 10)} to ${new Date(endDate).toISOString().slice(0, 10)}.`,
-      `Policy number: ${policyNumber}`,
-      `Application: ${application.reference}`,
-      `Premium: ${money(application.premium)}`,
-      "",
-      "Cover is subject to the policy wording, schedule, exclusions, and excess.",
-    ].join("\n");
-
-    for (const [name, body] of [
-      [`${policyNumber} - policy schedule`, schedule],
-      [`${policyNumber} - certificate`, certificate],
-      [`${policyNumber} - policy wording v${product.wordingVersion}`, `${product.wording}\n\n${product.disclosures}`],
-    ] as const) {
-      await ctx.db.insert("documents", {
-        ownerUserId: application.customerUserId,
-        name,
-        category: "policy",
-        policyId,
-        body,
-        contentType: "text/plain",
-        version: product.version,
-        issuedBy: viewer.user._id,
-        issuedAt: now,
-        createdAt: now,
-      });
-    }
+    await writePolicyDocuments(ctx, {
+      ownerUserId: application.customerUserId,
+      policyId,
+      issuedBy: viewer.user._id,
+      at: now,
+      version: product.version,
+      documents: buildPolicyDocuments({
+        policyNumber,
+        applicationReference: application.reference,
+        customerName: customer?.fullName ?? "Policyholder",
+        product,
+        country: application.country,
+        currency: application.currency,
+        premium: application.premium,
+        startDate,
+        endDate,
+      }),
+    });
 
     await ctx.db.insert("applicationEvents", {
       applicationId: application._id,
