@@ -12,7 +12,20 @@ import {
 import { isBrokerAssigned } from "./lib/access";
 import { writeAudit } from "./lib/audit";
 import { notifyStaff, notifyUser } from "./lib/notify";
-import { addMonths, DAY, reference, requiredText } from "./lib/refs";
+import { ensureCustomerProfile } from "./lib/people";
+import {
+  buildPolicyDocuments,
+  writePolicyDocuments,
+} from "./lib/policyDocuments";
+import {
+  addMonths,
+  DAY,
+  maxDate,
+  money,
+  parseDateInput,
+  reference,
+  requiredText,
+} from "./lib/refs";
 
 async function assertPolicyAccess(
   ctx: Parameters<typeof isBrokerAssigned>[0],
@@ -42,6 +55,293 @@ async function assertPolicyAccess(
   }
   throw new Error("You do not have access to this policy.");
 }
+
+export const customerOptions = query({
+  args: { search: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+    const search = args.search?.trim().toLowerCase();
+    const [users, profiles] = await Promise.all([
+      ctx.db.query("users").take(500),
+      ctx.db.query("customerProfiles").take(500),
+    ]);
+    const profileMap = new Map(profiles.map((profile) => [profile.userId, profile]));
+    return users
+      .filter((user) => (user.role ?? "customer") === "customer" && !user.isAnonymous)
+      .filter((user) => {
+        if (!search) return true;
+        const profile = profileMap.get(user._id);
+        return [user.name ?? "", user.email ?? "", profile?.reference ?? ""]
+          .join(" ")
+          .toLowerCase()
+          .includes(search);
+      })
+      .sort((a, b) =>
+        (a.name ?? a.email ?? "").localeCompare(b.name ?? b.email ?? ""),
+      )
+      .slice(0, 50)
+      .map((user) => {
+        const profile = profileMap.get(user._id);
+        return {
+          userId: user._id,
+          name: profile?.fullName ?? user.name ?? user.email ?? "Customer",
+          email: profile?.email ?? user.email ?? "",
+          reference: profile?.reference ?? "",
+          country: profile?.country ?? "GB",
+          currency: profile?.currency ?? "GBP",
+          hasProfile: Boolean(profile),
+        };
+      });
+  },
+});
+
+export const productOptions = query({
+  args: { country: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+    const products = await ctx.db
+      .query("products")
+      .withIndex("by_status", (q) => q.eq("status", "published"))
+      .take(200);
+    return products
+      .filter((product) => !args.country || product.countries.includes(args.country))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((product) => ({
+        _id: product._id,
+        name: product.name,
+        code: product.code,
+        version: product.version,
+        currency: product.currency,
+        termMonths: product.termMonths,
+        coverageLimit: product.coverageLimit,
+        excess: product.excess,
+        basePremium: product.basePremium,
+        countries: product.countries,
+        renewalNoticeDays: product.renewalNoticeDays,
+        wordingVersion: product.wordingVersion,
+      }));
+  },
+});
+
+/**
+ * Issue a policy directly from the staff console.
+ *
+ * The model keeps one record of how cover was sold, so this records an approved
+ * application alongside the policy rather than issuing an orphan policy. The
+ * premium is invoiced as a pending transaction: staff can issue without waiting
+ * for the money, and finance still sees the receivable.
+ */
+export const create = mutation({
+  args: {
+    customerUserId: v.id("users"),
+    productId: v.id("products"),
+    brokerUserId: v.optional(v.id("users")),
+    country: v.string(),
+    premium: v.number(),
+    startDate: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const viewer = await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+    const customer = await ctx.db.get(args.customerUserId);
+    if (!customer) throw new Error("Customer not found.");
+    if (customer.role === "admin" || customer.role === "super_admin") {
+      throw new Error("Choose a customer account.");
+    }
+    const product = await ctx.db.get(args.productId);
+    if (!product) throw new Error("Product not found.");
+    if (product.status !== "published") {
+      throw new Error("Only a published product version can be issued.");
+    }
+
+    const country = requiredText(args.country, "Country", 8).toUpperCase();
+    if (!product.countries.includes(country)) {
+      throw new Error("This product is not available in the selected country.");
+    }
+    const premium = money(args.premium, "Premium");
+    const startDate = parseDateInput(args.startDate, "Start date");
+    if (startDate < Date.UTC(2000, 0, 1) || startDate > maxDate()) {
+      throw new Error("Choose a valid start date.");
+    }
+    const endDate = addMonths(startDate, product.termMonths);
+    if (endDate > maxDate()) {
+      throw new Error("That term ends beyond the supported date range.");
+    }
+    const renewalDate = endDate - product.renewalNoticeDays * DAY;
+
+    let brokerUserId = args.brokerUserId;
+    if (brokerUserId) {
+      const broker = await ctx.db.get(brokerUserId);
+      if (!broker || broker.role !== "broker") {
+        throw new Error("Choose a broker account.");
+      }
+    } else {
+      const assignment = await ctx.db
+        .query("brokerAssignments")
+        .withIndex("by_customer", (q) =>
+          q.eq("customerUserId", args.customerUserId).eq("status", "active"),
+        )
+        .first();
+      brokerUserId = assignment?.brokerUserId;
+    }
+
+    const profile = await ensureCustomerProfile(ctx, args.customerUserId);
+    const insuredName = profile.fullName;
+    const now = Date.now();
+    const policyNumber = reference("POL");
+    const applicationReference = reference("APP");
+
+    const applicationId = await ctx.db.insert("applications", {
+      reference: applicationReference,
+      customerUserId: args.customerUserId,
+      brokerUserId,
+      productId: product._id,
+      productCode: product.code,
+      productVersion: product.version,
+      productName: product.name,
+      categoryKey: product.categoryKey,
+      country,
+      currency: product.currency,
+      premium,
+      answers: { source: "staff_issued" },
+      status: "approved",
+      submittedAt: now,
+      assignedTo: viewer.user._id,
+      decision: "approved",
+      decisionReason: "Issued directly from the policy register.",
+      decidedBy: viewer.user._id,
+      decidedAt: now,
+      termsAcceptedAt: now,
+      documents: [],
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const policyId = await ctx.db.insert("policies", {
+      policyNumber,
+      customerUserId: args.customerUserId,
+      brokerUserId,
+      applicationId,
+      productId: product._id,
+      productCode: product.code,
+      productVersion: product.version,
+      productName: product.name,
+      categoryKey: product.categoryKey,
+      status: "active",
+      insuredName,
+      country,
+      currency: product.currency,
+      premium,
+      excess: product.excess,
+      coverageLimit: product.coverageLimit,
+      exclusions: product.exclusions,
+      benefits: product.benefits,
+      wordingVersion: product.wordingVersion,
+      startDate,
+      endDate,
+      renewalDate,
+      issuedBy: viewer.user._id,
+      issuedAt: now,
+      endorsements: [],
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await ctx.db.patch(applicationId, { policyId, updatedAt: now });
+
+    await writePolicyDocuments(ctx, {
+      ownerUserId: args.customerUserId,
+      policyId,
+      issuedBy: viewer.user._id,
+      at: now,
+      version: product.version,
+      documents: buildPolicyDocuments({
+        policyNumber,
+        applicationReference,
+        customerName: insuredName,
+        product,
+        country,
+        currency: product.currency,
+        premium,
+        startDate,
+        endDate,
+      }),
+    });
+
+    await ctx.db.insert("applicationEvents", {
+      applicationId,
+      actorId: viewer.user._id,
+      actorRole: viewer.role,
+      kind: "decision",
+      message: `Policy ${policyNumber} issued by staff.`,
+      toStatus: "approved",
+      internal: false,
+      createdAt: now,
+    });
+
+    if (premium > 0) {
+      await ctx.db.insert("transactions", {
+        reference: reference("INV"),
+        customerUserId: args.customerUserId,
+        policyId,
+        applicationId,
+        type: "premium",
+        amount: premium,
+        currency: product.currency,
+        status: "pending",
+        method: "bank_transfer",
+        providerVerified: false,
+        idempotencyKey: `direct-issue:${policyId}`,
+        note: `Premium for ${policyNumber}, issued by staff`,
+        reconciled: false,
+        dueDate: startDate,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    await notifyUser(ctx, {
+      userId: args.customerUserId,
+      type: "policy.issued",
+      title: "Your policy is issued",
+      body: `Policy ${policyNumber} is active. Your schedule, certificate, and wording are in your document library.`,
+      href: "/dashboard/policies",
+      relatedType: "policies",
+      relatedId: policyId,
+      dedupeKey: `policy-issued:${policyId}`,
+    });
+    if (brokerUserId) {
+      await notifyUser(ctx, {
+        userId: brokerUserId,
+        type: "policy.issued",
+        title: `Policy ${policyNumber} issued`,
+        body: `${product.name} has been issued for your assigned customer.`,
+        href: "/dashboard/policies",
+        relatedType: "policies",
+        relatedId: policyId,
+        dedupeKey: `policy-issued-broker:${policyId}`,
+      });
+    }
+
+    await writeAudit(ctx, viewer, {
+      action: "policy.issued_directly",
+      entityType: "policies",
+      entityId: policyId,
+      after: {
+        policyNumber,
+        applicationId,
+        customerUserId: args.customerUserId,
+        productId: product._id,
+        premium,
+        currency: product.currency,
+        startDate,
+        endDate,
+      },
+      reason: "Issued directly from the policy register.",
+    });
+
+    return { policyId, policyNumber, applicationId };
+  },
+});
 
 export const mine = query({
   args: { status: v.optional(v.string()) },

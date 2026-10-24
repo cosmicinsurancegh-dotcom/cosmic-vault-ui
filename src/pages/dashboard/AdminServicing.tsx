@@ -12,6 +12,7 @@ import {
   Td,
   Th,
 } from "@/components/dashboard/PlatformUI";
+import { NewPolicyDialog } from "@/components/dashboard/NewPolicyDialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,12 +28,16 @@ import { useDocumentDownload } from "@/hooks/use-document-download";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatDate, formatDateTime, formatMoney, statusLabel } from "@/lib/format";
+import { STAFF_PERMISSIONS, can } from "@/lib/permissions";
+import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQuery } from "convex/react";
-import { Download, Loader2, ScrollText, Search } from "lucide-react";
+import { Download, Loader2, Plus, ScrollText, Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 export default function AdminPoliciesPage() {
+  const { user } = useAuth();
+  const [createOpen, setCreateOpen] = useState(false);
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [expiring, setExpiring] = useState(false);
@@ -47,6 +52,11 @@ export default function AdminPoliciesPage() {
     pageSize: 10,
   });
   const requests = useQuery(api.policies.requests, { status: "pending" });
+  const canManage = can(
+    user?.role,
+    user?.permissions,
+    STAFF_PERMISSIONS.POLICIES_MANAGE,
+  );
 
   if (policies === undefined) return <LoadingState label="Loading policies" />;
 
@@ -55,7 +65,17 @@ export default function AdminPoliciesPage() {
       <PageHeader
         eyebrow="Policy administration"
         title="The policy register."
-        description="Servicing requests, suspensions, cancellations, and renewals are recorded with an auditable decision."
+        description="Issue cover directly or service an existing policy. Every issuance, suspension, cancellation, and renewal is recorded with an auditable decision."
+        actions={
+          canManage ? (
+            <Button
+              className="h-10 rounded-[4px] px-4"
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus className="size-4" /> New policy
+            </Button>
+          ) : undefined
+        }
       />
 
       {requests && requests.length > 0 && (
@@ -173,6 +193,18 @@ export default function AdminPoliciesPage() {
           onOpenChange={(open) => !open && setRequestId(null)}
         />
       )}
+
+      <NewPolicyDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onIssued={(policyId) => {
+          setStatus("all");
+          setSearch("");
+          setExpiring(false);
+          setPage(1);
+          setSelectedId(policyId);
+        }}
+      />
     </div>
   );
 }

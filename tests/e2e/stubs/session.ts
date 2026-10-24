@@ -22,6 +22,12 @@ export type E2ESession = {
 declare global {
   interface Window {
     __E2E_SESSION__?: E2ESession | null;
+    /**
+     * Canned query results, keyed by the reference name (`table.fn`). A spec
+     * opts in per test, so the default "still loading" behaviour stays intact
+     * for every other screen.
+     */
+    __E2E_FIXTURES__?: Record<string, unknown> | null;
   }
 }
 

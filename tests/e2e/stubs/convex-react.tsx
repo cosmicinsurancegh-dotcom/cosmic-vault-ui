@@ -40,6 +40,13 @@ export function useQuery(reference: E2ERef | undefined) {
     getSession,
   );
   if (reference?.__e2eQuery === "users.currentUser") return session;
+  // A spec can supply canned data for the screens it opens; everything else
+  // stays in the loading state the real client reports before its first reply.
+  const fixtures =
+    typeof window === "undefined" ? null : (window.__E2E_FIXTURES__ ?? null);
+  if (fixtures && reference && reference.__e2eQuery in fixtures) {
+    return fixtures[reference.__e2eQuery];
+  }
   return undefined;
 }
 
