@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   Check,
-  MapPin,
   Minus,
   PackageCheck,
   Radar,
@@ -214,30 +213,25 @@ export function ReleaseTracking() {
         <Reveal y={26}>
           <div
             ref={cardRef}
-            className="mt-10 overflow-hidden rounded-[4px] border border-line bg-card shadow-[0_30px_60px_-50px_rgba(8,18,39,0.5)]"
+            className="mt-10 overflow-hidden rounded-[4px] border border-line bg-card"
           >
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line px-5 py-4 sm:px-7">
-              <div className="flex items-start gap-3">
-                <span className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_10px_20px_-12px_var(--electric)]">
-                  <MapPin className="size-5" strokeWidth={2} />
-                </span>
-                <div>
-                  <p className="flex flex-wrap items-center gap-2 text-[0.55rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                    Release record
-                    <span className="rounded-full border border-ink/15 bg-ice px-2 py-0.5 text-[0.5rem] tracking-[0.16em] text-ink/50">
-                      Sample
-                    </span>
-                  </p>
-                  <p className="mt-0.5 text-[0.92rem] font-semibold tracking-[-0.02em] text-ink">
-                    1 kg gold bar
-                  </p>
-                  <p className="text-[0.65rem] text-muted-foreground">
-                    Halcyon Armoured Transit · ETA 22 Oct 2026
-                  </p>
-                </div>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-line px-5 py-4 sm:px-7">
+              <div className="min-w-0">
+                <p className="flex flex-wrap items-center gap-2 text-[0.55rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  Release record
+                  <span className="rounded-full border border-ink/15 px-2 py-0.5 text-[0.5rem] tracking-[0.16em] text-ink/50">
+                    Sample
+                  </span>
+                </p>
+                <p className="mt-1 text-[0.95rem] font-semibold tracking-[-0.02em] text-ink">
+                  1 kg gold bar
+                </p>
+                <p className="mt-0.5 text-[0.65rem] text-muted-foreground">
+                  Halcyon Armoured Transit · ETA 22 Oct 2026
+                </p>
               </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-[0.6rem] font-semibold leading-none text-primary">
-                <Truck className="size-3" strokeWidth={2.4} />
+              <span className="inline-flex items-center gap-1.5 text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-primary">
+                <span className="size-1.5 rounded-full bg-primary" />
                 In Transit
               </span>
             </div>
@@ -394,22 +388,6 @@ export function ReleaseTracking() {
                 </motion.li>
               ))}
             </ol>
-
-            <div className="border-t border-line bg-ice/40 px-5 py-3 sm:px-7">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-[0.6rem] text-muted-foreground">
-                  Origin: Cosmic Vault, 18 Finsbury Circus, London EC2M 7EB
-                </p>
-                <p className="text-[0.6rem] text-muted-foreground">
-                  Destination: member address, Bristol BS1
-                </p>
-              </div>
-              <p className="mt-1.5 text-[0.58rem] leading-4 text-muted-foreground/80">
-                Illustration only. A sample release drawn to show how the five
-                stages read; the object, carrier, destination and timestamps
-                are placeholders, not a live shipment.
-              </p>
-            </div>
           </div>
         </Reveal>
 

@@ -42,7 +42,7 @@ export function HeroStrongroom({ onQuote }: HeroVariantProps) {
   return (
     <div ref={track} id="top" className={reduce ? undefined : "h-[calc(max(40rem,100svh)+100svh)]"}>
     <section
-      className={`relative isolate flex flex-col justify-center overflow-hidden bg-[#2B61EB] pb-10 pt-20 text-white ${
+      className={`relative isolate flex flex-col justify-center overflow-hidden bg-[#2B61EB] pb-4 pt-20 sm:pb-10 text-white ${
         reduce ? "min-h-[max(40rem,88svh)]" : "sticky top-0 h-[max(40rem,100svh)]"
       }`}
     >
@@ -60,9 +60,9 @@ export function HeroStrongroom({ onQuote }: HeroVariantProps) {
         className="pointer-events-none absolute inset-0 -z-10 text-white/[0.07] [background-image:radial-gradient(currentColor_0.5px,transparent_0.5px)] [background-size:4px_4px]"
       />
 
-      {/* The door. A faint backdrop behind the copy on a phone, beside it from sm up, where it can be turned by hand.
+      {/* The door. Above the copy on a phone, beside it from sm up, where it can be turned by hand.
           `.iso-band` centres it in the band below the fixed navbar and caps it to that band, so it never slides under the bar. */}
-      <div className="iso-band pointer-events-none absolute -right-[18vw] flex w-[min(118vw,52rem)] items-center opacity-25 sm:pointer-events-auto sm:opacity-100 lg:right-[max(0rem,calc((100vw-1240px)/2-3rem))] lg:w-[min(52vw,50rem)]">
+      <div className="iso-band relative max-sm:!top-auto max-sm:!bottom-auto mx-auto mb-4 flex w-[min(90vw,27svh)] items-center max-sm:mr-auto sm:pointer-events-auto sm:absolute sm:-right-[18vw] sm:mb-0 sm:w-[min(118vw,52rem)] lg:right-[max(0rem,calc((100vw-1240px)/2-3rem))] lg:w-[min(52vw,50rem)]">
         <motion.div
           initial={reduce ? false : { opacity: 0, y: 28, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -84,8 +84,8 @@ export function HeroStrongroom({ onQuote }: HeroVariantProps) {
         </motion.div>
       </div>
 
-      <div className="pointer-events-none relative z-10 mx-auto flex w-full max-w-[1240px] flex-col px-5 pb-8">
-        <div className="flex items-center justify-between pt-6 text-[0.55rem] font-semibold uppercase tracking-[0.28em] text-white">
+      <div className="pointer-events-none relative z-10 mx-auto flex w-full max-w-[1240px] flex-col px-5 pb-2 sm:pb-8">
+        <div className="flex items-center justify-between pt-2 text-[0.55rem] sm:pt-6 font-semibold uppercase tracking-[0.28em] text-white">
           <motion.p
             initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -136,7 +136,7 @@ export function HeroStrongroom({ onQuote }: HeroVariantProps) {
           initial={reduce ? false : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.7, ease: EASE }}
-          className="pointer-events-auto mt-8 max-w-[26rem] sm:mt-10"
+          className="pointer-events-auto mt-4 max-w-[26rem] sm:mt-10"
         >
           <p className="text-[0.88rem] leading-7 text-white/80">
             Gold, stones and critical minerals — held under dual control, each
