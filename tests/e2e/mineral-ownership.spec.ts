@@ -533,6 +533,13 @@ test.describe("mineral ownership from a customer record", () => {
     const register = page.getByRole("dialog");
     await expect(register.getByText("Change owner")).toBeVisible();
 
+    // The record wears the same route rail as the tracking desk.
+    const rail = register.getByLabel("Route from Zurich, CH to London, GB");
+    await expect(rail).toBeVisible();
+    await expect(rail.getByText("Position")).toBeVisible();
+    await expect(rail.getByText("Basel, CH", { exact: true })).toBeVisible();
+
+
     // Existing account.
     await register.getByLabel("New owner").selectOption(OTHER_CUSTOMER_ID);
     await register

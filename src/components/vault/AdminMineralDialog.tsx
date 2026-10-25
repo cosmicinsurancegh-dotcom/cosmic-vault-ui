@@ -65,7 +65,8 @@ import {
 import { toast } from "sonner";
 import { MineralVisual } from "./MineralVisual";
 import { ShipmentEmailPreview } from "./ShipmentEmailPreview";
-import { ShippingProgress } from "./ShippingProgress";
+import { ShipmentRouteRail } from "@/components/dashboard/ShipmentRouteRail";
+import { vaultRoute } from "./vaultRoute";
 import { InsuranceBadge, ShippingStatusBadge } from "./StatusBadges";
 
 const CARRIERS = [
@@ -609,6 +610,7 @@ function ShippingTab({
   const publishStatus = useShipmentStatusPublisher(actor);
 
   if (shipment) {
+    const route = vaultRoute(shipment);
     return (
       <div className="space-y-5">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -662,9 +664,11 @@ function ShippingTab({
             <p className="text-[0.55rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Live journey
             </p>
-            <div className="mt-4">
-              <ShippingProgress shipment={shipment} orientation="vertical" showNotes />
-            </div>
+            <ShipmentRouteRail
+              shipment={route.shipment}
+              events={route.events}
+              className="mt-4"
+            />
           </div>
           <div className="space-y-3">
             <div className="rounded-[4px] border border-line bg-ice/20 p-4">

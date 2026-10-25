@@ -131,8 +131,9 @@ function InfoItem({
 }
 
 /**
- * Four milestones on one line, the same rhythm as the live journey: what has
- * happened, where the consignment is now, and what the estimate says next.
+ * Four milestones on one line, drawn in the route rail's language — a dashed
+ * track with a solid progress fill, diamond waypoints and ringed markers — so
+ * the popup reads as the same tracking view as the board it opened from.
  */
 function LifecycleStepper({
   shipment,
@@ -156,11 +157,45 @@ function LifecycleStepper({
     strokeWidth?: number;
   }>[] = [PackageCheck, mode.Icon, Truck, Check];
 
+  const lastIndex = SHIPMENT_STAGES.length - 1;
+  const progress = Math.max(count - 1, 0) / lastIndex;
+
   return (
     <ol
-      className="grid grid-cols-4"
+      className="relative grid grid-cols-4 items-start gap-1"
       aria-label={`Milestones for ${shipment.reference}`}
     >
+      {/* The same track the rail draws: dashed ahead, filled behind. */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute left-[12.5%] right-[12.5%] top-4 h-0 -translate-y-1/2 border-t-2 border-dashed border-muted-foreground/25"
+      />
+      <span
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute left-[12.5%] top-4 h-[3px] -translate-y-1/2 rounded-full transition-[width] duration-500",
+          attention
+            ? "bg-amber-500 shadow-[0_2px_7px_-1px_var(--halo)]"
+            : "bg-primary shadow-[0_2px_7px_-1px_var(--electric)]",
+        )}
+        style={{ width: `calc(75% * ${progress})` }}
+      />
+      {[1 / 6, 1 / 2, 5 / 6].map((point) => (
+        <span
+          key={point}
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute top-[13px] size-[7px] -translate-x-1/2 rotate-45 rounded-[1px] border",
+            point <= progress
+              ? attention
+                ? "border-amber-500 bg-amber-500"
+                : "border-primary bg-primary"
+              : "border-line bg-card",
+          )}
+          style={{ left: `calc(12.5% + 75% * ${point})` }}
+        />
+      ))}
+
       {SHIPMENT_STAGES.map((stage, index) => {
         const complete = index < count - 1;
         const current = index === count - 1;
@@ -169,55 +204,40 @@ function LifecycleStepper({
           (current ? shipment.lastStatusAt : undefined);
         const Icon = stageIcons[index];
         const future = !complete && !current;
-        const estimateOnly = future && index === SHIPMENT_STAGES.length - 1;
+        const estimateOnly = future && index === lastIndex;
 
         return (
           <li
             key={stage.key}
-            className="relative flex min-w-0 flex-col items-center px-1 text-center"
+            className="relative z-10 flex min-w-0 flex-col items-center px-1 text-center"
             aria-current={current ? "step" : undefined}
           >
-            {index < SHIPMENT_STAGES.length - 1 && (
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "absolute left-[calc(50%+30px)] top-6 h-px w-[calc(100%-60px)]",
-                  complete ? "bg-primary/40" : "bg-line",
-                )}
-              />
-            )}
             <span
               className={cn(
-                "relative grid size-12 place-items-center rounded-full ring-4 transition-colors",
-                complete &&
-                  "bg-primary text-primary-foreground ring-primary/10",
+                "relative grid size-8 place-items-center rounded-full border ring-4 ring-card transition-colors",
+                complete && "border-primary bg-primary text-primary-foreground",
                 current &&
                   (attention
-                    ? "bg-amber-500 text-white ring-amber-500/15"
-                    : "bg-primary text-primary-foreground ring-primary/15"),
-                future &&
-                  "bg-muted text-muted-foreground/60 ring-muted-foreground/5",
+                    ? "border-amber-500 bg-amber-500 text-white"
+                    : "border-primary bg-primary text-primary-foreground"),
+                future && "border-line bg-card text-muted-foreground/55",
               )}
             >
-              {future ? (
-                <span className="size-2 rounded-full bg-muted-foreground/40" />
-              ) : (
-                <Icon className="size-5" strokeWidth={2.2} />
-              )}
+              <Icon className="size-4" strokeWidth={2.4} />
             </span>
             <p
               className={cn(
-                "mt-3 w-full truncate text-[0.72rem] font-semibold tracking-[-0.01em]",
-                future ? "text-muted-foreground/70" : "text-ink",
+                "mt-2.5 w-full truncate text-[0.76rem] font-semibold leading-4 tracking-[-0.01em]",
+                future ? "text-muted-foreground/60" : "text-ink",
               )}
             >
               {stage.label}
             </p>
-            <p className="mt-1 text-[0.6rem] tabular-nums text-muted-foreground">
+            <p className="mt-1 w-full truncate text-[0.58rem] tabular-nums text-muted-foreground">
               {complete || current
                 ? (day(at) ?? "Pending")
                 : estimateOnly
-                  ? (day(shipment.estimatedArrivalAt) ?? "Estimated")
+                  ? `Est. ${day(shipment.estimatedArrivalAt) ?? "pending"}`
                   : "Pending"}
             </p>
           </li>

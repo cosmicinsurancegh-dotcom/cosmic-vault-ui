@@ -34,7 +34,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
 import { toast } from "sonner";
 import { MineralVisual } from "./MineralVisual";
-import { ShippingProgress } from "./ShippingProgress";
+import { ShipmentRouteRail } from "@/components/dashboard/ShipmentRouteRail";
+import { vaultRoute } from "./vaultRoute";
 import {
   InsuranceBadge,
   ShippingStatusBadge,
@@ -344,6 +345,7 @@ function ShippingSection({ mineral }: { mineral: Mineral }) {
   }
 
   const active = shipment.currentStatus === "in_transit";
+  const route = vaultRoute(shipment);
   return (
     <section className="border-t border-line px-5 py-6 sm:px-7">
       <SectionHeading
@@ -410,9 +412,11 @@ function ShippingSection({ mineral }: { mineral: Mineral }) {
           <p className="text-[0.56rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             Live journey
           </p>
-          <div className="mt-4">
-            <ShippingProgress shipment={shipment} orientation="vertical" showNotes />
-          </div>
+          <ShipmentRouteRail
+            shipment={route.shipment}
+            events={route.events}
+            className="mt-4"
+          />
         </div>
         <div className="rounded-[4px] border border-line bg-ice/25 p-4 sm:p-5">
           <div>

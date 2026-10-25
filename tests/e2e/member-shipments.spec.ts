@@ -289,6 +289,20 @@ test.describe("member shipment tracking", () => {
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 
+  test("wears the same route rail on the minerals page", async ({ page }) => {
+    await startSignedIn(page);
+    await page.goto("/dashboard/minerals");
+
+    // The member's record view reads the same rail as the tracking desk.
+    const rail = page.getByLabel("Route from London vault to Zurich vault");
+    await expect(rail).toBeVisible();
+    await expect(rail.getByText("Origin")).toBeVisible();
+    await expect(rail.getByText("Position")).toBeVisible();
+    await expect(rail.getByText("Destination")).toBeVisible();
+    await expect(rail.getByText("Basel, CH", { exact: true })).toBeVisible();
+    await expect(rail.getByText("Brink's", { exact: true })).toBeVisible();
+  });
+
   test("explains an empty tracking desk", async ({ page }) => {
     await page.addInitScript(
       ({ session }) => {

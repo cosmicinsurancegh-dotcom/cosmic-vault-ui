@@ -3,8 +3,8 @@ import {
   type JourneyMineral,
   type JourneyPolicy,
 } from "./LiveShipmentPanel";
+import { ShipmentRouteRail } from "./ShipmentRouteRail";
 import {
-  ShipmentRouteRail,
   ShipmentSignalChip,
   ShipmentStateChip,
   type JourneyEvent,

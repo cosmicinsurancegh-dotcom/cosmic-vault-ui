@@ -5,12 +5,8 @@ import {
   StatusPill,
   Timeline,
 } from "@/components/dashboard/PlatformUI";
-import {
-  SHIPMENT_STAGES,
-  SHIPMENT_STATUS_LABELS,
-  shipmentNeedsAttention,
-  shipmentProgress,
-} from "@/convex/lib/shipments";
+import { ShipmentRouteRail } from "@/components/dashboard/ShipmentRouteRail";
+import { SHIPMENT_STATUS_LABELS } from "@/convex/lib/shipments";
 import { api } from "@/convex/_generated/api";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useQuery } from "convex/react";
@@ -127,27 +123,11 @@ export default function MineralsPage() {
                           {shipment.carrier}
                         </span>
                       </div>
-                      <div>
-                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                          <motion.div
-                            initial={reduceMotion ? false : { width: 0 }}
-                            animate={{
-                              width: `${shipmentProgress(shipment.status)}%`,
-                            }}
-                            transition={{ duration: 0.6, ease: "easeOut" }}
-                            className={
-                              shipmentNeedsAttention(shipment.status)
-                                ? "h-full rounded-full bg-amber-500"
-                                : "h-full rounded-full bg-primary"
-                            }
-                          />
-                        </div>
-                        <div className="mt-2 flex justify-between gap-1 text-[0.55rem] uppercase tracking-[0.08em] text-muted-foreground">
-                          {SHIPMENT_STAGES.map((stage) => (
-                            <span key={stage.key}>{stage.label}</span>
-                          ))}
-                        </div>
-                      </div>
+                      <ShipmentRouteRail
+                        shipment={shipment}
+                        events={events}
+                        className="pt-1"
+                      />
                       <dl className="grid grid-cols-2 gap-2 text-[0.62rem] text-muted-foreground">
                         <div>
                           <dt className="uppercase tracking-[0.1em]">

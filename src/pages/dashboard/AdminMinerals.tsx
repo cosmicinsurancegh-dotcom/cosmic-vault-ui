@@ -22,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ShipmentRouteRail } from "@/components/dashboard/ShipmentRouteRail";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -37,16 +38,13 @@ import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
-  SHIPMENT_STAGES,
   SHIPMENT_STATUSES,
   SHIPMENT_STATUS_LABELS,
-  shipmentProgress,
   type ShipmentStatus,
 } from "@/convex/lib/shipments";
 import { formatDate, formatMoney, toMinor } from "@/lib/format";
 import { STAFF_PERMISSIONS, can } from "@/lib/permissions";
 import { useMutation, useQuery } from "convex/react";
-import { motion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
@@ -1350,42 +1348,24 @@ function MineralDetailDialog({
 
           {shipment && (
             <section className="space-y-3 rounded-xl border border-line p-4">
+              {/* The rail below carries the route, carrier and estimate, so the
+                  header only names the consignment and its tracking number. */}
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
+                <div className="min-w-0">
                   <p className="text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                     Shipment {shipment.reference}
                   </p>
-                  <p className="mt-1 text-sm text-ink">
-                    {shipment.origin} → {shipment.destination}
-                  </p>
-                  <p className="text-[0.65rem] text-muted-foreground">
+                  <p className="mt-1 truncate text-[0.65rem] text-muted-foreground">
                     {shipment.carrier}
                     {shipment.trackingNumber
                       ? ` · ${shipment.trackingNumber}`
-                      : ""}
-                    {shipment.estimatedArrivalAt
-                      ? ` · ETA ${formatDate(shipment.estimatedArrivalAt)}`
                       : ""}
                   </p>
                 </div>
                 <StatusPill status={shipment.status} />
               </div>
 
-              <div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${shipmentProgress(shipment.status)}%` }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
-                    className="h-full rounded-full bg-primary"
-                  />
-                </div>
-                <div className="mt-2 flex justify-between text-[0.58rem] uppercase tracking-[0.1em] text-muted-foreground">
-                  {SHIPMENT_STAGES.map((stage) => (
-                    <span key={stage.key}>{stage.label}</span>
-                  ))}
-                </div>
-              </div>
+              <ShipmentRouteRail shipment={shipment} events={events} />
 
               {canManage && (
                 <div className="space-y-2 border-t border-line pt-3">
