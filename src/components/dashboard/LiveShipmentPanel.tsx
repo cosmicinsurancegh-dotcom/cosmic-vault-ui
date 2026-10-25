@@ -291,14 +291,9 @@ export function LiveShipmentPanel({
   const tracking = shipment.trackingNumber ?? shipment.reference;
 
   return (
-    <div
-      id={id}
-      className={cn(
-        "border-t border-line bg-[linear-gradient(180deg,var(--ice)_0%,transparent_70%)] px-4 py-4 sm:px-5",
-        className,
-      )}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div id={id} className={cn("min-w-0", className)}>
+      {/* The close control sits in the dialog's top-right corner. */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pr-8">
         <h3 className="text-[0.9rem] font-semibold tracking-[-0.02em] text-ink">
           Live shipment tracking
         </h3>

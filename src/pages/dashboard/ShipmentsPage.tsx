@@ -274,17 +274,9 @@ export default function ShipmentsPage() {
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-52">
-                    <DropdownMenuItem
-                      onSelect={() =>
-                        setOpenId((current) =>
-                          current === shipment._id ? null : shipment._id,
-                        )
-                      }
-                    >
+                    <DropdownMenuItem onSelect={() => setOpenId(shipment._id)}>
                       <MapPin className="size-3.5" />
-                      {openId === shipment._id
-                        ? "Hide live tracking"
-                        : "Show live tracking"}
+                      Show live tracking
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onSelect={() => copyTracking(shipment.trackingNumber)}

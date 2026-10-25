@@ -259,9 +259,21 @@ test.describe("staff shipment control", () => {
     const row = page.locator("article").filter({ hasText: "CV-SHP-2001" });
 
     await expect(row.getByText("Ada Vault · ada@example.com")).toBeVisible();
+
+    // Staff controls stay on the row, outside the tracking dialog.
+    await expect(
+      row.getByLabel("Update shipment status for Aurum bar"),
+    ).toHaveValue("in_transit");
+    await expect(
+      row.getByRole("button", { name: "Reassign", exact: true }),
+    ).toBeVisible();
+
     await row
-      .getByRole("button", { name: "Show live tracking for CV-SHP-2001" })
+      .getByRole("button", { name: "Open live tracking for CV-SHP-2001" })
       .click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    // The open record is in the address, so the view can be shared.
+    await expect(page).toHaveURL(/shipment=e2e-ship-1/);
 
     const panel = page.locator("#live-e2e-ship-1");
     await expect(
@@ -272,14 +284,42 @@ test.describe("staff shipment control", () => {
     await expect(panel.getByText("Cleared customs in Basel.")).toBeVisible();
     await expect(panel.getByText("Packed under dual control.")).toBeVisible();
 
-    // Staff controls stay on the row, outside the tracking panel.
+    // The dialog is modal, so it goes away before the board is used again.
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator("#live-e2e-ship-1")).toHaveCount(0);
+    await expect(page).not.toHaveURL(/shipment=/);
+
+    // The whole card opens the same view as its button.
+    await row.getByText("CV-SHP-2001").click();
+    await expect(panel).toBeVisible();
+  });
+
+  test("opens live tracking straight from a shared link", async ({ page }) => {
+    await page.addInitScript(
+      ({ session, fixtures }) => {
+        window.__E2E_SESSION__ = session;
+        window.__E2E_FIXTURES__ = fixtures;
+      },
+      { session: ADMIN_SESSION, fixtures: FIXTURES },
+    );
+
+    // A link to one consignment opens its tracking view on arrival.
+    await page.goto("/dashboard/admin/shipments?shipment=e2e-ship-1");
+
+    const panel = page.locator("#live-e2e-ship-1");
+    await expect(panel).toBeVisible();
     await expect(
-      row.getByLabel("Update shipment status for Aurum bar"),
-    ).toHaveValue("in_transit");
-    await expect(
-      row.getByRole("button", { name: "Reassign", exact: true }),
+      panel.getByRole("heading", { name: "Live shipment tracking" }),
     ).toBeVisible();
-    await expect(page.locator("#live-e2e-ship-2")).toHaveCount(0);
+    await expect(panel.getByLabel("Milestones for CV-SHP-2001")).toBeVisible();
+    await expect(panel.getByText("Cleared customs in Basel.")).toBeVisible();
+
+    // Closing drops the record from the address, leaving the plain board.
+    await page.getByRole("button", { name: "Close" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page).not.toHaveURL(/shipment=/);
+    await expect(page.getByLabel("Search consignments")).toBeVisible();
   });
 
   test("publishes a status change with its location, note and estimate", async ({

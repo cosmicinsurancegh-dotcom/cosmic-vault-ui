@@ -31,7 +31,7 @@ import {
   UserRoundPlus,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 
 type RegisterRow = FunctionReturnType<typeof api.minerals.list>[number];
@@ -52,6 +52,9 @@ function hasShipment(row: RegisterRow): row is ShipmentRow {
  *
  * The register query carries the current shipment but not its history, so the
  * live tracking panel reads the mineral's detail record when a row is opened.
+ *
+ * Which consignment is open lives in the URL (`?shipment=<id>`), so a search
+ * result or a shared link lands on the same live tracking view.
  */
 export default function AdminShipmentsPage() {
   const navigate = useNavigate();
@@ -72,17 +75,39 @@ export default function AdminShipmentsPage() {
     status: ShipmentStatus;
   } | null>(null);
   const [publishing, setPublishing] = useState(false);
-  const [openKey, setOpenKey] = useState<{
-    mineralId: Id<"minerals">;
-    shipmentId: Id<"shipments">;
-  } | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const linkedShipmentId = searchParams.get("shipment");
 
   const rows = useQuery(api.minerals.list, canManage ? {} : "skip");
+
+  /* The link may name a consignment the current filters hide, so it is looked
+     up in the whole register rather than in the visible rows. */
+  const openRow = useMemo(
+    () =>
+      (rows ?? [])
+        .filter(hasShipment)
+        .find((row) => row.shipment._id === linkedShipmentId) ?? null,
+    [rows, linkedShipmentId],
+  );
+
   const detail = useQuery(
     api.minerals.detail,
-    openKey ? { mineralId: openKey.mineralId } : "skip",
+    openRow ? { mineralId: openRow.mineral._id } : "skip",
   );
   const updateStatus = useMutation(api.minerals.updateShipmentStatus);
+
+  /** Opening and closing the popup is a navigation, so the link is shareable. */
+  const setLinkedShipment = (shipmentId: string | null) => {
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (shipmentId) next.set("shipment", shipmentId);
+        else next.delete("shipment");
+        return next;
+      },
+      { replace: true },
+    );
+  };
 
   const shipments = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -331,7 +356,7 @@ export default function AdminShipmentsPage() {
         ) : (
           <div>
             {shipments.map(({ mineral, policy, shipment, assignee }) => {
-              const isOpen = openKey?.shipmentId === shipment._id;
+              const isOpen = openRow?.shipment._id === shipment._id;
               const events =
                 isOpen && detail?.shipment?._id === shipment._id
                   ? detail.events
@@ -352,14 +377,7 @@ export default function AdminShipmentsPage() {
                   }
                   open={isOpen}
                   onToggle={() =>
-                    setOpenKey((current) =>
-                      current?.shipmentId === shipment._id
-                        ? null
-                        : {
-                            shipmentId: shipment._id,
-                            mineralId: mineral._id,
-                          },
-                    )
+                    setLinkedShipment(isOpen ? null : shipment._id)
                   }
                   controls={
                     <>

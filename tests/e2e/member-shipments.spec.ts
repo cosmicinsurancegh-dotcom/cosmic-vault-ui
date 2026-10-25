@@ -213,14 +213,24 @@ test.describe("member shipment tracking", () => {
     await expect(page.getByText("MA-9021-14")).toBeVisible();
   });
 
-  test("opens the live tracking panel inline", async ({ page }) => {
+  test("opens live tracking in a dialog from the row or the card", async ({
+    page,
+  }) => {
     await startSignedIn(page);
     await page.goto("/dashboard/shipments");
 
+    // Row actions stay available without opening the record.
+    await page.getByRole("button", { name: "Actions for CV-SHP-3001" }).click();
+    await expect(
+      page.getByRole("menuitem", { name: "Show live tracking" }),
+    ).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+
     const toggle = page.getByRole("button", {
-      name: "Show live tracking for CV-SHP-3001",
+      name: "Open live tracking for CV-SHP-3001",
     });
-    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(toggle).toHaveAttribute("aria-haspopup", "dialog");
     await toggle.click();
 
     const panel = page.locator("#live-e2e-member-shipment-1");
@@ -245,18 +255,30 @@ test.describe("member shipment tracking", () => {
     const layout = await panel.evaluate((node) => ({
       overflow: node.scrollWidth - node.clientWidth,
       mapHeight: Math.round(
-        document
-          .querySelector(".shipment-map")
-          ?.getBoundingClientRect().height ?? 0,
+        document.querySelector(".shipment-map")?.getBoundingClientRect()
+          .height ?? 0,
       ),
     }));
     expect(layout.overflow).toBeLessThanOrEqual(1);
     expect(layout.mapHeight).toBeGreaterThan(200);
 
-    // The panel belongs to its own row: the delivered consignment stays closed.
-    await expect(page.locator("#live-e2e-member-shipment-2")).toHaveCount(0);
+    // One consignment at a time: the dialog names the row it belongs to.
+    await expect(
+      page.getByRole("dialog").getByText("Live tracking for CV-SHP-3001"),
+    ).toBeAttached();
 
-    // Row actions stay available without opening the record.
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    // The whole card is the target, not just the arrow button.
+    const row = page.locator("article").filter({ hasText: "CV-SHP-3001" });
+    await row.getByText("CV-SHP-3001").click();
+    await expect(panel).toBeVisible();
+
+    await page.getByRole("button", { name: "Close" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    // A control inside the card does its own job instead of opening the record.
     await page.getByRole("button", { name: "Actions for CV-SHP-3001" }).click();
     await expect(
       page.getByRole("menuitem", { name: "Copy tracking number" }),
@@ -264,14 +286,7 @@ test.describe("member shipment tracking", () => {
     await expect(
       page.getByRole("menuitem", { name: "View my minerals" }),
     ).toBeVisible();
-    await page.keyboard.press("Escape");
-
-    const hide = page.getByRole("button", {
-      name: "Hide live tracking for CV-SHP-3001",
-    });
-    await expect(hide).toHaveAttribute("aria-expanded", "true");
-    await hide.click();
-    await expect(panel).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 
   test("explains an empty tracking desk", async ({ page }) => {

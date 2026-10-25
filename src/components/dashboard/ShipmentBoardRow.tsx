@@ -11,21 +11,27 @@ import {
   type JourneyShipment,
 } from "./ShipmentJourney";
 import { shipmentModeFor } from "./shipmentMode";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { copyTracking } from "@/lib/clipboard";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import {
-  ChevronDown,
-  ClipboardCopy,
-  Clock3,
-  UserRoundPlus,
-} from "lucide-react";
-import type { ReactNode } from "react";
+import { ClipboardCopy, Clock3, Maximize2, UserRoundPlus } from "lucide-react";
+import type { MouseEvent, ReactNode } from "react";
+
+/** Anything the row itself controls, which a card click must leave alone. */
+const ROW_ACTIONS =
+  "a, button, input, select, textarea, [role='menuitem'], [data-row-action]";
 
 /**
  * One consignment on the dispatch board: identity and exceptions on the left,
  * the route rail in the middle, and the row's controls on the right. The live
- * tracking panel opens beneath it, inside the same record.
+ * tracking view opens in a dialog over the board — from the row's own button or
+ * from anywhere on the card.
  *
  * The member desk and the staff console share this row; staff add an owner line
  * and their own controls, members get the actions menu.
@@ -63,10 +69,27 @@ export function ShipmentBoardRow({
       ? shipment.lastStatusAt
       : shipment.estimatedArrivalAt;
   const panelId = `live-${shipment._id}`;
+  const label = shipment.reference;
+
+  const showTracking = () => {
+    if (!open) onToggle();
+  };
+
+  /* The row is one big target, so a click on the copy button, a control or the
+     actions menu does its own job instead of opening the tracking view. */
+  const openFromCard = (event: MouseEvent<HTMLElement>) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest(ROW_ACTIONS)) return;
+    showTracking();
+  };
 
   return (
     <article
-      className={cn("border-b border-line/70 last:border-b-0", className)}
+      onClick={openFromCard}
+      className={cn(
+        "cursor-pointer border-b border-line/70 last:border-b-0",
+        className,
+      )}
     >
       <div className="grid gap-4 px-4 py-4 transition-colors hover:bg-ice/25 sm:px-5 lg:grid-cols-[236px_minmax(0,1fr)_auto] lg:items-start lg:gap-6">
         <div className="min-w-0">
@@ -145,27 +168,13 @@ export function ShipmentBoardRow({
         <div className="flex flex-wrap items-center gap-1.5 lg:flex-col lg:items-end">
           <button
             type="button"
-            onClick={onToggle}
-            aria-expanded={open}
-            aria-controls={panelId}
-            aria-label={`${
-              open ? "Hide" : "Show"
-            } live tracking for ${shipment.reference}`}
-            title={open ? "Hide live tracking" : "Show live tracking"}
-            className={cn(
-              "grid size-8 shrink-0 place-items-center rounded-[4px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-              open
-                ? "border-primary/40 bg-primary/10 text-primary"
-                : "border-line text-muted-foreground hover:border-primary/35 hover:text-primary",
-            )}
+            onClick={showTracking}
+            aria-haspopup="dialog"
+            aria-label={`Open live tracking for ${label}`}
+            title="Open live tracking"
+            className="grid size-8 shrink-0 place-items-center rounded-[4px] border border-line text-muted-foreground transition-colors hover:border-primary/35 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           >
-            <ChevronDown
-              className={cn(
-                "size-4 transition-transform",
-                open && "rotate-180",
-              )}
-              strokeWidth={2.2}
-            />
+            <Maximize2 className="size-3.5" strokeWidth={2.2} />
           </button>
 
           {menu}
@@ -173,15 +182,29 @@ export function ShipmentBoardRow({
         </div>
       </div>
 
-      {open && (
-        <LiveShipmentPanel
-          id={panelId}
-          shipment={shipment}
-          events={events}
-          mineral={mineral}
-          policy={policy}
-        />
-      )}
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) onToggle();
+        }}
+      >
+        <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[4px] border-line bg-background sm:max-w-5xl">
+          <DialogTitle className="sr-only">
+            Live tracking for {label}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {shipment.carrier} · {shipment.origin} to {shipment.destination}.
+            Escape closes this view.
+          </DialogDescription>
+          <LiveShipmentPanel
+            id={panelId}
+            shipment={shipment}
+            events={events}
+            mineral={mineral}
+            policy={policy}
+          />
+        </DialogContent>
+      </Dialog>
     </article>
   );
 }
