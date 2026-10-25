@@ -170,9 +170,95 @@ const FIXTURES: Record<string, unknown> = {
       status: "active",
     },
   ],
+  // One delivery that landed and one the provider rejected, so the board can be
+  // checked for both states without opening the settings panel.
+  "minerals.emailLog": [
+    {
+      shipmentId: OWNED_SHIPMENT_ID,
+      emailStatus: "sent",
+      emailError: null,
+      emailAttempts: 1,
+      at: CREATED_AT + 3000,
+      stalled: false,
+    },
+    {
+      shipmentId: UNASSIGNED_SHIPMENT_ID,
+      emailStatus: "failed",
+      emailError: "Provider rejected the recipient address.",
+      emailAttempts: 2,
+      at: CREATED_AT + 4000,
+      stalled: false,
+    },
+  ],
 };
 
 test.describe("staff shipment control", () => {
+  test("shows whether each consignment's last email reached its owner", async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      ({ session, fixtures }) => {
+        window.__E2E_SESSION__ = session;
+        window.__E2E_FIXTURES__ = fixtures;
+      },
+      { session: ADMIN_SESSION, fixtures: FIXTURES },
+    );
+
+    await page.goto("/dashboard/admin/shipments");
+
+    const owned = page.locator("article").filter({ hasText: "CV-SHP-2001" });
+    await expect(owned.getByText("Email sent")).toBeVisible();
+
+    // A rejected send is visible on the board itself, with the reason on hover.
+    const other = page.locator("article").filter({ hasText: "CV-SHP-2002" });
+    await expect(other.getByText("Email failed")).toBeVisible();
+    await expect(
+      other.locator("p[title*='Provider rejected the recipient address']"),
+    ).toBeVisible();
+
+    // The count is in the board's summary, above the list, so the problem is
+    // known before scrolling: one failed, one delivered.
+    const issues = page.getByText("Last email failed or stalled").locator("..");
+    await expect(issues).toContainText("1");
+  });
+
+  test("resends a failed email from the row that failed", async ({ page }) => {
+    await page.addInitScript(
+      ({ session, fixtures }) => {
+        window.__E2E_SESSION__ = session;
+        window.__E2E_FIXTURES__ = fixtures;
+        window.__E2E_MUTATIONS__ = [];
+      },
+      { session: ADMIN_SESSION, fixtures: FIXTURES },
+    );
+
+    await page.goto("/dashboard/admin/shipments");
+
+    // A delivered email offers no resend, so nobody emails an owner twice.
+    const delivered = page
+      .locator("article")
+      .filter({ hasText: "CV-SHP-2001" });
+    await expect(delivered.getByText("Email sent")).toBeVisible();
+    await expect(
+      delivered.getByRole("button", { name: /^Resend/ }),
+    ).toHaveCount(0);
+
+    // The rejected one can be retried where its failure is shown.
+    const failed = page.locator("article").filter({ hasText: "CV-SHP-2002" });
+    await failed
+      .getByRole("button", { name: "Resend the last email for CV-SHP-2002" })
+      .click();
+
+    await expect(page.getByText("Email queued again.")).toBeVisible();
+
+    const calls = await page.evaluate(() => window.__E2E_MUTATIONS__ ?? []);
+    const resend = calls.filter(
+      (call) => call.ref === "minerals.resendShipmentEmail",
+    );
+    expect(resend).toHaveLength(1);
+    expect(resend[0]?.args).toEqual({ shipmentId: UNASSIGNED_SHIPMENT_ID });
+  });
+
   test("assigns an ownerless consignment to an account", async ({ page }) => {
     await page.addInitScript(
       ({ session, fixtures }) => {

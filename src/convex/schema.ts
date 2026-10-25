@@ -748,12 +748,26 @@ const schema = defineSchema(
       emailStatus: notificationEmailStatusValidator,
       emailAttempts: v.number(),
       emailError: v.optional(v.string()),
+      /*
+       * The message exactly as it was handed to the provider. Delivery runs in
+       * a scheduled action, so without this a retry could only guess the
+       * wording - and the designed shipment emails are not built from a
+       * settings template, so a retry would have sent a different message.
+       */
+      emailSubject: v.optional(v.string()),
+      emailText: v.optional(v.string()),
+      emailHtml: v.optional(v.string()),
+      /** When the current delivery attempt was queued; absent on older rows. */
+      emailQueuedAt: v.optional(v.number()),
       createdAt: v.number(),
       ...demoFields,
     })
       .index("by_user", ["userId"])
       .index("by_dedupe", ["dedupeKey"])
-      .index("by_email_status", ["emailStatus"]),
+      .index("by_email_status", ["emailStatus"])
+      // The record a notification is about, so a console can show the delivery
+      // state of the emails it sent (e.g. per consignment on the shipment board).
+      .index("by_related", ["relatedId"]),
 
     /**
      * Outbound shipment progress emails. The vault's mineral and shipment

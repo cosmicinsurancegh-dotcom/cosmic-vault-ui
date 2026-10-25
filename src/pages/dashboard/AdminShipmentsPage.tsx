@@ -25,6 +25,7 @@ import type { FunctionReturnType } from "convex/server";
 import {
   AlertTriangle,
   ArrowRightLeft,
+  MailX,
   PackageCheck,
   Search,
   Truck,
@@ -95,6 +96,7 @@ export default function AdminShipmentsPage() {
     openRow ? { mineralId: openRow.mineral._id } : "skip",
   );
   const updateStatus = useMutation(api.minerals.updateShipmentStatus);
+  const resendShipmentEmail = useMutation(api.minerals.resendShipmentEmail);
 
   /** Opening and closing the popup is a navigation, so the link is shareable. */
   const setLinkedShipment = (shipmentId: string | null) => {
@@ -138,6 +140,51 @@ export default function AdminShipmentsPage() {
       );
   }, [rows, search, status]);
 
+  /* Delivery state is read back per consignment: a status email is queued and
+     sent after the mutation commits, so the shipment row itself cannot say
+     whether the owner was actually reached. Read for the whole register, not
+     the filtered rows, so the summary below the header does not change when a
+     filter does. */
+  const shipmentIds = useMemo(
+    () => (rows ?? []).filter(hasShipment).map((row) => row.shipment._id),
+    [rows],
+  );
+  const emailLog = useQuery(
+    api.minerals.emailLog,
+    canManage ? { shipmentIds } : "skip",
+  );
+  const deliveryByShipment = useMemo(
+    () => new Map((emailLog ?? []).map((entry) => [entry.shipmentId, entry])),
+    [emailLog],
+  );
+
+  /**
+   * Retries a consignment's last email from the row it failed on. The server
+   * sends the message that was queued, so the owner gets the email they were
+   * promised, and it refuses one the provider already accepted.
+   */
+  const resendEmailFor = async (row: ShipmentRow) => {
+    try {
+      await resendShipmentEmail({ shipmentId: row.shipment._id });
+      toast.success("Email queued again.", {
+        description: `Resending to ${row.assignee?.email ?? "the owner"}. Its result shows on this row.`,
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not resend the email.",
+      );
+    }
+  };
+
+  /** Consignments whose last email failed or never reported back. */
+  const emailIssues = useMemo(
+    () =>
+      (emailLog ?? []).filter(
+        (entry) => entry.stalled || entry.emailStatus === "failed",
+      ).length,
+    [emailLog],
+  );
+
   const metrics = useMemo(() => {
     const all = (rows ?? []).filter(hasShipment);
     return {
@@ -168,7 +215,7 @@ export default function AdminShipmentsPage() {
 
   /** Errors are left to the dialog, which keeps the form open to show them. */
   const publishStatus = async (
-    row: Pick<ShipmentRow, "mineral" | "shipment">,
+    row: Pick<ShipmentRow, "mineral" | "shipment" | "assignee">,
     input: {
       status: ShipmentStatus;
       location?: string;
@@ -187,8 +234,10 @@ export default function AdminShipmentsPage() {
       });
       const label = SHIPMENT_STATUS_LABELS[input.status].toLowerCase();
       if (result.notified) {
+        /* Delivery runs after the mutation commits, so the honest outcome here
+           is "queued" - a failed or stalled send is listed under Settings. */
         toast.success(`${row.mineral.name} is now ${label}.`, {
-          description: "The owner has been emailed.",
+          description: `Email queued to ${row.assignee?.email ?? "the owner"}. Delivery failures appear under Settings → Email delivery.`,
         });
       } else {
         toast.warning(`${row.mineral.name} is now ${label}.`, {
@@ -250,7 +299,7 @@ export default function AdminShipmentsPage() {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <MetricTile
           label="Consignments"
           value={metrics.total}
@@ -274,6 +323,20 @@ export default function AdminShipmentsPage() {
           value={metrics.unassigned}
           helper="No owner to email yet"
           icon={UserRoundPlus}
+        />
+        <MetricTile
+          label="Email issues"
+          value={
+            emailIssues > 0 ? (
+              <span className="text-amber-700 dark:text-amber-400">
+                {emailIssues}
+              </span>
+            ) : (
+              emailIssues
+            )
+          }
+          helper="Last email failed or stalled"
+          icon={MailX}
         />
       </div>
 
@@ -355,7 +418,8 @@ export default function AdminShipmentsPage() {
           />
         ) : (
           <div>
-            {shipments.map(({ mineral, policy, shipment, assignee }) => {
+            {shipments.map((row) => {
+              const { mineral, policy, shipment, assignee } = row;
               const isOpen = openRow?.shipment._id === shipment._id;
               const events =
                 isOpen && detail?.shipment?._id === shipment._id
@@ -375,6 +439,8 @@ export default function AdminShipmentsPage() {
                       ? { name: assignee.name, email: assignee.email }
                       : null
                   }
+                  email={deliveryByShipment.get(shipment._id) ?? null}
+                  onResendEmail={() => resendEmailFor(row)}
                   open={isOpen}
                   onToggle={() =>
                     setLinkedShipment(isOpen ? null : shipment._id)

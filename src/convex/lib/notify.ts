@@ -1,7 +1,14 @@
 import { internal } from "../_generated/api";
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { getSettings } from "./settings";
+
+/**
+ * A queued email with no provider result after this long is treated as stalled:
+ * the scheduled delivery never reported back, so the message was never sent.
+ * Normal sends answer within seconds.
+ */
+export const STALLED_EMAIL_MS = 5 * 60_000;
 
 type NotifyArgs = {
   userId: Id<"users">;
@@ -64,6 +71,13 @@ export async function notifyUser(
     company: settings.companyName,
   };
 
+  /* Rendered once: the same wording is stored and handed to the provider. */
+  const subject =
+    args.subject ?? render(template?.subject ?? args.title, values);
+  const text =
+    args.text ?? render(template?.body ?? "{{title}}\n\n{{body}}", values);
+  const html = args.html;
+
   const id = await ctx.db.insert("notifications", {
     userId: args.userId,
     type: args.type,
@@ -75,6 +89,15 @@ export async function notifyUser(
     dedupeKey,
     emailStatus: canEmail ? "queued" : "skipped",
     emailAttempts: 0,
+    /* The queued message is kept so a retry resends the same email. */
+    ...(canEmail
+      ? {
+          emailSubject: subject,
+          emailText: text,
+          ...(html ? { emailHtml: html } : {}),
+          emailQueuedAt: Date.now(),
+        }
+      : {}),
     createdAt: Date.now(),
   });
 
@@ -82,14 +105,73 @@ export async function notifyUser(
     await ctx.scheduler.runAfter(0, internal.email.deliver, {
       notificationId: id,
       to: user.email!,
-      subject: args.subject ?? render(template?.subject ?? args.title, values),
-      text:
-        args.text ?? render(template?.body ?? "{{title}}\n\n{{body}}", values),
-      html: args.html,
+      subject,
+      text,
+      html,
     });
   }
 
   return id;
+}
+
+/**
+ * Queues another delivery of a notification's email and returns the address it
+ * is going to.
+ *
+ * The message recorded when the notification was created is resent verbatim,
+ * branded HTML included, because the designed consignment emails are not built
+ * from a settings template - re-rendering one would send a different email than
+ * the one that failed. Rows queued before the message was kept fall back to the
+ * template, which is the best that can be done for them.
+ *
+ * Shared by the settings panel and the dispatch board so both resend the same
+ * way; only the permission that gets you there differs.
+ */
+export async function requeueNotificationEmail(
+  ctx: MutationCtx,
+  notification: Doc<"notifications">,
+): Promise<string> {
+  const user = await ctx.db.get(notification.userId);
+  if (!user?.email) throw new Error("This recipient has no email address.");
+
+  const settings = await getSettings(ctx);
+  const template = settings.emailTemplates.find(
+    (item) => item.key === notification.type,
+  );
+  const values = {
+    name: user.name?.split(" ")[0] ?? "there",
+    title: notification.title,
+    body: notification.body,
+    reference: notification.relatedId ?? "",
+    company: settings.companyName,
+  };
+
+  const subject =
+    notification.emailSubject ??
+    render(template?.subject ?? notification.title, values);
+  const text =
+    notification.emailText ??
+    render(template?.body ?? "{{title}}\n\n{{body}}", values);
+  const html = notification.emailHtml;
+
+  await ctx.db.patch(notification._id, {
+    emailStatus: "queued",
+    emailError: undefined,
+    emailSubject: subject,
+    emailText: text,
+    ...(html ? { emailHtml: html } : {}),
+    /* The attempt that is now in flight, so it is not read as stalled. */
+    emailQueuedAt: Date.now(),
+  });
+  await ctx.scheduler.runAfter(0, internal.email.deliver, {
+    notificationId: notification._id,
+    to: user.email,
+    subject,
+    text,
+    html,
+  });
+
+  return user.email;
 }
 
 /** Notify every administrator, optionally only those holding a permission. */

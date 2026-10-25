@@ -18,10 +18,112 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { copyTracking } from "@/lib/clipboard";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ClipboardCopy, Clock3, Maximize2, UserRoundPlus } from "lucide-react";
-import type { MouseEvent, ReactNode } from "react";
+import {
+  ClipboardCopy,
+  Clock3,
+  Mail,
+  MailCheck,
+  MailX,
+  Maximize2,
+  RotateCw,
+  UserRoundPlus,
+} from "lucide-react";
+import { useState, type MouseEvent, type ReactNode } from "react";
+
+/** The last email attempt recorded for a consignment. */
+export type ShipmentEmailState = {
+  emailStatus: "queued" | "sent" | "skipped" | "failed";
+  emailError: string | null;
+  at: number;
+  /** Queued for longer than a send should take: the delivery never reported. */
+  stalled: boolean;
+};
+
+/**
+ * The delivery state of the consignment's last email. A status change says
+ * "queued" until the provider answers, so the board reads the result back
+ * rather than assuming the owner was reached.
+ *
+ * A failed or stalled send also carries the way out of it: a resend from the
+ * row, using the same stored message the failed attempt tried to deliver, so
+ * staff never have to leave the board to fix a delivery.
+ */
+function ShipmentEmailChip({
+  email,
+  reference,
+  onResend,
+}: {
+  email: ShipmentEmailState;
+  /** The consignment's shipping ID, so a row's resend is named for it. */
+  reference: string;
+  onResend?: () => Promise<void>;
+}) {
+  const [resending, setResending] = useState(false);
+  const failed = email.stalled || email.emailStatus === "failed";
+  const skipped = email.emailStatus === "skipped";
+  const sent = email.emailStatus === "sent";
+  const Icon = sent ? MailCheck : failed || skipped ? MailX : Mail;
+  const label = sent
+    ? "Email sent"
+    : failed
+      ? email.stalled
+        ? "Email stalled"
+        : "Email failed"
+      : skipped
+        ? "Email skipped"
+        : "Email queued";
+  const detail = email.emailError
+    ? `${label} · ${email.emailError}`
+    : `${label} · ${formatDateTime(email.at)}`;
+
+  return (
+    <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+      <p
+        title={detail}
+        className={cn(
+          "inline-flex min-w-0 items-center gap-1.5 truncate text-[0.58rem] font-medium",
+          failed || skipped
+            ? "text-amber-700 dark:text-amber-400"
+            : "text-muted-foreground",
+        )}
+      >
+        <Icon className="size-3 shrink-0" strokeWidth={2.2} />
+        <span className="truncate">{label}</span>
+        <span className="truncate font-normal tabular-nums opacity-70">
+          · {formatDateTime(email.at)}
+        </span>
+      </p>
+
+      {/* Offered only where a resend can help: a skipped email has no address
+          to reach, and a delivered one must not be sent twice. */}
+      {failed && onResend ? (
+        <button
+          type="button"
+          disabled={resending}
+          onClick={async () => {
+            setResending(true);
+            try {
+              await onResend();
+            } finally {
+              setResending(false);
+            }
+          }}
+          title="Queue this consignment's last email again"
+          aria-label={`Resend the last email for ${reference}`}
+          className="inline-flex shrink-0 items-center gap-1 rounded-[4px] border border-amber-600/40 px-1.5 py-0.5 text-[0.55rem] font-semibold text-amber-700 transition-colors hover:border-amber-600 hover:bg-amber-500/10 disabled:opacity-60 dark:text-amber-400"
+        >
+          <RotateCw
+            className={cn("size-2.5", resending && "animate-spin")}
+            strokeWidth={2.4}
+          />
+          {resending ? "Resending" : "Resend"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 /** Anything the row itself controls, which a card click must leave alone. */
 const ROW_ACTIONS =
@@ -44,6 +146,8 @@ export function ShipmentBoardRow({
   open,
   onToggle,
   owner,
+  email,
+  onResendEmail,
   controls,
   menu,
   className,
@@ -56,6 +160,10 @@ export function ShipmentBoardRow({
   onToggle: () => void;
   /** Staff only: `null` means the mineral has no owner yet. */
   owner?: { name: string; email: string } | null;
+  /** Staff only: the last email about this consignment; `null` means none. */
+  email?: ShipmentEmailState | null;
+  /** Staff only: queues the last email again; shown only if a send failed. */
+  onResendEmail?: () => Promise<void>;
   /** Staff only: status and assignment controls. */
   controls?: ReactNode;
   /** Member only: the row's actions menu. */
@@ -139,6 +247,16 @@ export function ShipmentBoardRow({
               )}
             </p>
           )}
+
+          {/* The owner line says who should be reached; this says whether the
+              last email actually reached them. */}
+          {email ? (
+            <ShipmentEmailChip
+              email={email}
+              reference={label}
+              onResend={onResendEmail}
+            />
+          ) : null}
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <ShipmentStateChip status={shipment.status} />

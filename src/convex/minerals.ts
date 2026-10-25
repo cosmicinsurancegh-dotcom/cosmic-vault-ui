@@ -18,7 +18,11 @@ import {
   normalizeInviteEmail,
   normalizeInviteName,
 } from "./lib/invite";
-import { notifyUser } from "./lib/notify";
+import {
+  notifyUser,
+  requeueNotificationEmail,
+  STALLED_EMAIL_MS,
+} from "./lib/notify";
 import { ensureCustomerProfile, displayName } from "./lib/people";
 import {
   cleanText,
@@ -1047,6 +1051,100 @@ export const forOwner = query({
         return { mineral, policy, shipment, shipments };
       }),
     );
+  },
+});
+
+/**
+ * The last email sent about each consignment, for the dispatch board.
+ *
+ * Status emails are queued and delivered after the mutation commits, so the
+ * board cannot know from the shipment record whether the owner was reached.
+ * This reads the delivery state back per consignment, which is how a failed or
+ * stalled send becomes obvious where staff actually publish status changes
+ * instead of only in the settings panel.
+ */
+export const emailLog = query({
+  args: { shipmentIds: v.array(v.id("shipments")) },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+    // Deduplicated and capped: the board asks for the rows it is showing.
+    const ids = [...new Set(args.shipmentIds)].slice(0, 120);
+    const now = Date.now();
+
+    const rows = await Promise.all(
+      ids.map(async (shipmentId) => {
+        const attempts = await ctx.db
+          .query("notifications")
+          .withIndex("by_related", (q) => q.eq("relatedId", shipmentId))
+          .take(8);
+        const latest = attempts.sort((a, b) => b.createdAt - a.createdAt)[0];
+        if (!latest) return null;
+        return {
+          shipmentId,
+          emailStatus: latest.emailStatus,
+          emailError: latest.emailError ?? null,
+          emailAttempts: latest.emailAttempts,
+          at: latest.createdAt,
+          // Queued is only a problem once the send should have answered.
+          stalled:
+            latest.emailStatus === "queued" &&
+            (latest.emailQueuedAt ?? latest.createdAt) < now - STALLED_EMAIL_MS,
+        };
+      }),
+    );
+
+    return rows.filter((row) => row !== null);
+  },
+});
+
+/**
+ * Queues a consignment's last email again, from the dispatch board.
+ *
+ * A failed or stalled send is shown on the row, so the fix belongs there too
+ * rather than two screens away in settings. The resend is the message that was
+ * queued, not a template re-render.
+ *
+ * Deliberately narrow: the notification is resolved from the shipment rather
+ * than passed in, so this cannot be used to resend arbitrary mail, and a send
+ * the provider already accepted is refused - a second click must not email the
+ * owner twice. `policies.manage` is the permission that already publishes the
+ * status changes these emails carry, and the staff who do that do not
+ * necessarily hold `settings.manage`.
+ */
+export const resendShipmentEmail = mutation({
+  args: { shipmentId: v.id("shipments") },
+  handler: async (ctx, args) => {
+    const viewer = await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+    const shipment = await ctx.db.get(args.shipmentId);
+    if (!shipment) throw new Error("Shipment not found.");
+
+    const attempts = await ctx.db
+      .query("notifications")
+      .withIndex("by_related", (q) => q.eq("relatedId", shipment._id))
+      .take(8);
+    const latest = attempts.sort((a, b) => b.createdAt - a.createdAt)[0];
+    if (!latest) {
+      throw new Error(
+        "This consignment has no email on record. Publish a status change to send one.",
+      );
+    }
+    if (latest.emailStatus === "sent") {
+      throw new Error(
+        "The provider already accepted this email. Use Settings → Email delivery to reach the owner another way.",
+      );
+    }
+
+    const email = await requeueNotificationEmail(ctx, latest);
+    await writeAudit(ctx, viewer, {
+      action: "shipment.email_resent",
+      entityType: "shipments",
+      entityId: shipment._id,
+      before: { emailStatus: latest.emailStatus },
+      after: { emailStatus: "queued", to: email },
+      reason: latest.emailError,
+    });
+
+    return { to: email, status: latest.emailStatus };
   },
 });
 

@@ -1408,8 +1408,9 @@ function MineralDetailDialog({
                   />
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-[0.62rem] leading-5 text-muted-foreground">
-                      Saving emails {assignee?.email ?? "the assigned member"}{" "}
-                      immediately with the shipment update.
+                      The status saves at once; the update is emailed to{" "}
+                      {assignee?.email ?? "the assigned member"}. Failed sends
+                      are listed under Settings → Email delivery.
                     </p>
                     <Button
                       size="sm"
@@ -1427,7 +1428,7 @@ function MineralDetailDialog({
                           });
                           toast.success(
                             result.notified
-                              ? "Status updated and the member was emailed."
+                              ? `Status updated. The email is queued to ${assignee?.email ?? "the member"}.`
                               : "Status updated. No member email was sent.",
                           );
                           setStatus("");

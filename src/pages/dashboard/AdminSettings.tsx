@@ -644,20 +644,24 @@ export default function AdminSettingsPage() {
       <Panel>
         <PanelHeader
           title="Email delivery issues"
-          description="Failed or skipped deliveries are retained. Retry safely without duplicating in-app notifications."
+          description="Failed, skipped and stalled deliveries are retained. Retry safely without duplicating in-app notifications."
         />
         {issues === undefined ? (
           <LoadingState label="Loading delivery records" />
-        ) : issues.failed.length === 0 && issues.skipped.length === 0 ? (
+        ) : issues.failed.length === 0 &&
+          issues.skipped.length === 0 &&
+          issues.stalled.length === 0 ? (
           <EmptyState icon={MailWarning} title="No delivery issues" description="Queued emails are delivered through the configured integration gateway." />
         ) : (
           <ul className="max-h-[320px] divide-y divide-line overflow-y-auto">
-            {[...issues.failed, ...issues.skipped].map((item) => (
+            {[...issues.failed, ...issues.stalled, ...issues.skipped].map((item) => (
               <li key={item._id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-xs font-medium text-ink">{item.title}</p>
                   <p className="text-[0.62rem] text-muted-foreground">
-                    {item.emailStatus} · attempts {item.emailAttempts} · {formatDateTime(item.createdAt)}
+                    {item.emailStatus === "queued"
+                      ? `stalled · no delivery result after ${issues.stalledAfterMinutes} minutes · ${formatDateTime(item.createdAt)}`
+                      : `${item.emailStatus} · attempts ${item.emailAttempts} · ${formatDateTime(item.createdAt)}`}
                     {item.emailError ? ` · ${item.emailError}` : ""}
                   </p>
                 </div>

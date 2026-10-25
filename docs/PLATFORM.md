@@ -168,14 +168,32 @@ customers, their policies and their own activity report.
 
 **Notifications** - `lib/notify` writes an in-app notification with a dedupe key,
 then schedules `email.deliver`. Delivery results (`queued`, `sent`, `failed`,
-`skipped`) and errors are stored on the notification; staff can review and retry
-(`notifications.deliveryIssues`, `notifications.retryEmail`).
+`skipped`) and errors are stored on the notification, together with the exact
+subject, text and HTML that were queued, so a retry resends the same email
+rather than re-rendering a settings template (the designed shipment emails are
+not built from one). Staff review and retry from `notifications.deliveryIssues`
+and `notifications.retryEmail`, which also lists a send still `queued` minutes
+later - a delivery that never reported back, which nothing else would show.
+Because delivery happens after the mutation commits, a status change reports
+"queued", not "sent", until the provider answers.
 
 **Shipment emails** - every change of a consignment's tracking status emails the
 member through `shipmentEmailDelivery.sendUpdate`. The message is rendered once
 by `vault/shipmentEmail.ts` (the same module the dashboard preview uses), and the
 attempt is recorded in `shipmentEmails` with the provider result, so failures are
-visible instead of silent.
+visible instead of silent. On the register's dispatch board the last attempt is
+read back per consignment (`minerals.emailLog`, indexed on
+`notifications.relatedId`), so a failed, skipped or stalled send shows on the row
+itself rather than only in the settings panel. The board's summary counts those
+consignments above the list as "Email issues", read for the whole register rather
+than the filtered rows so a filter does not change the number. A failed or
+stalled row also carries the way out of it: `minerals.resendShipmentEmail` queues
+that consignment's last email again through the same `requeueNotificationEmail`
+helper the settings panel uses, so the retry is the stored message. It is gated on `policies.manage`
+(the permission that publishes the status changes those emails carry), resolves
+the notification from the shipment rather than accepting an id, refuses a send
+the provider already accepted so a second click cannot email the owner twice, and
+records `shipment.email_resent` in the audit log.
 
 - The template wears the dashboard design system: a porcelain canvas, a white
   4px card with hairline borders, electric-blue accents, ink-navy type, uppercase
@@ -220,21 +238,21 @@ premium marking and stale draft cleanup (`maintenance.ts`).
 
 ## 6. Environment and integrations
 
-| Variable                                        | Used by                                      | Notes                                                                                                                                                                              |
-| ----------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Variable                                        | Used by                                      | Notes                                                                                                                                                                                                                                            |
+| ----------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `VITE_CONVEX_URL`                               | `src/main.tsx`                               | Provided by the platform. Validated by `src/lib/convexUrl.ts`; a missing value resolves to the production deployment, and a value that is not a Convex deployment URL renders the configuration screen instead of being swapped for another host |
-| `CONVEX_SITE_URL`                               | Auth config                                  | Provided by the platform (sets the deployment's own token issuer)                                                                                                                  |
-| `CONVEX_DEPLOYMENT`                             | Convex CLI                                   | Provided by the platform                                                                                                                                                           |
-| `VLY_INTEGRATION_KEY`                           | `convex/email.ts`, `convex/auth/emailOtp.ts` | Platform integration gateway for email. Required for email codes: `emailOtp.ts` refuses with a named error instead of pretending a code was sent                                   |
-| `VLY_INTEGRATION_BASE_URL`                      | `convex/auth/emailOtp.ts`                    | Optional gateway override; defaults to the platform gateway                                                                                                                        |
-| `VLY_CONVEX_AUTH_ISSUER`                        | `convex/auth.config.ts`                      | Optional; issuer for freebuff-signed federated tokens, defaults to `https://freebuff.com`                                                                                          |
-| `VITE_VLY_APP_ID`, `VITE_VLY_MONITORING_URL`    | `src/instrumentation.tsx`                    | Platform-provided error reporting; when either is missing reporting is skipped                                                                                                     |
-| `VITE_SUPABASE_URL`                             | `src/lib/supabase.ts`, `convex/supabase.ts`  | Supabase project URL                                                                                                                                                               |
-| `VITE_SUPABASE_ANON_KEY`                        | `src/lib/supabase.ts`                        | Public key for browser calls (RLS-bound)                                                                                                                                           |
-| `SUPABASE_SERVICE_ROLE_KEY`                     | `convex/supabase.ts`                         | Server-only key for storage/admin calls                                                                                                                                            |
-| `SUPABASE_URL`                                  | `convex/supabase.ts`                         | Optional on the server; falls back to `VITE_SUPABASE_URL`                                                                                                                          |
-| `SUPABASE_PROJECT_REF`                          | Supabase CLI only                            | Optional; not read by app code - the ref is derived from the project URL                                                                                                           |
-| `DEMO_SEED_ENABLED` (+ `DEMO_SEED_ENVIRONMENT`) | `convex/demoSeed.ts`                         | Test-only switch; seeding throws unless it is exactly `1`, and only test suites set it                                                                                             |
+| `CONVEX_SITE_URL`                               | Auth config                                  | Provided by the platform (sets the deployment's own token issuer)                                                                                                                                                                                |
+| `CONVEX_DEPLOYMENT`                             | Convex CLI                                   | Provided by the platform                                                                                                                                                                                                                         |
+| `VLY_INTEGRATION_KEY`                           | `convex/email.ts`, `convex/auth/emailOtp.ts` | Platform integration gateway for email. Required for email codes: `emailOtp.ts` refuses with a named error instead of pretending a code was sent                                                                                                 |
+| `VLY_INTEGRATION_BASE_URL`                      | `convex/auth/emailOtp.ts`                    | Optional gateway override; defaults to the platform gateway                                                                                                                                                                                      |
+| `VLY_CONVEX_AUTH_ISSUER`                        | `convex/auth.config.ts`                      | Optional; issuer for freebuff-signed federated tokens, defaults to `https://freebuff.com`                                                                                                                                                        |
+| `VITE_VLY_APP_ID`, `VITE_VLY_MONITORING_URL`    | `src/instrumentation.tsx`                    | Platform-provided error reporting; when either is missing reporting is skipped                                                                                                                                                                   |
+| `VITE_SUPABASE_URL`                             | `src/lib/supabase.ts`, `convex/supabase.ts`  | Supabase project URL                                                                                                                                                                                                                             |
+| `VITE_SUPABASE_ANON_KEY`                        | `src/lib/supabase.ts`                        | Public key for browser calls (RLS-bound)                                                                                                                                                                                                         |
+| `SUPABASE_SERVICE_ROLE_KEY`                     | `convex/supabase.ts`                         | Server-only key for storage/admin calls                                                                                                                                                                                                          |
+| `SUPABASE_URL`                                  | `convex/supabase.ts`                         | Optional on the server; falls back to `VITE_SUPABASE_URL`                                                                                                                                                                                        |
+| `SUPABASE_PROJECT_REF`                          | Supabase CLI only                            | Optional; not read by app code - the ref is derived from the project URL                                                                                                                                                                         |
+| `DEMO_SEED_ENABLED` (+ `DEMO_SEED_ENVIRONMENT`) | `convex/demoSeed.ts`                         | Test-only switch; seeding throws unless it is exactly `1`, and only test suites set it                                                                                                                                                           |
 
 Every variable has a defined absence behaviour. Browser-side values are
 validated or treated as optional (`getSupabase()` returns `null`, monitoring is

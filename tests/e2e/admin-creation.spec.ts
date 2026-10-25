@@ -77,7 +77,12 @@ const FIXTURES: Record<string, unknown> = {
     emailTemplates: [],
   },
   "staff.list": [],
-  "notifications.deliveryIssues": { failed: [], skipped: [] },
+  "notifications.deliveryIssues": {
+    failed: [],
+    skipped: [],
+    stalled: [],
+    stalledAfterMinutes: 5,
+  },
 };
 
 async function startAs(
