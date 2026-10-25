@@ -338,3 +338,104 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ---- Shipment tracking map ---------------------------------------------
+   Leaflet ships its own neutral chrome. These rules fold it into the vault
+   palette in both themes without touching the library's layout or controls. */
+.shipment-map .leaflet-container {
+  background: var(--ice);
+  font-family: inherit;
+  outline: none;
+}
+
+.shipment-map .leaflet-control-attribution {
+  background: color-mix(in oklab, var(--card) 88%, transparent);
+  color: var(--muted-foreground);
+  font-size: 9px;
+  padding: 1px 5px;
+}
+
+.shipment-map .leaflet-control-attribution a {
+  color: var(--primary);
+}
+
+.shipment-map .leaflet-bar {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.shipment-map .leaflet-bar a {
+  background: var(--card);
+  border-bottom-color: var(--line);
+  color: var(--ink);
+}
+
+.shipment-map .leaflet-bar a:hover {
+  background: var(--ice);
+}
+
+.shipment-map .shipment-map__marker {
+  background: none;
+  border: 0;
+}
+
+.shipment-map__pin,
+.shipment-map__badge {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  box-shadow: 0 10px 20px -14px rgba(8, 18, 39, 0.8);
+}
+
+.shipment-map__pin {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.shipment-map__pin--destination {
+  background: var(--card);
+  color: var(--primary);
+  border: 1px solid color-mix(in oklab, var(--primary) 45%, transparent);
+}
+
+.shipment-map__badge {
+  background: var(--card);
+  color: var(--primary);
+  border: 1px solid var(--line);
+}
+
+.shipment-map__pin svg,
+.shipment-map__badge svg {
+  width: 15px;
+  height: 15px;
+}
+
+.shipment-map__label {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: 0 8px 18px -14px rgba(8, 18, 39, 0.65);
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 6px;
+  white-space: nowrap;
+}
+
+.shipment-map__label::before {
+  display: none;
+}
+
+/* Raster tiles are drawn for a light basemap; invert them for dark mode so the
+   panel keeps the vault's contrast. Markers and the route sit above them. */
+.dark .shipment-map .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9)
+    saturate(0.7);
+}
+
+.dark .shipment-map .leaflet-container {
+  background: oklch(0.24 0.04 255);
+}

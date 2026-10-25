@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AssignMineralDialog } from "@/components/vault/AssignMineralDialog";
+import { ShipmentBoardRow } from "@/components/dashboard/ShipmentBoardRow";
+import { PublishShipmentDialog } from "@/components/vault/PublishShipmentDialog";
 import {
   EmptyState,
   LoadingState,
@@ -8,7 +10,6 @@ import {
   PageHeader,
   Panel,
   PanelHeader,
-  StatusPill,
 } from "@/components/dashboard/PlatformUI";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -18,14 +19,12 @@ import {
   type ShipmentStatus,
 } from "@/convex/lib/shipments";
 import { useAuth } from "@/hooks/use-auth";
-import { formatDate } from "@/lib/format";
 import { STAFF_PERMISSIONS, can } from "@/lib/permissions";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import {
   AlertTriangle,
   ArrowRightLeft,
-  Loader2,
   PackageCheck,
   Search,
   Truck,
@@ -36,7 +35,9 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 type RegisterRow = FunctionReturnType<typeof api.minerals.list>[number];
-type ShipmentRow = RegisterRow & { shipment: NonNullable<RegisterRow["shipment"]> };
+type ShipmentRow = RegisterRow & {
+  shipment: NonNullable<RegisterRow["shipment"]>;
+};
 
 function hasShipment(row: RegisterRow): row is ShipmentRow {
   return row.shipment !== null;
@@ -48,6 +49,9 @@ function hasShipment(row: RegisterRow): row is ShipmentRow {
  * A consignment belongs to a mineral, so assigning one to an account moves the
  * mineral and every shipment attached to it. The server records the change in
  * the audit log, emails the new owner and notifies the previous one.
+ *
+ * The register query carries the current shipment but not its history, so the
+ * live tracking panel reads the mineral's detail record when a row is opened.
  */
 export default function AdminShipmentsPage() {
   const navigate = useNavigate();
@@ -60,9 +64,24 @@ export default function AdminShipmentsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<ShipmentStatus | "all">("all");
   const [assigningId, setAssigningId] = useState<Id<"minerals"> | null>(null);
-  const [updatingId, setUpdatingId] = useState<Id<"shipments"> | null>(null);
+  /* The status select only stages the change; nothing is published until the
+     dialog confirms it, because publishing emails the owner. */
+  const [pending, setPending] = useState<{
+    mineralId: Id<"minerals">;
+    shipmentId: Id<"shipments">;
+    status: ShipmentStatus;
+  } | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [openKey, setOpenKey] = useState<{
+    mineralId: Id<"minerals">;
+    shipmentId: Id<"shipments">;
+  } | null>(null);
 
   const rows = useQuery(api.minerals.list, canManage ? {} : "skip");
+  const detail = useQuery(
+    api.minerals.detail,
+    openKey ? { mineralId: openKey.mineralId } : "skip",
+  );
   const updateStatus = useMutation(api.minerals.updateShipmentStatus);
 
   const shipments = useMemo(() => {
@@ -113,36 +132,47 @@ export default function AdminShipmentsPage() {
   }, [rows]);
 
   const assigning =
-    (rows ?? []).filter(hasShipment).find(
-      (row) => row.mineral._id === assigningId,
-    ) ?? null;
+    (rows ?? [])
+      .filter(hasShipment)
+      .find((row) => row.mineral._id === assigningId) ?? null;
 
-  const changeStatus = async ({
-    mineral,
-    shipment,
-  }: Pick<ShipmentRow, "mineral" | "shipment">, next: ShipmentStatus) => {
-    if (next === shipment.status) return;
-    setUpdatingId(shipment._id);
+  const pendingRow =
+    (rows ?? [])
+      .filter(hasShipment)
+      .find((row) => row.shipment._id === pending?.shipmentId) ?? null;
+
+  /** Errors are left to the dialog, which keeps the form open to show them. */
+  const publishStatus = async (
+    row: Pick<ShipmentRow, "mineral" | "shipment">,
+    input: {
+      status: ShipmentStatus;
+      location?: string;
+      note?: string;
+      estimatedArrivalAt?: number | null;
+    },
+  ) => {
+    setPublishing(true);
     try {
-      const result = await updateStatus({ shipmentId: shipment._id, status: next });
-      const label = SHIPMENT_STATUS_LABELS[next].toLowerCase();
+      const result = await updateStatus({
+        shipmentId: row.shipment._id,
+        status: input.status,
+        location: input.location,
+        note: input.note,
+        estimatedArrivalAt: input.estimatedArrivalAt,
+      });
+      const label = SHIPMENT_STATUS_LABELS[input.status].toLowerCase();
       if (result.notified) {
-        toast.success(`${mineral.name} is now ${label}.`, {
+        toast.success(`${row.mineral.name} is now ${label}.`, {
           description: "The owner has been emailed.",
         });
       } else {
-        toast.warning(`${mineral.name} is now ${label}.`, {
+        toast.warning(`${row.mineral.name} is now ${label}.`, {
           description: "No owner is assigned, so no email was sent.",
         });
       }
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Could not update the shipment status.",
-      );
+      setPending(null);
     } finally {
-      setUpdatingId(null);
+      setPublishing(false);
     }
   };
 
@@ -225,7 +255,7 @@ export default function AdminShipmentsPage() {
       <Panel>
         <PanelHeader
           title="Consignments"
-          description="Every shipment in the register, newest journey first. Assign a record to the member it belongs to or change its published status."
+          description="Every shipment in the register, newest journey first. Assign a record to the member it belongs to, change its published status, or open its live tracking."
           action={
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -243,12 +273,11 @@ export default function AdminShipmentsPage() {
         <div className="flex flex-wrap gap-1.5 border-b border-line px-5 py-3">
           {(["all", ...SHIPMENT_STATUSES] as (ShipmentStatus | "all")[]).map(
             (option) => {
-              const count =
-                option === "all"
-                  ? (rows ?? []).filter(hasShipment).length
-                  : (rows ?? []).filter(hasShipment).filter(
-                      (row) => row.shipment.status === option,
-                    ).length;
+              const count = (rows ?? [])
+                .filter(hasShipment)
+                .filter(
+                  (row) => option === "all" || row.shipment.status === option,
+                ).length;
               const label =
                 option === "all" ? "All" : SHIPMENT_STATUS_LABELS[option];
               return (
@@ -263,7 +292,7 @@ export default function AdminShipmentsPage() {
                       : "rounded-full border border-line bg-card px-3 py-1.5 text-[0.62rem] font-medium leading-none text-muted-foreground transition-colors hover:border-primary/30 hover:text-ink"
                   }
                 >
-                  {label} ({count})
+                  {`${label} (${count})`}
                 </button>
               );
             },
@@ -300,92 +329,75 @@ export default function AdminShipmentsPage() {
             }
           />
         ) : (
-          <div className="divide-y divide-line">
-            {shipments.map(({ mineral, shipment, assignee }) => (
-              <article
-                key={shipment._id}
-                className="grid gap-4 px-5 py-4 transition-colors hover:bg-ice/30 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)_auto] lg:items-center lg:gap-6"
-              >
-                <div className="min-w-0">
-                  <p className="text-[0.5rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    Shipment
-                  </p>
-                  <p className="mt-0.5 truncate text-[0.8rem] font-semibold tracking-[-0.01em] text-ink">
-                    {shipment.reference}
-                  </p>
-                  <p className="mt-0.5 truncate text-[0.62rem] text-muted-foreground">
-                    {mineral.name} · {mineral.reference}
-                  </p>
-                  <p className="mt-1 flex flex-wrap items-center gap-1.5 truncate text-[0.6rem] text-muted-foreground">
-                    {assignee ? (
-                      <>
-                        <UserRoundPlus className="size-3" />
-                        {assignee.name} · {assignee.email}
-                      </>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[0.58rem] font-semibold text-amber-700 dark:text-amber-400">
-                        <UserRoundPlus className="size-3" />
-                        Unassigned
-                      </span>
-                    )}
-                  </p>
-                </div>
+          <div>
+            {shipments.map(({ mineral, policy, shipment, assignee }) => {
+              const isOpen = openKey?.shipmentId === shipment._id;
+              const events =
+                isOpen && detail?.shipment?._id === shipment._id
+                  ? detail.events
+                  : [];
+              const staged = pending?.shipmentId === shipment._id;
 
-                <div className="min-w-0">
-                  <p className="truncate text-[0.72rem] font-medium text-ink">
-                    {shipment.origin} → {shipment.destination}
-                  </p>
-                  <p className="mt-0.5 truncate text-[0.6rem] text-muted-foreground">
-                    {shipment.carrier}
-                    {shipment.trackingNumber
-                      ? ` · ${shipment.trackingNumber}`
-                      : ""}
-                    {shipment.estimatedArrivalAt
-                      ? ` · ETA ${formatDate(shipment.estimatedArrivalAt)}`
-                      : ""}
-                  </p>
-                  <p className="mt-0.5 truncate text-[0.58rem] text-muted-foreground/80">
-                    {shipment.currentLocation
-                      ? `Last seen · ${shipment.currentLocation}`
-                      : "No location recorded"}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                  <StatusPill status={shipment.status} />
-                  <select
-                    aria-label={`Update shipment status for ${mineral.name}`}
-                    value={shipment.status}
-                    disabled={updatingId === shipment._id}
-                    onChange={(event) =>
-                      changeStatus(
-                        { mineral, shipment },
-                        event.target.value as ShipmentStatus,
-                      )
-                    }
-                    className="h-8 cursor-pointer rounded-lg border border-line bg-card px-2 text-[0.62rem] text-ink disabled:opacity-60"
-                  >
-                    {SHIPMENT_STATUSES.map((item) => (
-                      <option key={item} value={item}>
-                        {SHIPMENT_STATUS_LABELS[item]}
-                      </option>
-                    ))}
-                  </select>
-                  {updatingId === shipment._id && (
-                    <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
-                  )}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 rounded-[4px] bg-transparent px-2.5 text-[0.62rem]"
-                    onClick={() => setAssigningId(mineral._id)}
-                  >
-                    <ArrowRightLeft className="size-3" />
-                    {assignee ? "Reassign" : "Assign"}
-                  </Button>
-                </div>
-              </article>
-            ))}
+              return (
+                <ShipmentBoardRow
+                  key={shipment._id}
+                  mineral={mineral}
+                  policy={policy}
+                  shipment={shipment}
+                  events={events}
+                  owner={
+                    assignee
+                      ? { name: assignee.name, email: assignee.email }
+                      : null
+                  }
+                  open={isOpen}
+                  onToggle={() =>
+                    setOpenKey((current) =>
+                      current?.shipmentId === shipment._id
+                        ? null
+                        : {
+                            shipmentId: shipment._id,
+                            mineralId: mineral._id,
+                          },
+                    )
+                  }
+                  controls={
+                    <>
+                      <select
+                        aria-label={`Update shipment status for ${mineral.name}`}
+                        value={
+                          staged && pending ? pending.status : shipment.status
+                        }
+                        disabled={staged && publishing}
+                        onChange={(event) =>
+                          setPending({
+                            mineralId: mineral._id,
+                            shipmentId: shipment._id,
+                            status: event.target.value as ShipmentStatus,
+                          })
+                        }
+                        className="h-8 w-[132px] cursor-pointer rounded-[4px] border border-line bg-card px-2 text-[0.62rem] text-ink disabled:opacity-60 lg:w-full"
+                      >
+                        {SHIPMENT_STATUSES.map((item) => (
+                          <option key={item} value={item}>
+                            {SHIPMENT_STATUS_LABELS[item]}
+                          </option>
+                        ))}
+                      </select>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 w-[132px] justify-center rounded-[4px] bg-transparent px-2.5 text-[0.62rem] lg:w-full"
+                        onClick={() => setAssigningId(mineral._id)}
+                      >
+                        <ArrowRightLeft className="size-3" />
+                        {assignee ? "Reassign" : "Assign"}
+                      </Button>
+                    </>
+                  }
+                />
+              );
+            })}
           </div>
         )}
       </Panel>
@@ -393,9 +405,9 @@ export default function AdminShipmentsPage() {
       <p className="px-1 text-[0.6rem] leading-5 text-muted-foreground">
         Ownership is held on the mineral, so assigning a consignment moves the
         mineral and every shipment attached to it. The change is written to the
-        audit log, the new owner is emailed and the previous owner is notified in
-        their dashboard. Status changes append to the shipment history and email
-        the owner the new step.
+        audit log, the new owner is emailed and the previous owner is notified
+        in their dashboard. Status changes append to the shipment history and
+        email the owner the new step.
       </p>
 
       <AssignMineralDialog
@@ -409,6 +421,23 @@ export default function AdminShipmentsPage() {
         shipmentCount={assigning ? 1 : 0}
         title="Assign this consignment"
       />
+
+      {pendingRow && (
+        <PublishShipmentDialog
+          key={`${pendingRow.shipment._id}-${pending?.status ?? ""}`}
+          open={Boolean(pending)}
+          onOpenChange={(open) => {
+            if (!open && !publishing) setPending(null);
+          }}
+          mineralName={pendingRow.mineral.name}
+          shipmentReference={pendingRow.shipment.reference}
+          currentStatus={pendingRow.shipment.status}
+          currentLocation={pendingRow.shipment.currentLocation}
+          currentEta={pendingRow.shipment.estimatedArrivalAt}
+          initialStatus={pending?.status}
+          onSubmit={(input) => publishStatus(pendingRow, input)}
+        />
+      )}
     </div>
   );
 }

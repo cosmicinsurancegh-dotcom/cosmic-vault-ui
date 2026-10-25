@@ -13,7 +13,11 @@ import {
   type Viewer,
 } from "./lib/authz";
 import { writeAudit } from "./lib/audit";
-import { inviteUser, normalizeInviteEmail, normalizeInviteName } from "./lib/invite";
+import {
+  inviteUser,
+  normalizeInviteEmail,
+  normalizeInviteName,
+} from "./lib/invite";
 import { notifyUser } from "./lib/notify";
 import { ensureCustomerProfile, displayName } from "./lib/people";
 import {
@@ -672,12 +676,31 @@ export const detach = mutation({
   },
 });
 
+/**
+ * The publish dialog converts the date staff picked into a timestamp. The range
+ * is guarded so a mistyped year cannot move a consignment out of living memory.
+ */
+function readEstimatedArrival(value: number | undefined) {
+  if (value === undefined) return undefined;
+  const at = Math.round(value);
+  if (
+    !Number.isFinite(at) ||
+    at < Date.UTC(2000, 0, 1) ||
+    at > Date.UTC(2100, 0, 1)
+  ) {
+    throw new Error("Enter a valid estimated delivery date.");
+  }
+  return at;
+}
+
 export const updateShipmentStatus = mutation({
   args: {
     shipmentId: v.id("shipments"),
     status: shipmentStatusValidator,
     location: v.optional(v.string()),
     note: v.optional(v.string()),
+    /** A new delivery estimate; `null` clears it, omit it to leave it alone. */
+    estimatedArrivalAt: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, args) => {
     const viewer = await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
@@ -696,6 +719,21 @@ export const updateShipmentStatus = mutation({
     const location =
       cleanText(args.location, "Location", 120) || shipment.currentLocation;
     const note = cleanText(args.note, "Note", 2000) || undefined;
+    const clearingEstimate = args.estimatedArrivalAt === null;
+    const requestedEta =
+      typeof args.estimatedArrivalAt === "number"
+        ? args.estimatedArrivalAt
+        : undefined;
+    const estimatedArrivalAt = clearingEstimate
+      ? undefined
+      : (readEstimatedArrival(requestedEta) ?? shipment.estimatedArrivalAt);
+    if (
+      estimatedArrivalAt !== undefined &&
+      shipment.departureAt !== undefined &&
+      estimatedArrivalAt < shipment.departureAt
+    ) {
+      throw new Error("Estimated arrival must be after departure.");
+    }
 
     await ctx.db.patch(shipment._id, {
       status: args.status,
@@ -703,6 +741,12 @@ export const updateShipmentStatus = mutation({
       updatedAt: now,
       lastStatusAt: now,
       updatedBy: viewer.user._id,
+      /* Clearing writes `undefined`, which removes the field from the record. */
+      ...(estimatedArrivalAt === undefined
+        ? clearingEstimate
+          ? { estimatedArrivalAt: undefined }
+          : {}
+        : { estimatedArrivalAt }),
     });
 
     const eventId = await ctx.db.insert("shipmentEvents", {
@@ -721,8 +765,17 @@ export const updateShipmentStatus = mutation({
       action: "shipment.status_changed",
       entityType: "shipments",
       entityId: shipment._id,
-      before: { status: shipment.status, location: shipment.currentLocation },
-      after: { status: args.status, location },
+      before: {
+        status: shipment.status,
+        location: shipment.currentLocation,
+        estimatedArrivalAt: shipment.estimatedArrivalAt,
+      },
+      after: {
+        status: args.status,
+        location,
+        /* `null` records the removal, so it reads apart from an untouched date. */
+        estimatedArrivalAt: clearingEstimate ? null : estimatedArrivalAt,
+      },
       reason: note,
     });
 
@@ -739,6 +792,7 @@ export const updateShipmentStatus = mutation({
           ...shipment,
           status: args.status,
           currentLocation: location,
+          estimatedArrivalAt,
           updatedAt: now,
           lastStatusAt: now,
         };

@@ -171,7 +171,12 @@ test.describe("member shipment tracking", () => {
     ).toBeVisible();
     await expect(page.getByText("BR-4471-88")).toBeVisible();
     await expect(page.getByText("MA-9021-14")).toBeVisible();
-    await expect(page.getByText(/London vault → Zurich vault/)).toBeVisible();
+    // The route is drawn as a dispatch board, so its ends carry the place names
+    // and the rail itself names the whole journey for assistive technology.
+    await expect(
+      page.getByLabel("Route from London vault to Zurich vault"),
+    ).toBeVisible();
+    await expect(page.getByText("Zurich vault", { exact: true })).toBeVisible();
     await expect(page.getByText(/Cleared customs in Basel\./)).toBeVisible();
     await expect(page.getByText(/Signed for by T\. Berg\./)).toBeVisible();
 
@@ -206,6 +211,67 @@ test.describe("member shipment tracking", () => {
 
     await page.getByLabel("Search shipments").fill("malca");
     await expect(page.getByText("MA-9021-14")).toBeVisible();
+  });
+
+  test("opens the live tracking panel inline", async ({ page }) => {
+    await startSignedIn(page);
+    await page.goto("/dashboard/shipments");
+
+    const toggle = page.getByRole("button", {
+      name: "Show live tracking for CV-SHP-3001",
+    });
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await toggle.click();
+
+    const panel = page.locator("#live-e2e-member-shipment-1");
+    await expect(panel).toBeVisible();
+    await expect(
+      panel.getByRole("heading", { name: "Live shipment tracking" }),
+    ).toBeVisible();
+    await expect(panel.getByLabel("Milestones for CV-SHP-3001")).toBeVisible();
+    await expect(panel.getByText("Transport mode")).toBeVisible();
+    await expect(
+      panel.getByText("Brink's", { exact: true }).first(),
+    ).toBeVisible();
+    await expect(panel.getByText("Shipment details")).toBeVisible();
+    await expect(panel.getByText("Gold", { exact: true })).toBeVisible();
+    await expect(panel.getByText("Cover", { exact: true })).toBeVisible();
+    await expect(panel.getByText("Lloyd's of London")).toBeVisible();
+    await expect(panel.getByText("Progress updates")).toBeVisible();
+    await expect(panel.getByText("Cleared customs in Basel.")).toBeVisible();
+
+    // The live view fits its card at desk width and the map keeps its height.
+    await expect(panel.locator(".shipment-map")).toBeVisible();
+    const layout = await panel.evaluate((node) => ({
+      overflow: node.scrollWidth - node.clientWidth,
+      mapHeight: Math.round(
+        document
+          .querySelector(".shipment-map")
+          ?.getBoundingClientRect().height ?? 0,
+      ),
+    }));
+    expect(layout.overflow).toBeLessThanOrEqual(1);
+    expect(layout.mapHeight).toBeGreaterThan(200);
+
+    // The panel belongs to its own row: the delivered consignment stays closed.
+    await expect(page.locator("#live-e2e-member-shipment-2")).toHaveCount(0);
+
+    // Row actions stay available without opening the record.
+    await page.getByRole("button", { name: "Actions for CV-SHP-3001" }).click();
+    await expect(
+      page.getByRole("menuitem", { name: "Copy tracking number" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("menuitem", { name: "View my minerals" }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    const hide = page.getByRole("button", {
+      name: "Hide live tracking for CV-SHP-3001",
+    });
+    await expect(hide).toHaveAttribute("aria-expanded", "true");
+    await hide.click();
+    await expect(panel).toHaveCount(0);
   });
 
   test("explains an empty tracking desk", async ({ page }) => {

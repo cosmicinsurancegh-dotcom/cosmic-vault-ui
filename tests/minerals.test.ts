@@ -299,6 +299,95 @@ describe("minerals and shipments", () => {
     expect(mine[0].shipment?.currentLocation).toBe("Basel, CH");
   });
 
+  it("moves the estimated delivery date with a status change", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+
+    const nextEta = Date.UTC(2027, 0, 15);
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.updateShipmentStatus, {
+        shipmentId: created.shipmentId,
+        status: "in_transit",
+        location: "Basel, CH",
+        estimatedArrivalAt: nextEta,
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    const stored = await t.run(
+      async (ctx) => await ctx.db.get(created.shipmentId),
+    );
+    expect(stored?.estimatedArrivalAt).toBe(nextEta);
+
+    // The member sees the new date on the tracking desk.
+    const mine = await t
+      .withIdentity({ subject: client })
+      .query(api.minerals.mine, {});
+    expect(mine[0].shipment?.estimatedArrivalAt).toBe(nextEta);
+
+    // An estimate before departure is refused, so the history stays coherent.
+    await expect(
+      t
+        .withIdentity({ subject: admin })
+        .mutation(api.minerals.updateShipmentStatus, {
+          shipmentId: created.shipmentId,
+          status: "customs_hold",
+          estimatedArrivalAt: Date.UTC(2020, 5, 1),
+        }),
+    ).rejects.toThrow(/after departure/i);
+  });
+
+  it("clears a delivery estimate that no longer applies", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.updateShipmentStatus, {
+        shipmentId: created.shipmentId,
+        status: "customs_hold",
+        note: "Carrier withdrew the sailing; the date is being re-planned.",
+        estimatedArrivalAt: null,
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    const stored = await t.run(async (ctx) => ({
+      shipment: await ctx.db.get(created.shipmentId),
+    }));
+    // The field is gone, not left holding the old date.
+    expect(stored.shipment?.estimatedArrivalAt).toBeUndefined();
+    expect(stored.shipment).toMatchObject({
+      status: "customs_hold",
+      origin: "Zurich, CH",
+    });
+
+    // The audit entry records the removal distinctly from an untouched date.
+    const audit = await t.run(
+      async (ctx) => await ctx.db.query("auditLogs").collect(),
+    );
+    const change = audit.find(
+      (entry) => entry.action === "shipment.status_changed",
+    );
+    expect(change?.before.estimatedArrivalAt).toBe(Date.UTC(2026, 9, 24));
+    expect(change?.after.estimatedArrivalAt).toBeNull();
+
+    // The member's desk now holds no estimate rather than a stale one.
+    const mine = await t
+      .withIdentity({ subject: client })
+      .query(api.minerals.mine, {});
+    expect(mine[0].shipment?.estimatedArrivalAt).toBeUndefined();
+  });
+
   it("rejects a status change that changes nothing", async () => {
     const t = test();
     const admin = await seedAdmin(t);
@@ -573,12 +662,10 @@ describe("minerals for a customer record", () => {
     const first = await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.create, payload(client));
-    await t
-      .withIdentity({ subject: admin })
-      .mutation(api.minerals.create, {
-        ...payload(other),
-        policy: { ...payload().policy, policyNumber: "CV-MIN-2026-200" },
-      });
+    await t.withIdentity({ subject: admin }).mutation(api.minerals.create, {
+      ...payload(other),
+      policy: { ...payload().policy, policyNumber: "CV-MIN-2026-200" },
+    });
 
     await expect(
       t
@@ -658,7 +745,9 @@ describe("unassigned minerals", () => {
     expect(result.notified).toBe(true);
 
     expect(
-      await t.withIdentity({ subject: admin }).query(api.minerals.unassigned, {}),
+      await t
+        .withIdentity({ subject: admin })
+        .query(api.minerals.unassigned, {}),
     ).toHaveLength(0);
     expect(
       await t.withIdentity({ subject: client }).query(api.minerals.mine, {}),
@@ -743,7 +832,9 @@ describe("detaching minerals", () => {
     ).toHaveLength(0);
     expect(
       (
-        await t.withIdentity({ subject: admin }).query(api.minerals.unassigned, {})
+        await t
+          .withIdentity({ subject: admin })
+          .query(api.minerals.unassigned, {})
       ).map((row) => row.mineral._id),
     ).toContain(created.mineralId);
     expect(
