@@ -4,7 +4,7 @@ import {
   formatDateTime,
   formatMoney,
   statusLabel,
-  toneForStatus,
+  statusTone,
 } from "@/lib/format";
 import { Loader2 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
@@ -38,7 +38,11 @@ export function PageHeader({
           </p>
         )}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2 self-start">{actions}</div>}
+      {actions && (
+        <div className="flex flex-wrap items-center gap-2 self-start">
+          {actions}
+        </div>
+      )}
     </header>
   );
 }
@@ -51,7 +55,9 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-[4px] border border-line bg-card", className)}>
+    <section
+      className={cn("rounded-[4px] border border-line bg-card", className)}
+    >
       {children}
     </section>
   );
@@ -69,9 +75,13 @@ export function PanelHeader({
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4">
       <div>
-        <h2 className="text-sm font-semibold tracking-[-0.01em] text-ink">{title}</h2>
+        <h2 className="text-sm font-semibold tracking-[-0.01em] text-ink">
+          {title}
+        </h2>
         {description && (
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            {description}
+          </p>
         )}
       </div>
       {action}
@@ -105,7 +115,11 @@ export function MetricTile({
       <p className="mt-4 text-[1.7rem] font-semibold leading-none tracking-[-0.04em] text-ink">
         {value}
       </p>
-      {helper && <p className="mt-2 text-[0.7rem] leading-4 text-muted-foreground">{helper}</p>}
+      {helper && (
+        <p className="mt-2 text-[0.7rem] leading-4 text-muted-foreground">
+          {helper}
+        </p>
+      )}
     </>
   );
   const className =
@@ -119,7 +133,11 @@ export function MetricTile({
   }
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={cn(className, "text-left")}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(className, "text-left")}
+      >
         {content}
       </button>
     );
@@ -127,14 +145,26 @@ export function MetricTile({
   return <div className={className}>{content}</div>;
 }
 
-export function StatusPill({ status }: { status?: string }) {
+/**
+ * A status is a dot and its name, never a boxed chip: the row already frames
+ * it, so only the tint marks the state.
+ */
+export function StatusPill({
+  status,
+  className,
+}: {
+  status?: string;
+  className?: string;
+}) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded-[4px] border px-2.5 py-0.5 text-[0.62rem] font-semibold",
-        toneForStatus(status),
+        "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[0.62rem] font-medium",
+        statusTone(status),
+        className,
       )}
     >
+      <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-current" />
       {statusLabel(status)}
     </span>
   );
@@ -160,7 +190,9 @@ export function EmptyState({
       )}
       <p className="mt-4 text-sm font-semibold text-ink">{title}</p>
       {description && (
-        <p className="mt-1.5 max-w-sm text-xs leading-5 text-muted-foreground">{description}</p>
+        <p className="mt-1.5 max-w-sm text-xs leading-5 text-muted-foreground">
+          {description}
+        </p>
       )}
       {action && <div className="mt-4">{action}</div>}
     </div>
@@ -192,9 +224,19 @@ export function Callout({
     danger: "border-destructive/30 bg-destructive/[0.06] text-ink",
   };
   return (
-    <div className={cn("rounded-xl border px-4 py-3 text-xs leading-5", tones[tone])}>
+    <div
+      className={cn(
+        "rounded-xl border px-4 py-3 text-xs leading-5",
+        tones[tone],
+      )}
+    >
       {title && <p className="text-xs font-semibold">{title}</p>}
-      <div className={cn(title && "mt-1", "text-xs leading-5 text-muted-foreground")}>
+      <div
+        className={cn(
+          title && "mt-1",
+          "text-xs leading-5 text-muted-foreground",
+        )}
+      >
         {children}
       </div>
     </div>
@@ -252,7 +294,9 @@ export function Timeline({
   }[];
 }) {
   if (items.length === 0) {
-    return <p className="px-5 py-6 text-xs text-muted-foreground">No history yet.</p>;
+    return (
+      <p className="px-5 py-6 text-xs text-muted-foreground">No history yet.</p>
+    );
   }
   return (
     <ol className="space-y-4">
@@ -263,8 +307,12 @@ export function Timeline({
             {formatDateTime(item.at)}
             {item.internal && " · internal"}
           </p>
-          {item.title && <p className="mt-1 text-sm font-medium text-ink">{item.title}</p>}
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.body}</p>
+          {item.title && (
+            <p className="mt-1 text-sm font-medium text-ink">{item.title}</p>
+          )}
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            {item.body}
+          </p>
         </li>
       ))}
     </ol>
@@ -314,12 +362,20 @@ export function Pagination({
 export function TableShell({ children }: { children: ReactNode }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[640px] border-collapse text-left text-sm">{children}</table>
+      <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+        {children}
+      </table>
     </div>
   );
 }
 
-export function Th({ children, className }: { children?: ReactNode; className?: string }) {
+export function Th({
+  children,
+  className,
+}: {
+  children?: ReactNode;
+  className?: string;
+}) {
   return (
     <th
       className={cn(
@@ -332,14 +388,35 @@ export function Th({ children, className }: { children?: ReactNode; className?: 
   );
 }
 
-export function Td({ children, className }: { children?: ReactNode; className?: string }) {
+export function Td({
+  children,
+  className,
+}: {
+  children?: ReactNode;
+  className?: string;
+}) {
   return (
-    <td className={cn("border-b border-line/70 px-5 py-3 align-middle text-xs text-ink", className)}>
+    <td
+      className={cn(
+        "border-b border-line/70 px-5 py-3 align-middle text-xs text-ink",
+        className,
+      )}
+    >
       {children}
     </td>
   );
 }
 
-export function DateCell({ value, timeZone }: { value?: number; timeZone?: string }) {
-  return <span className="whitespace-nowrap">{formatDate(value, "en-GB", timeZone)}</span>;
+export function DateCell({
+  value,
+  timeZone,
+}: {
+  value?: number;
+  timeZone?: string;
+}) {
+  return (
+    <span className="whitespace-nowrap">
+      {formatDate(value, "en-GB", timeZone)}
+    </span>
+  );
 }

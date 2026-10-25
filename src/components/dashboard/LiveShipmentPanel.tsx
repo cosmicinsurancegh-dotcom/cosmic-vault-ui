@@ -319,7 +319,7 @@ export function LiveShipmentPanel({
         </h3>
         <ShipmentStateChip
           status={shipment.status}
-          className="px-3 py-1.5 text-[0.66rem]"
+          className="text-[0.66rem]"
         />
       </div>
 

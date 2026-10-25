@@ -9,9 +9,9 @@ export type ShipmentSignal = {
   Icon: ComponentType<{ className?: string; strokeWidth?: number }>;
 };
 
-const SUCCESS = "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
-const WARNING = "bg-amber-500/10 text-amber-700 dark:text-amber-400";
-const DANGER = "bg-destructive/10 text-destructive";
+const SUCCESS = "text-emerald-700 dark:text-emerald-400";
+const WARNING = "text-amber-700 dark:text-amber-400";
+const DANGER = "text-destructive";
 
 /**
  * The one exception worth flagging next to the status, read from the record

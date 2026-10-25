@@ -1,7 +1,6 @@
 import { shipmentModeFor } from "./shipmentMode";
 import {
   SHIPMENT_STAGES,
-  SHIPMENT_STATUS_LABELS,
   shipmentNeedsAttention,
   shipmentStageCount,
   type ShipmentStatus,
@@ -90,8 +89,10 @@ export function ShipmentRouteRail({
     {
       key: "position",
       kicker: "Position",
-      title:
-        shipment.currentLocation ?? SHIPMENT_STATUS_LABELS[shipment.status],
+      /* The status has its own dot and word wherever this rail is drawn, so the
+         station names the place. Without one it says so, rather than repeating
+         the status as if it were a location. */
+      title: shipment.currentLocation ?? "No location recorded",
       lines: [
         `Updated · ${formatDateTime(latest?.createdAt ?? shipment.lastStatusAt)}`,
         events.length > 0

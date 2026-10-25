@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { AssignMineralDialog } from "@/components/vault/AssignMineralDialog";
 import { ShipmentBoardRow } from "@/components/dashboard/ShipmentBoardRow";
 import { PublishShipmentDialog } from "@/components/vault/PublishShipmentDialog";
+import { ShipmentRequestPanel } from "@/components/vault/ShipmentRequestPanel";
 import {
   EmptyState,
   LoadingState,
@@ -20,20 +21,32 @@ import {
 } from "@/convex/lib/shipments";
 import { useAuth } from "@/hooks/use-auth";
 import { STAFF_PERMISSIONS, can } from "@/lib/permissions";
+import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import {
   AlertTriangle,
-  ArrowRightLeft,
   MailX,
   PackageCheck,
   Search,
   Truck,
   UserRoundPlus,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Component, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
+
+/** The decisions a request can carry, as the board filters on them. */
+const REQUEST_STATES = ["pending", "approved", "declined"] as const;
+type RequestState = (typeof REQUEST_STATES)[number];
+type RequestFilter = RequestState | "any";
+
+const REQUEST_FILTER_LABELS: Record<RequestFilter, string> = {
+  any: "Any",
+  pending: "Pending",
+  approved: "Approved",
+  declined: "Declined",
+};
 
 type RegisterRow = FunctionReturnType<typeof api.minerals.list>[number];
 type ShipmentRow = RegisterRow & {
@@ -42,6 +55,40 @@ type ShipmentRow = RegisterRow & {
 
 function hasShipment(row: RegisterRow): row is ShipmentRow {
   return row.shipment !== null;
+}
+
+/**
+ * A failed secondary query must not take the board down with it. The request
+ * queue is fetched separately from the register, so a backend that has not been
+ * updated - or one transient server error - should cost staff the queue, not
+ * the consignments they came here to manage.
+ */
+class RequestQueueBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    if (this.state.failed) {
+      return (
+        <div
+          role="status"
+          className="rounded-[4px] border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-[0.62rem] leading-5 text-amber-800 dark:text-amber-300"
+        >
+          The shipment-request queue could not be loaded, so it is hidden for
+          now. The deployment may be missing the latest backend functions; the
+          consignment board below is unaffected. Reload once it has been
+          updated.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 /**
@@ -67,13 +114,15 @@ export default function AdminShipmentsPage() {
   );
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<ShipmentStatus | "all">("all");
+  const [requestState, setRequestState] = useState<RequestFilter>("any");
   const [assigningId, setAssigningId] = useState<Id<"minerals"> | null>(null);
-  /* The status select only stages the change; nothing is published until the
-     dialog confirms it, because publishing emails the owner. */
+  /* Opening the publish dialog only names the consignment: the status itself
+     is chosen inside it, where the location and note that explain the change
+     are entered. Nothing is published until that dialog confirms it, because
+     publishing emails the owner. */
   const [pending, setPending] = useState<{
     mineralId: Id<"minerals">;
     shipmentId: Id<"shipments">;
-    status: ShipmentStatus;
   } | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -113,32 +162,41 @@ export default function AdminShipmentsPage() {
 
   const shipments = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return (rows ?? [])
-      .filter(hasShipment)
-      .filter((row) => status === "all" || row.shipment.status === status)
-      .filter((row) => {
-        if (!query) return true;
-        return [
-          row.shipment.reference,
-          row.shipment.trackingNumber ?? "",
-          row.shipment.carrier,
-          row.shipment.origin,
-          row.shipment.destination,
-          row.mineral.name,
-          row.mineral.reference,
-          row.assignee?.name ?? "",
-          row.assignee?.email ?? "",
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-      })
-      .sort(
-        (a, b) =>
-          (a.shipment.estimatedArrivalAt ?? a.shipment.createdAt) -
-          (b.shipment.estimatedArrivalAt ?? b.shipment.createdAt),
-      );
-  }, [rows, search, status]);
+    return (
+      (rows ?? [])
+        .filter(hasShipment)
+        .filter((row) => status === "all" || row.shipment.status === status)
+        /* A mineral keeps every request it ever carried, so the filter isolates
+         the consignments whose trail contains a request in that state. */
+        .filter(
+          (row) =>
+            requestState === "any" ||
+            (row.requests ?? []).some((entry) => entry.status === requestState),
+        )
+        .filter((row) => {
+          if (!query) return true;
+          return [
+            row.shipment.reference,
+            row.shipment.trackingNumber ?? "",
+            row.shipment.carrier,
+            row.shipment.origin,
+            row.shipment.destination,
+            row.mineral.name,
+            row.mineral.reference,
+            row.assignee?.name ?? "",
+            row.assignee?.email ?? "",
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(query);
+        })
+        .sort(
+          (a, b) =>
+            (a.shipment.estimatedArrivalAt ?? a.shipment.createdAt) -
+            (b.shipment.estimatedArrivalAt ?? b.shipment.createdAt),
+        )
+    );
+  }, [rows, search, status, requestState]);
 
   /* Delivery state is read back per consignment: a status email is queued and
      sent after the mutation commits, so the shipment row itself cannot say
@@ -340,10 +398,14 @@ export default function AdminShipmentsPage() {
         />
       </div>
 
+      <RequestQueueBoundary>
+        <ShipmentRequestPanel />
+      </RequestQueueBoundary>
+
       <Panel>
         <PanelHeader
           title="Consignments"
-          description="Every shipment in the register, newest journey first. Assign a record to the member it belongs to, change its published status, or open its live tracking."
+          description="Every shipment in the register, newest journey first. Filter by status or by what the member asked for, assign a record to the member it belongs to, change its published status, or open its live tracking."
           action={
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -358,56 +420,111 @@ export default function AdminShipmentsPage() {
           }
         />
 
-        <div className="flex flex-wrap gap-1.5 border-b border-line px-5 py-3">
-          {(["all", ...SHIPMENT_STATUSES] as (ShipmentStatus | "all")[]).map(
-            (option) => {
+        {/* Status and request filters share one quiet row: a status narrows the
+            register, a decision narrows it further, and neither needs a box. */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-5 py-3">
+          <div
+            role="group"
+            aria-label="Filter by status"
+            className="flex flex-wrap items-center gap-x-3 gap-y-1.5"
+          >
+            {(["all", ...SHIPMENT_STATUSES] as (ShipmentStatus | "all")[]).map(
+              (option) => {
+                const count = (rows ?? [])
+                  .filter(hasShipment)
+                  .filter(
+                    (row) => option === "all" || row.shipment.status === option,
+                  ).length;
+                const label =
+                  option === "all" ? "All" : SHIPMENT_STATUS_LABELS[option];
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setStatus(option)}
+                    aria-pressed={status === option}
+                    className={cn(
+                      "text-[0.62rem] font-medium transition-colors",
+                      status === option
+                        ? "text-ink underline decoration-primary decoration-2 underline-offset-4"
+                        : "text-muted-foreground hover:text-ink",
+                    )}
+                  >
+                    {label}{" "}
+                    <span className="tabular-nums text-muted-foreground">
+                      ({count})
+                    </span>
+                  </button>
+                );
+              },
+            )}
+          </div>
+
+          <span aria-hidden className="h-4 w-px bg-line" />
+
+          <div
+            role="group"
+            aria-label="Filter by request state"
+            className="flex flex-wrap items-center gap-x-3 gap-y-1.5"
+          >
+            <span className="text-[0.56rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Requests
+            </span>
+            {(["any", ...REQUEST_STATES] as RequestFilter[]).map((option) => {
               const count = (rows ?? [])
                 .filter(hasShipment)
                 .filter(
-                  (row) => option === "all" || row.shipment.status === option,
+                  (row) =>
+                    option === "any" ||
+                    (row.requests ?? []).some(
+                      (entry) => entry.status === option,
+                    ),
                 ).length;
-              const label =
-                option === "all" ? "All" : SHIPMENT_STATUS_LABELS[option];
               return (
                 <button
                   key={option}
                   type="button"
-                  onClick={() => setStatus(option)}
-                  aria-pressed={status === option}
-                  className={
-                    status === option
-                      ? "rounded-full border border-primary bg-primary px-3 py-1.5 text-[0.62rem] font-medium leading-none text-primary-foreground"
-                      : "rounded-full border border-line bg-card px-3 py-1.5 text-[0.62rem] font-medium leading-none text-muted-foreground transition-colors hover:border-primary/30 hover:text-ink"
-                  }
+                  onClick={() => setRequestState(option)}
+                  aria-pressed={requestState === option}
+                  className={cn(
+                    "text-[0.62rem] font-medium transition-colors",
+                    requestState === option
+                      ? "text-ink underline decoration-primary decoration-2 underline-offset-4"
+                      : "text-muted-foreground hover:text-ink",
+                  )}
                 >
-                  {`${label} (${count})`}
+                  {REQUEST_FILTER_LABELS[option]}{" "}
+                  <span className="tabular-nums text-muted-foreground">
+                    ({count})
+                  </span>
                 </button>
               );
-            },
-          )}
+            })}
+          </div>
         </div>
 
         {shipments.length === 0 ? (
           <EmptyState
             icon={Truck}
             title={
-              search.trim() || status !== "all"
+              search.trim() || status !== "all" || requestState !== "any"
                 ? "No consignments match."
                 : "No consignments recorded yet."
             }
             description={
-              search.trim() || status !== "all"
-                ? "Change the status filter, or search a different shipment, mineral or owner."
+              search.trim() || status !== "all" || requestState !== "any"
+                ? "Change the status or request filter, or search a different shipment, mineral or owner."
                 : "A shipment is recorded with its mineral in the mineral register, then it appears here for assignment and tracking."
             }
             action={
-              search.trim() || status !== "all" ? (
+              search.trim() || status !== "all" || requestState !== "any" ? (
                 <Button
                   size="sm"
                   variant="outline"
                   className="rounded-[4px] bg-transparent"
                   onClick={() => {
                     setStatus("all");
+                    setRequestState("any");
                     setSearch("");
                   }}
                 >
@@ -425,7 +542,6 @@ export default function AdminShipmentsPage() {
                 isOpen && detail?.shipment?._id === shipment._id
                   ? detail.events
                   : [];
-              const staged = pending?.shipmentId === shipment._id;
 
               return (
                 <ShipmentBoardRow
@@ -441,43 +557,37 @@ export default function AdminShipmentsPage() {
                   }
                   email={deliveryByShipment.get(shipment._id) ?? null}
                   onResendEmail={() => resendEmailFor(row)}
+                  requests={row.requests}
                   open={isOpen}
                   onToggle={() =>
                     setLinkedShipment(isOpen ? null : shipment._id)
                   }
                   controls={
-                    <>
-                      <select
-                        aria-label={`Update shipment status for ${mineral.name}`}
-                        value={
-                          staged && pending ? pending.status : shipment.status
-                        }
-                        disabled={staged && publishing}
-                        onChange={(event) =>
+                    <div className="flex items-center gap-3 lg:flex-col lg:items-end lg:gap-1">
+                      {/* The status itself is written once, as the dot and word
+                          on the left of the row; here it is only an action, and
+                          the dialog asks which status it moves to. */}
+                      <button
+                        type="button"
+                        onClick={() =>
                           setPending({
                             mineralId: mineral._id,
                             shipmentId: shipment._id,
-                            status: event.target.value as ShipmentStatus,
                           })
                         }
-                        className="h-8 w-[132px] cursor-pointer rounded-[4px] border border-line bg-card px-2 text-[0.62rem] text-ink disabled:opacity-60 lg:w-full"
+                        aria-label={`Change status for ${mineral.name}`}
+                        className="text-[0.62rem] font-medium text-ink/75 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                       >
-                        {SHIPMENT_STATUSES.map((item) => (
-                          <option key={item} value={item}>
-                            {SHIPMENT_STATUS_LABELS[item]}
-                          </option>
-                        ))}
-                      </select>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-[132px] justify-center rounded-[4px] bg-transparent px-2.5 text-[0.62rem] lg:w-full"
+                        Change status
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setAssigningId(mineral._id)}
+                        className="text-[0.62rem] font-medium text-muted-foreground transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                       >
-                        <ArrowRightLeft className="size-3" />
                         {assignee ? "Reassign" : "Assign"}
-                      </Button>
-                    </>
+                      </button>
+                    </div>
                   }
                 />
               );
@@ -508,7 +618,7 @@ export default function AdminShipmentsPage() {
 
       {pendingRow && (
         <PublishShipmentDialog
-          key={`${pendingRow.shipment._id}-${pending?.status ?? ""}`}
+          key={pendingRow.shipment._id}
           open={Boolean(pending)}
           onOpenChange={(open) => {
             if (!open && !publishing) setPending(null);
@@ -518,7 +628,6 @@ export default function AdminShipmentsPage() {
           currentStatus={pendingRow.shipment.status}
           currentLocation={pendingRow.shipment.currentLocation}
           currentEta={pendingRow.shipment.estimatedArrivalAt}
-          initialStatus={pending?.status}
           onSubmit={(input) => publishStatus(pendingRow, input)}
         />
       )}

@@ -52,58 +52,46 @@ export function statusLabel(value?: string) {
   return STATUS_LABELS[value] ?? value.replace(/_/g, " ");
 }
 
-const TONES: Record<string, string> = {
-  active:
-    "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  succeeded:
-    "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  paid: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  approved:
-    "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  verified:
-    "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  sent: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  quoted:
-    "border-primary/25 bg-primary/10 text-primary dark:text-electric-soft",
-  under_assessment:
-    "border-primary/25 bg-primary/10 text-primary dark:text-electric-soft",
-  submitted: "border-halo/50 bg-halo/20 text-[#7a5a1c] dark:text-halo",
-  under_review: "border-halo/50 bg-halo/20 text-[#7a5a1c] dark:text-halo",
-  additional_info_required:
-    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  pending:
-    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  payment_pending:
-    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  renewal_pending:
-    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  awaiting_customer:
-    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  declined: "border-destructive/30 bg-destructive/10 text-destructive",
-  failed: "border-destructive/30 bg-destructive/10 text-destructive",
-  cancelled: "border-destructive/30 bg-destructive/10 text-destructive",
-  suspended: "border-destructive/30 bg-destructive/10 text-destructive",
-  disputed: "border-destructive/30 bg-destructive/10 text-destructive",
-  expired: "border-line bg-muted text-muted-foreground",
-  withdrawn: "border-line bg-muted text-muted-foreground",
-  closed: "border-line bg-muted text-muted-foreground",
-  draft: "border-line bg-muted text-muted-foreground",
-  refunded: "border-line bg-muted text-muted-foreground",
-  preparing: "border-halo/50 bg-halo/20 text-[#7a5a1c] dark:text-halo",
-  in_transit:
-    "border-primary/25 bg-primary/10 text-primary dark:text-electric-soft",
-  customs_hold:
-    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  out_for_delivery:
-    "border-primary/25 bg-primary/10 text-primary dark:text-electric-soft",
-  delivered:
-    "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  delayed:
-    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+/**
+ * Status colour as a label tone: the dot inherits it with `bg-current`, so a
+ * status reads as a tinted word rather than a chip boxed off from the row.
+ */
+const STATUS_TONES: Record<string, string> = {
+  active: "text-emerald-700 dark:text-emerald-400",
+  succeeded: "text-emerald-700 dark:text-emerald-400",
+  paid: "text-emerald-700 dark:text-emerald-400",
+  approved: "text-emerald-700 dark:text-emerald-400",
+  verified: "text-emerald-700 dark:text-emerald-400",
+  sent: "text-emerald-700 dark:text-emerald-400",
+  delivered: "text-emerald-700 dark:text-emerald-400",
+  quoted: "text-primary dark:text-electric-soft",
+  under_assessment: "text-primary dark:text-electric-soft",
+  in_transit: "text-primary dark:text-electric-soft",
+  out_for_delivery: "text-primary dark:text-electric-soft",
+  submitted: "text-[#7a5a1c] dark:text-halo",
+  under_review: "text-[#7a5a1c] dark:text-halo",
+  preparing: "text-[#7a5a1c] dark:text-halo",
+  additional_info_required: "text-amber-700 dark:text-amber-400",
+  pending: "text-amber-700 dark:text-amber-400",
+  payment_pending: "text-amber-700 dark:text-amber-400",
+  renewal_pending: "text-amber-700 dark:text-amber-400",
+  awaiting_customer: "text-amber-700 dark:text-amber-400",
+  customs_hold: "text-amber-700 dark:text-amber-400",
+  delayed: "text-amber-700 dark:text-amber-400",
+  declined: "text-destructive",
+  failed: "text-destructive",
+  cancelled: "text-destructive",
+  suspended: "text-destructive",
+  disputed: "text-destructive",
+  expired: "text-muted-foreground",
+  withdrawn: "text-muted-foreground",
+  closed: "text-muted-foreground",
+  draft: "text-muted-foreground",
+  refunded: "text-muted-foreground",
 };
 
-export function toneForStatus(value?: string) {
-  return TONES[value ?? ""] ?? "border-line bg-muted text-muted-foreground";
+export function statusTone(value?: string) {
+  return STATUS_TONES[value ?? ""] ?? "text-muted-foreground";
 }
 
 export function formatMoney(

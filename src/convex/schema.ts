@@ -261,6 +261,11 @@ const schema = defineSchema(
       key: v.string(),
       companyName: v.string(),
       supportEmail: v.string(),
+      /**
+       * The address outbound email is sent from. Set in Settings; when it is
+       * unset the deployment's EMAIL_FROM_ADDRESS is used instead.
+       */
+      emailFromAddress: v.optional(v.string()),
       defaultCurrency: v.string(),
       commissionEnabled: v.boolean(),
       renewalNoticeDays: v.number(),
@@ -870,6 +875,31 @@ const schema = defineSchema(
     })
       .index("by_mineral", ["mineralId"])
       .index("by_number", ["policyNumber"])
+      .index("by_status", ["status"]),
+
+    /**
+     * A member's ask for a mineral to be moved. Staff review the queue and
+     * either book a consignment against the request (approving it in the same
+     * write) or decline it with a reason. The shipment itself is only created
+     * when the logistics desk has the carrier, route and dates.
+     */
+    shipmentRequests: defineTable({
+      mineralId: v.id("minerals"),
+      customerUserId: v.id("users"),
+      destination: v.string(),
+      preferredDate: v.optional(v.number()),
+      notes: v.optional(v.string()),
+      status: requestStatusValidator,
+      shipmentId: v.optional(v.id("shipments")),
+      decidedBy: v.optional(v.id("users")),
+      decisionNote: v.optional(v.string()),
+      decidedAt: v.optional(v.number()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+      ...demoFields,
+    })
+      .index("by_mineral", ["mineralId"])
+      .index("by_customer", ["customerUserId"])
       .index("by_status", ["status"]),
 
     shipments: defineTable({

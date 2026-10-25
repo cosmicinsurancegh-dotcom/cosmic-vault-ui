@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ShipmentRouteRail } from "@/components/dashboard/ShipmentRouteRail";
+import { ShipmentFormDialog } from "@/components/vault/ShipmentFormDialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -49,6 +50,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  ChevronDown,
   Gem,
   Loader2,
   Plus,
@@ -69,13 +71,13 @@ const COVERAGES = [
 ] as const;
 
 /**
- * The create flow runs one step at a time: the mineral itself, then its policy,
- * its first shipment and finally the member who owns it.
+ * The create flow runs one step at a time: the mineral itself, its policy, and
+ * the member who owns it. A shipment is not part of recording a holding - it is
+ * booked later, either from the member's request or on staff instruction.
  */
 const CREATE_STEPS = [
   { key: "mineral", label: "Mineral" },
   { key: "policy", label: "Policy" },
-  { key: "shipment", label: "Shipment" },
   { key: "member", label: "Member" },
 ] as const;
 
@@ -107,15 +109,6 @@ function emptyForm() {
     endDate: inAYear(),
     policyStatus: "active" as "draft" | "active" | "expired" | "cancelled",
     policyNotes: "",
-    carrier: "",
-    trackingNumber: "",
-    origin: "",
-    destination: "",
-    departureAt: today(),
-    estimatedArrivalAt: "",
-    shipmentStatus: "preparing" as ShipmentStatus,
-    currentLocation: "",
-    shipmentNotes: "",
     assignmentMode: "existing" as "existing" | "new",
     userId: "",
     newName: "",
@@ -243,7 +236,7 @@ export default function AdminMineralsPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ mineral, policy, shipment, assignee }) => (
+              {rows.map(({ mineral, policy, shipment, request, assignee }) => (
                 <tr
                   key={mineral._id}
                   className="transition-colors hover:bg-primary/[0.02]"
@@ -282,6 +275,13 @@ export default function AdminMineralsPage() {
                         </p>
                         <p className="text-[0.62rem] text-muted-foreground">
                           {shipment.origin} → {shipment.destination}
+                        </p>
+                      </>
+                    ) : request?.status === "pending" ? (
+                      <>
+                        <p className="text-xs text-ink">Requested</p>
+                        <p className="text-[0.62rem] text-muted-foreground">
+                          {request.destination}
                         </p>
                       </>
                     ) : (
@@ -389,10 +389,6 @@ function CreateMineralDialog({
       form.coverageLimit.trim().length > 0 &&
       form.startDate.length > 0 &&
       form.endDate.length > 0,
-    shipment: () =>
-      form.carrier.trim().length > 0 &&
-      form.origin.trim().length > 0 &&
-      form.destination.trim().length > 0,
     member: () =>
       form.assignmentMode === "existing"
         ? form.userId.length > 0
@@ -433,17 +429,6 @@ function CreateMineralDialog({
           status: form.policyStatus,
           notes: form.policyNotes || undefined,
         },
-        shipment: {
-          carrier: form.carrier,
-          trackingNumber: form.trackingNumber || undefined,
-          origin: form.origin,
-          destination: form.destination,
-          departureAt: form.departureAt || undefined,
-          estimatedArrivalAt: form.estimatedArrivalAt || undefined,
-          status: form.shipmentStatus,
-          currentLocation: form.currentLocation || undefined,
-          notes: form.shipmentNotes || undefined,
-        },
         assignment:
           form.assignmentMode === "existing"
             ? {
@@ -476,13 +461,14 @@ function CreateMineralDialog({
         <DialogHeader>
           <DialogTitle>Add a mineral</DialogTitle>
           <DialogDescription>
-            Four short steps: the mineral, its policy, its first shipment and
-            the member who owns it. Move back at any point before saving.
+            Three short steps: the mineral, its policy and the member who owns
+            it. A shipment is booked separately, once the member asks for one.
+            Move back at any point before saving.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2">
-          <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <ol className="grid grid-cols-3 gap-2">
             {CREATE_STEPS.map((entry, index) => {
               const complete = index < step && stepReady(index);
               const current = index === step;
@@ -755,124 +741,6 @@ function CreateMineralDialog({
           {step === 2 && (
             <section className="space-y-3 rounded-xl border border-line p-4">
               <h3 className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Shipment details
-              </h3>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="s-carrier">Carrier</Label>
-                  <Input
-                    id="s-carrier"
-                    value={form.carrier}
-                    onChange={(event) => set("carrier", event.target.value)}
-                    placeholder="Brink's Global Services"
-                    className="h-9 rounded-lg bg-card"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="s-tracking">Tracking number (optional)</Label>
-                  <Input
-                    id="s-tracking"
-                    value={form.trackingNumber}
-                    onChange={(event) =>
-                      set("trackingNumber", event.target.value)
-                    }
-                    className="h-9 rounded-lg bg-card"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="s-origin">Origin</Label>
-                  <Input
-                    id="s-origin"
-                    value={form.origin}
-                    onChange={(event) => set("origin", event.target.value)}
-                    placeholder="Zurich, CH"
-                    className="h-9 rounded-lg bg-card"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="s-destination">Destination</Label>
-                  <Input
-                    id="s-destination"
-                    value={form.destination}
-                    onChange={(event) => set("destination", event.target.value)}
-                    placeholder="London, GB"
-                    className="h-9 rounded-lg bg-card"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="s-departure">Departure</Label>
-                  <Input
-                    id="s-departure"
-                    type="date"
-                    value={form.departureAt}
-                    onChange={(event) => set("departureAt", event.target.value)}
-                    className="h-9 rounded-lg bg-card"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="s-eta">Estimated arrival</Label>
-                  <Input
-                    id="s-eta"
-                    type="date"
-                    value={form.estimatedArrivalAt}
-                    onChange={(event) =>
-                      set("estimatedArrivalAt", event.target.value)
-                    }
-                    className="h-9 rounded-lg bg-card"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="s-status">Starting status</Label>
-                  <select
-                    id="s-status"
-                    value={form.shipmentStatus}
-                    onChange={(event) =>
-                      set(
-                        "shipmentStatus",
-                        event.target.value as ShipmentStatus,
-                      )
-                    }
-                    className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
-                  >
-                    {SHIPMENT_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {SHIPMENT_STATUS_LABELS[status]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="s-location">
-                    Current location (optional)
-                  </Label>
-                  <Input
-                    id="s-location"
-                    value={form.currentLocation}
-                    onChange={(event) =>
-                      set("currentLocation", event.target.value)
-                    }
-                    className="h-9 rounded-lg bg-card"
-                  />
-                </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="s-notes">Shipment notes (optional)</Label>
-                  <Textarea
-                    id="s-notes"
-                    value={form.shipmentNotes}
-                    onChange={(event) =>
-                      set("shipmentNotes", event.target.value)
-                    }
-                    rows={2}
-                    className="rounded-lg bg-card text-xs"
-                  />
-                </div>
-              </div>
-            </section>
-          )}
-
-          {step === 3 && (
-            <section className="space-y-3 rounded-xl border border-line p-4">
-              <h3 className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Assign to a member
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -1028,6 +896,9 @@ function AssignmentSection({
   const [note, setNote] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  /* Reassigning is rare: the form stays folded until staff ask for it, so the
+     record reads as policy, shipment and history. */
+  const [expanded, setExpanded] = useState(false);
   const options = useQuery(api.minerals.assigneeOptions, {
     search: search.trim() || undefined,
   });
@@ -1078,7 +949,9 @@ function AssignmentSection({
       setNewEmail("");
       setNote("");
       setSearch("");
+      setMode("existing");
       setConfirmOpen(false);
+      setExpanded(false);
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -1090,136 +963,171 @@ function AssignmentSection({
     }
   };
 
+  /** Closing the form discards the draft, so a half-filled move never lingers. */
+  const collapse = () => {
+    if (pending) return;
+    setExpanded(false);
+    setMode("existing");
+    setUserId("");
+    setNewName("");
+    setNewEmail("");
+    setNote("");
+    setSearch("");
+  };
+
   return (
-    <section className="space-y-3 rounded-xl border border-line p-4">
-      <div className="flex items-start gap-2.5">
-        <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-[4px] border border-line bg-card text-primary">
-          <UserRoundPlus className="size-3.5" />
-        </span>
+    <section className="rounded-xl border border-line p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             Change owner
           </h3>
-          <p className="mt-1 text-[0.65rem] leading-5 text-muted-foreground">
-            Assign this mineral to another customer or broker. Every shipment
-            attached to it moves with the record, and the new owner is emailed.
+          <p className="mt-0.5 text-[0.62rem] leading-5 text-muted-foreground">
+            The policy and every consignment move with it.
           </p>
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setMode("existing")}
-          className={
-            mode === "existing"
-              ? "rounded-[4px] bg-primary px-3 py-1.5 text-[0.68rem] font-medium text-primary-foreground"
-              : "rounded-[4px] border border-line px-3 py-1.5 text-[0.68rem] font-medium text-muted-foreground"
-          }
-        >
-          Choose an existing account
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("new")}
-          className={
-            mode === "new"
-              ? "rounded-[4px] bg-primary px-3 py-1.5 text-[0.68rem] font-medium text-primary-foreground"
-              : "rounded-[4px] border border-line px-3 py-1.5 text-[0.68rem] font-medium text-muted-foreground"
-          }
-        >
-          Create a new member
-        </button>
-      </div>
-
-      {mode === "existing" ? (
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search name or email"
-              aria-label="Search member accounts"
-              className="h-9 rounded-lg bg-card pl-8 text-xs"
-            />
-          </div>
-          <select
-            aria-label="New owner"
-            value={userId}
-            onChange={(event) => setUserId(event.target.value)}
-            className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
+        {!expanded && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 rounded-[4px] bg-transparent px-3 text-[0.65rem]"
+            onClick={() => setExpanded(true)}
           >
-            <option value="">Choose a customer or broker…</option>
-            {(options ?? []).map((option) => (
-              <option key={option.userId} value={option.userId}>
-                {option.name} · {option.email}
-                {option.role === "broker" ? " (broker)" : ""}
-                {option.userId === currentAssigneeId ? " — current owner" : ""}
-              </option>
-            ))}
-          </select>
-          {sameOwner && (
-            <p className="text-[0.62rem] text-muted-foreground sm:col-span-2">
-              This account already owns the mineral.
-            </p>
+            <UserRoundPlus className="size-3.5" />
+            Reassign
+          </Button>
+        )}
+      </div>
+
+      {expanded && (
+        <div className="mt-3 space-y-3">
+          <div
+            role="group"
+            aria-label="Assignment mode"
+            className="flex flex-wrap gap-1.5"
+          >
+            <button
+              type="button"
+              onClick={() => setMode("existing")}
+              aria-pressed={mode === "existing"}
+              className={
+                mode === "existing"
+                  ? "rounded-[4px] bg-primary px-2.5 py-1 text-[0.6rem] font-medium text-primary-foreground"
+                  : "rounded-[4px] border border-line px-2.5 py-1 text-[0.6rem] font-medium text-muted-foreground transition-colors hover:text-ink"
+              }
+            >
+              Choose an existing account
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("new")}
+              aria-pressed={mode === "new"}
+              className={
+                mode === "new"
+                  ? "rounded-[4px] bg-primary px-2.5 py-1 text-[0.6rem] font-medium text-primary-foreground"
+                  : "rounded-[4px] border border-line px-2.5 py-1 text-[0.6rem] font-medium text-muted-foreground transition-colors hover:text-ink"
+              }
+            >
+              Create a new member
+            </button>
+          </div>
+
+          {mode === "existing" ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search name or email"
+                  aria-label="Search member accounts"
+                  className="h-9 rounded-lg bg-card pl-8 text-xs"
+                />
+              </div>
+              <select
+                aria-label="New owner"
+                value={userId}
+                onChange={(event) => setUserId(event.target.value)}
+                className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
+              >
+                <option value="">Choose a customer or broker…</option>
+                {(options ?? []).map((option) => (
+                  <option key={option.userId} value={option.userId}>
+                    {option.name} · {option.email}
+                    {option.role === "broker" ? " (broker)" : ""}
+                    {option.userId === currentAssigneeId
+                      ? " — current owner"
+                      : ""}
+                  </option>
+                ))}
+              </select>
+              {sameOwner && (
+                <p className="text-[0.62rem] text-muted-foreground sm:col-span-2">
+                  This account already owns the mineral.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="assign-new-name">Full name</Label>
+                <Input
+                  id="assign-new-name"
+                  value={newName}
+                  onChange={(event) => setNewName(event.target.value)}
+                  className="h-9 rounded-lg bg-card text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="assign-new-email">Email</Label>
+                <Input
+                  id="assign-new-email"
+                  type="email"
+                  value={newEmail}
+                  onChange={(event) => setNewEmail(event.target.value)}
+                  className="h-9 rounded-lg bg-card text-xs"
+                />
+              </div>
+              <p className="text-[0.62rem] leading-5 text-muted-foreground sm:col-span-2">
+                Created now; an account with this email is reused instead.
+              </p>
+            </div>
           )}
-        </div>
-      ) : (
-        <div className="grid gap-2 sm:grid-cols-2">
+
           <div className="space-y-1.5">
-            <Label htmlFor="assign-new-name">Full name</Label>
+            <Label htmlFor="assign-note">
+              Reason for the change (optional)
+            </Label>
             <Input
-              id="assign-new-name"
-              value={newName}
-              onChange={(event) => setNewName(event.target.value)}
+              id="assign-note"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="Recorded in the audit log"
               className="h-9 rounded-lg bg-card text-xs"
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="assign-new-email">Email</Label>
-            <Input
-              id="assign-new-email"
-              type="email"
-              value={newEmail}
-              onChange={(event) => setNewEmail(event.target.value)}
-              className="h-9 rounded-lg bg-card text-xs"
-            />
+
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              className="h-8 rounded-[4px] bg-transparent px-3 text-[0.65rem]"
+              disabled={pending}
+              onClick={collapse}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="h-8 rounded-[4px] px-3 text-[0.65rem]"
+              disabled={!ready || pending}
+              onClick={() => setConfirmOpen(true)}
+            >
+              {pending && <Loader2 className="size-3.5 animate-spin" />}
+              Reassign mineral
+            </Button>
           </div>
-          <p className="text-[0.62rem] leading-5 text-muted-foreground sm:col-span-2">
-            The account is created now and becomes sign-in capable when the
-            member signs in with this email using a one-time code. An existing
-            account with the same email is reused.
-          </p>
         </div>
       )}
-
-      <div className="space-y-1.5">
-        <Label htmlFor="assign-note">Reason for the change (optional)</Label>
-        <Input
-          id="assign-note"
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-          placeholder="Recorded in the audit log"
-          className="h-9 rounded-lg bg-card text-xs"
-        />
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
-        <p className="max-w-sm text-[0.62rem] leading-5 text-muted-foreground">
-          The new owner is emailed immediately; the previous owner is notified
-          in their dashboard.
-        </p>
-        <Button
-          size="sm"
-          className="h-9 rounded-[4px] px-4"
-          disabled={!ready || pending}
-          onClick={() => setConfirmOpen(true)}
-        >
-          {pending && <Loader2 className="size-3.5 animate-spin" />}
-          Reassign mineral
-        </Button>
-      </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent className="rounded-[4px] border-line bg-background">
@@ -1264,10 +1172,17 @@ function MineralDetailDialog({
 }) {
   const detail = useQuery(api.minerals.detail, { mineralId });
   const updateStatus = useMutation(api.minerals.updateShipmentStatus);
+  const createShipment = useMutation(api.minerals.createShipment);
   const [status, setStatus] = useState<ShipmentStatus | "">("");
   const [location, setLocation] = useState("");
   const [note, setNote] = useState("");
   const [pending, setPending] = useState(false);
+  const [booking, setBooking] = useState(false);
+  /* A status change is only relevant while the consignment moves, so the
+     fields stay folded until staff need to publish one. */
+  const [updating, setUpdating] = useState(false);
+  /* The history is reference: its last entry stands in until it is opened. */
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   if (detail === undefined) {
     return (
@@ -1294,6 +1209,13 @@ function MineralDetailDialog({
   }
 
   const { mineral, policy, shipment, events, assignee } = detail;
+  /* A closed consignment does not stop the mineral being shipped again. */
+  const activeShipment =
+    shipment &&
+    shipment.status !== "delivered" &&
+    shipment.status !== "cancelled"
+      ? shipment
+      : null;
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
@@ -1340,12 +1262,6 @@ function MineralDetailDialog({
             </div>
           </section>
 
-          <AssignmentSection
-            mineralId={mineral._id}
-            currentAssigneeId={mineral.assignedUserId}
-            canManage={canManage}
-          />
-
           {shipment && (
             <section className="space-y-3 rounded-xl border border-line p-4">
               {/* The rail below carries the route, carrier and estimate, so the
@@ -1362,16 +1278,30 @@ function MineralDetailDialog({
                       : ""}
                   </p>
                 </div>
-                <StatusPill status={shipment.status} />
+                {/* The pill stands beside an action, so it takes the same height
+                    as the button rather than sitting short against it. */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusPill
+                    status={shipment.status}
+                    className="h-8 text-[0.65rem]"
+                  />
+                  {canManage && !updating && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-[4px] bg-transparent px-3 text-[0.65rem]"
+                      onClick={() => setUpdating(true)}
+                    >
+                      Update status
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <ShipmentRouteRail shipment={shipment} events={events} />
 
-              {canManage && (
+              {canManage && updating && (
                 <div className="space-y-2 border-t border-line pt-3">
-                  <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    Update shipment status
-                  </p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <select
                       aria-label="New shipment status"
@@ -1408,63 +1338,139 @@ function MineralDetailDialog({
                   />
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-[0.62rem] leading-5 text-muted-foreground">
-                      The status saves at once; the update is emailed to{" "}
-                      {assignee?.email ?? "the assigned member"}. Failed sends
-                      are listed under Settings → Email delivery.
+                      Emailed to {assignee?.email ?? "the assigned member"}.
+                      Failed sends are under Settings → Email delivery.
                     </p>
-                    <Button
-                      size="sm"
-                      className="h-9 rounded-[4px]"
-                      disabled={pending || !status}
-                      onClick={async () => {
-                        if (!status) return;
-                        setPending(true);
-                        try {
-                          const result = await updateStatus({
-                            shipmentId: shipment._id,
-                            status,
-                            location: location.trim() || undefined,
-                            note: note.trim() || undefined,
-                          });
-                          toast.success(
-                            result.notified
-                              ? `Status updated. The email is queued to ${assignee?.email ?? "the member"}.`
-                              : "Status updated. No member email was sent.",
-                          );
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="h-8 rounded-[4px] bg-transparent px-3 text-[0.65rem]"
+                        disabled={pending}
+                        onClick={() => {
+                          setUpdating(false);
                           setStatus("");
                           setLocation("");
                           setNote("");
-                        } catch (error) {
-                          toast.error(
-                            error instanceof Error
-                              ? error.message
-                              : "Could not update the shipment.",
-                          );
-                        } finally {
-                          setPending(false);
-                        }
-                      }}
-                    >
-                      {pending && <Loader2 className="size-3.5 animate-spin" />}{" "}
-                      Update status
-                    </Button>
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-8 rounded-[4px] px-3 text-[0.65rem]"
+                        disabled={pending || !status}
+                        onClick={async () => {
+                          if (!status) return;
+                          setPending(true);
+                          try {
+                            const result = await updateStatus({
+                              shipmentId: shipment._id,
+                              status,
+                              location: location.trim() || undefined,
+                              note: note.trim() || undefined,
+                            });
+                            toast.success(
+                              result.notified
+                                ? `Status updated. The email is queued to ${assignee?.email ?? "the member"}.`
+                                : "Status updated. No member email was sent.",
+                            );
+                            setStatus("");
+                            setLocation("");
+                            setNote("");
+                            setUpdating(false);
+                          } catch (error) {
+                            toast.error(
+                              error instanceof Error
+                                ? error.message
+                                : "Could not update the shipment.",
+                            );
+                          } finally {
+                            setPending(false);
+                          }
+                        }}
+                      >
+                        {pending && (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        )}{" "}
+                        Update status
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
 
               <div className="border-t border-line pt-3">
-                <p className="mb-2 text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                  Shipment history
-                </p>
-                <Timeline
-                  items={events.map((event) => ({
-                    title: SHIPMENT_STATUS_LABELS[event.status],
-                    body: [event.location, event.note]
-                      .filter(Boolean)
-                      .join(" · "),
-                    at: event.createdAt,
-                  }))}
-                />
+                <button
+                  type="button"
+                  aria-expanded={historyOpen}
+                  onClick={() => setHistoryOpen((open) => !open)}
+                  className="flex w-full items-start justify-between gap-2 text-left"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      Shipment history
+                    </span>
+                    {/* The latest entry stands in for the timeline until it is
+                        opened, so the record stays short by default. */}
+                    <span className="mt-0.5 block truncate text-[0.62rem] leading-5 text-muted-foreground">
+                      {events.length === 0
+                        ? "No updates recorded yet."
+                        : [
+                            SHIPMENT_STATUS_LABELS[events[0].status],
+                            events[0].location,
+                            formatDate(events[0].createdAt),
+                            `${events.length} update${events.length === 1 ? "" : "s"}`,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    className={
+                      historyOpen
+                        ? "mt-1 size-3.5 shrink-0 rotate-180 text-muted-foreground transition-transform"
+                        : "mt-1 size-3.5 shrink-0 text-muted-foreground transition-transform"
+                    }
+                  />
+                </button>
+
+                {historyOpen && (
+                  <div className="mt-3">
+                    <Timeline
+                      items={events.map((event) => ({
+                        title: SHIPMENT_STATUS_LABELS[event.status],
+                        body: [event.location, event.note]
+                          .filter(Boolean)
+                          .join(" · "),
+                        at: event.createdAt,
+                      }))}
+                    />
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {canManage && !activeShipment && (
+            <section className="space-y-3 rounded-xl border border-line p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h3 className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Shipment
+                  </h3>
+                  <p className="mt-1 text-[0.65rem] leading-5 text-muted-foreground">
+                    {shipment
+                      ? "The last consignment is closed. Book another one if this mineral needs to move again."
+                      : "Nothing is booked for this mineral. Members request a shipment themselves; record one here for an instruction taken off the system."}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  className="h-9 rounded-[4px] px-4"
+                  onClick={() => setBooking(true)}
+                >
+                  <Truck className="size-3.5" /> Record shipment
+                </Button>
               </div>
             </section>
           )}
@@ -1474,7 +1480,39 @@ function MineralDetailDialog({
               {mineral.description}
             </Callout>
           )}
+
+          {/* Ownership last: it is the least frequent change on a record, so it
+              sits below the policy and shipment staff usually come here for. */}
+          <AssignmentSection
+            mineralId={mineral._id}
+            currentAssigneeId={mineral.assignedUserId}
+            canManage={canManage}
+          />
         </div>
+
+        {booking && (
+          <ShipmentFormDialog
+            open
+            title="Record a shipment"
+            description={`${mineral.name} · ${mineral.reference}. The owner is emailed the route, carrier and dates as soon as it is booked.`}
+            submitLabel="Book shipment"
+            onSubmit={async (values) => {
+              await createShipment({
+                mineralId: mineral._id,
+                shipment: values,
+              });
+              toast.success("Shipment booked.", {
+                description: assignee
+                  ? `Email queued to ${assignee.email}.`
+                  : "No owner is assigned, so no email was sent.",
+              });
+              setBooking(false);
+            }}
+            onOpenChange={(open) => {
+              if (!open) setBooking(false);
+            }}
+          />
+        )}
 
         <div className="flex justify-end">
           <Button

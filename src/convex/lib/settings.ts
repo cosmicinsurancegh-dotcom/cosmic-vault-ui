@@ -79,6 +79,8 @@ export const DEFAULT_SETTINGS = {
   key: "global",
   companyName: "Cosmic Vault Insurance",
   supportEmail: "concierge@cosmicvault.co",
+  /** Unset until an admin saves one; the deployment's address is used then. */
+  emailFromAddress: undefined as string | undefined,
   defaultCurrency: "GBP",
   commissionEnabled: false,
   renewalNoticeDays: 30,

@@ -32,7 +32,12 @@ export const deliver = internalAction({
 
     try {
       const { vly } = await import("./lib/vly");
+      const { emailSender } = await import("./lib/sender");
+      /* Read at send time, so a change in Settings applies to the next email
+         - including the assignment notices queued by a mutation. */
+      const sender = await ctx.runQuery(internal.settings.emailSender, {});
       const result = await vly.email.send({
+        from: emailSender(sender),
         to: args.to,
         subject: args.subject,
         text: args.text,

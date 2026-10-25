@@ -15,12 +15,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatDateTime } from "@/lib/format";
+import { PERMISSION_LABELS, STAFF_PERMISSIONS, can } from "@/lib/permissions";
 import {
-  PERMISSION_LABELS,
-  STAFF_PERMISSIONS,
-  can,
-} from "@/lib/permissions";
-import { checkSupabaseHealth, supabaseConfigured, supabaseUrl } from "@/lib/supabase";
+  checkSupabaseHealth,
+  supabaseConfigured,
+  supabaseUrl,
+} from "@/lib/supabase";
 import { useAction, useMutation, useQuery } from "convex/react";
 import {
   Database,
@@ -36,6 +36,7 @@ import { toast } from "sonner";
 type SettingsForm = {
   companyName: string;
   supportEmail: string;
+  emailFromAddress: string;
   defaultCurrency: string;
   commissionEnabled: boolean;
   renewalNoticeDays: string;
@@ -50,6 +51,7 @@ type SettingsForm = {
 const EMPTY_SETTINGS_FORM: SettingsForm = {
   companyName: "",
   supportEmail: "",
+  emailFromAddress: "",
   defaultCurrency: "GBP",
   commissionEnabled: false,
   renewalNoticeDays: "30",
@@ -65,6 +67,7 @@ const EMPTY_SETTINGS_FORM: SettingsForm = {
 function settingsForm(settings: {
   companyName: string;
   supportEmail: string;
+  emailFromAddress?: string;
   defaultCurrency: string;
   commissionEnabled: boolean;
   renewalNoticeDays: number;
@@ -78,6 +81,7 @@ function settingsForm(settings: {
   return {
     companyName: settings.companyName,
     supportEmail: settings.supportEmail,
+    emailFromAddress: settings.emailFromAddress ?? "",
     defaultCurrency: settings.defaultCurrency,
     commissionEnabled: settings.commissionEnabled,
     renewalNoticeDays: String(settings.renewalNoticeDays),
@@ -92,12 +96,23 @@ function settingsForm(settings: {
 
 export default function AdminSettingsPage() {
   const { user } = useAuth();
-  const allowed = can(user?.role, user?.permissions, STAFF_PERMISSIONS.SETTINGS_MANAGE);
-  const canStaff = can(user?.role, user?.permissions, STAFF_PERMISSIONS.STAFF_MANAGE);
+  const allowed = can(
+    user?.role,
+    user?.permissions,
+    STAFF_PERMISSIONS.SETTINGS_MANAGE,
+  );
+  const canStaff = can(
+    user?.role,
+    user?.permissions,
+    STAFF_PERMISSIONS.STAFF_MANAGE,
+  );
   const settings = useQuery(api.settings.get, allowed ? {} : "skip");
   const reference = useQuery(api.setup.referenceData, allowed ? {} : "skip");
   const staff = useQuery(api.staff.list, canStaff ? {} : "skip");
-  const issues = useQuery(api.notifications.deliveryIssues, allowed ? {} : "skip");
+  const issues = useQuery(
+    api.notifications.deliveryIssues,
+    allowed ? {} : "skip",
+  );
   const update = useMutation(api.settings.update);
   const resetTemplates = useMutation(api.settings.resetTemplates);
   const promote = useMutation(api.staff.promote);
@@ -124,7 +139,9 @@ export default function AdminSettingsPage() {
     email: "",
     role: "admin" as "admin" | "super_admin",
   });
-  const [permissionTarget, setPermissionTarget] = useState<Id<"users"> | null>(null);
+  const [permissionTarget, setPermissionTarget] = useState<Id<"users"> | null>(
+    null,
+  );
   const [permissionDraft, setPermissionDraft] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
 
@@ -144,7 +161,8 @@ export default function AdminSettingsPage() {
       <div className="space-y-6">
         <PageHeader eyebrow="System settings" title="Restricted settings." />
         <Callout tone="warning" title="Permission required">
-          System settings require the settings.manage permission, normally held by a super admin.
+          System settings require the settings.manage permission, normally held
+          by a super admin.
         </Callout>
       </div>
     );
@@ -160,6 +178,7 @@ export default function AdminSettingsPage() {
       await update({
         companyName: form.companyName,
         supportEmail: form.supportEmail,
+        emailFromAddress: form.emailFromAddress || undefined,
         defaultCurrency: form.defaultCurrency,
         commissionEnabled: form.commissionEnabled,
         renewalNoticeDays: Number(form.renewalNoticeDays),
@@ -173,7 +192,9 @@ export default function AdminSettingsPage() {
       });
       toast.success("Settings saved and audited.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save settings.");
+      toast.error(
+        error instanceof Error ? error.message : "Could not save settings.",
+      );
     } finally {
       setPending(false);
     }
@@ -191,7 +212,8 @@ export default function AdminSettingsPage() {
             disabled={pending}
             onClick={save}
           >
-            {pending && <Loader2 className="size-4 animate-spin" />} Save settings
+            {pending && <Loader2 className="size-4 animate-spin" />} Save
+            settings
           </Button>
         }
       />
@@ -202,63 +224,162 @@ export default function AdminSettingsPage() {
           <div className="grid gap-3 px-5 py-5 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="s-company">Company name</Label>
-              <Input id="s-company" value={form.companyName} onChange={(event) => setForm({ ...form, companyName: event.target.value })} className="h-9 rounded-lg bg-card" />
+              <Input
+                id="s-company"
+                value={form.companyName}
+                onChange={(event) =>
+                  setForm({ ...form, companyName: event.target.value })
+                }
+                className="h-9 rounded-lg bg-card"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="s-email">Support email</Label>
-              <Input id="s-email" type="email" value={form.supportEmail} onChange={(event) => setForm({ ...form, supportEmail: event.target.value })} className="h-9 rounded-lg bg-card" />
+              <Input
+                id="s-email"
+                type="email"
+                value={form.supportEmail}
+                onChange={(event) =>
+                  setForm({ ...form, supportEmail: event.target.value })
+                }
+                className="h-9 rounded-lg bg-card"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="s-currency">Default currency</Label>
               <select
                 id="s-currency"
                 value={form.defaultCurrency}
-                onChange={(event) => setForm({ ...form, defaultCurrency: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, defaultCurrency: event.target.value })
+                }
                 className="h-9 w-full rounded-lg border border-line bg-card px-2 text-xs text-ink"
               >
-                {reference.currencies.filter((currency) => currency.active).map((currency) => (
-                  <option key={currency.code} value={currency.code}>{currency.code}</option>
-                ))}
+                {reference.currencies
+                  .filter((currency) => currency.active)
+                  .map((currency) => (
+                    <option key={currency.code} value={currency.code}>
+                      {currency.code}
+                    </option>
+                  ))}
               </select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="s-renewal">Renewal notice (days)</Label>
-              <Input id="s-renewal" inputMode="numeric" value={form.renewalNoticeDays} onChange={(event) => setForm({ ...form, renewalNoticeDays: event.target.value })} className="h-9 rounded-lg bg-card" />
+              <Input
+                id="s-renewal"
+                inputMode="numeric"
+                value={form.renewalNoticeDays}
+                onChange={(event) =>
+                  setForm({ ...form, renewalNoticeDays: event.target.value })
+                }
+                className="h-9 rounded-lg bg-card"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="s-sla">Claim SLA (days)</Label>
-              <Input id="s-sla" inputMode="numeric" value={form.claimSlaDays} onChange={(event) => setForm({ ...form, claimSlaDays: event.target.value })} className="h-9 rounded-lg bg-card" />
+              <Input
+                id="s-sla"
+                inputMode="numeric"
+                value={form.claimSlaDays}
+                onChange={(event) =>
+                  setForm({ ...form, claimSlaDays: event.target.value })
+                }
+                className="h-9 rounded-lg bg-card"
+              />
             </div>
             <label className="flex items-center gap-2 text-xs text-muted-foreground sm:col-span-2">
-              <input type="checkbox" checked={form.commissionEnabled} onChange={(event) => setForm({ ...form, commissionEnabled: event.target.checked })} className="accent-[var(--primary)]" />
+              <input
+                type="checkbox"
+                checked={form.commissionEnabled}
+                onChange={(event) =>
+                  setForm({ ...form, commissionEnabled: event.target.checked })
+                }
+                className="accent-[var(--primary)]"
+              />
               Broker commission features enabled company-wide
             </label>
 
             <div className="space-y-1.5 sm:col-span-2">
-              <p className="text-xs font-semibold text-ink">Bank transfer instructions (shown to customers)</p>
+              <p className="text-xs font-semibold text-ink">Email sender</p>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="s-from">From address</Label>
+              <Input
+                id="s-from"
+                type="email"
+                placeholder="mail@cosmicvault.co"
+                value={form.emailFromAddress}
+                onChange={(event) =>
+                  setForm({ ...form, emailFromAddress: event.target.value })
+                }
+                className="h-9 rounded-lg bg-card"
+              />
+              <p className="text-[0.62rem] leading-4 text-muted-foreground">
+                Every notification and consignment email is sent from this
+                address under the company name. Leave it blank to use the
+                deployment's EMAIL_FROM_ADDRESS.
+              </p>
+            </div>
+
+            <div className="space-y-1.5 sm:col-span-2">
+              <p className="text-xs font-semibold text-ink">
+                Bank transfer instructions (shown to customers)
+              </p>
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="s-bank-name">Account name</Label>
-              <Input id="s-bank-name" value={form.bankAccountName} onChange={(event) => setForm({ ...form, bankAccountName: event.target.value })} className="h-9 rounded-lg bg-card" />
+              <Input
+                id="s-bank-name"
+                value={form.bankAccountName}
+                onChange={(event) =>
+                  setForm({ ...form, bankAccountName: event.target.value })
+                }
+                className="h-9 rounded-lg bg-card"
+              />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="s-iban">IBAN</Label>
-              <Input id="s-iban" value={form.bankIban} onChange={(event) => setForm({ ...form, bankIban: event.target.value })} className="h-9 rounded-lg bg-card" />
+              <Input
+                id="s-iban"
+                value={form.bankIban}
+                onChange={(event) =>
+                  setForm({ ...form, bankIban: event.target.value })
+                }
+                className="h-9 rounded-lg bg-card"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="s-sort">Sort code</Label>
-              <Input id="s-sort" value={form.bankSortCode} onChange={(event) => setForm({ ...form, bankSortCode: event.target.value })} className="h-9 rounded-lg bg-card" />
+              <Input
+                id="s-sort"
+                value={form.bankSortCode}
+                onChange={(event) =>
+                  setForm({ ...form, bankSortCode: event.target.value })
+                }
+                className="h-9 rounded-lg bg-card"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="s-swift">SWIFT / BIC</Label>
-              <Input id="s-swift" value={form.bankSwift} onChange={(event) => setForm({ ...form, bankSwift: event.target.value })} className="h-9 rounded-lg bg-card" />
+              <Input
+                id="s-swift"
+                value={form.bankSwift}
+                onChange={(event) =>
+                  setForm({ ...form, bankSwift: event.target.value })
+                }
+                className="h-9 rounded-lg bg-card"
+              />
             </div>
           </div>
         </Panel>
 
         <div className="space-y-5">
           <Panel>
-            <PanelHeader title="Supported currencies" description="Only configured currencies can be used by products." />
+            <PanelHeader
+              title="Supported currencies"
+              description="Only configured currencies can be used by products."
+            />
             <div className="flex flex-wrap gap-2 px-5 py-4">
               {reference.currencies.map((currency) => {
                 const checked = form.allowedCurrencies.includes(currency.code);
@@ -270,7 +391,9 @@ export default function AdminSettingsPage() {
                       setForm({
                         ...form,
                         allowedCurrencies: checked
-                          ? form.allowedCurrencies.filter((code) => code !== currency.code)
+                          ? form.allowedCurrencies.filter(
+                              (code) => code !== currency.code,
+                            )
                           : [...form.allowedCurrencies, currency.code],
                       })
                     }
@@ -288,7 +411,10 @@ export default function AdminSettingsPage() {
           </Panel>
 
           <Panel>
-            <PanelHeader title="Starter catalogue" description="Publishes six real product records you can edit." />
+            <PanelHeader
+              title="Starter catalogue"
+              description="Publishes six real product records you can edit."
+            />
             <div className="px-5 py-4">
               <Button
                 variant="outline"
@@ -296,9 +422,17 @@ export default function AdminSettingsPage() {
                 onClick={async () => {
                   try {
                     const result = await seed();
-                    toast.success(result.created ? `${result.created} products created.` : "Already seeded.");
+                    toast.success(
+                      result.created
+                        ? `${result.created} products created.`
+                        : "Already seeded.",
+                    );
                   } catch (error) {
-                    toast.error(error instanceof Error ? error.message : "Could not seed the catalogue.");
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : "Could not seed the catalogue.",
+                    );
                   }
                 }}
               >
@@ -329,7 +463,10 @@ export default function AdminSettingsPage() {
         />
         <div className="max-h-[420px] space-y-3 overflow-y-auto px-5 py-4">
           {templates.map((template, index) => (
-            <details key={template.key} className="rounded-xl border border-line">
+            <details
+              key={template.key}
+              className="rounded-xl border border-line"
+            >
               <summary className="cursor-pointer px-4 py-2.5 text-xs font-medium text-ink">
                 {template.key}
               </summary>
@@ -340,7 +477,9 @@ export default function AdminSettingsPage() {
                   onChange={(event) =>
                     setTemplates((current) =>
                       current.map((item, itemIndex) =>
-                        itemIndex === index ? { ...item, subject: event.target.value } : item,
+                        itemIndex === index
+                          ? { ...item, subject: event.target.value }
+                          : item,
                       ),
                     )
                   }
@@ -352,7 +491,9 @@ export default function AdminSettingsPage() {
                   onChange={(event) =>
                     setTemplates((current) =>
                       current.map((item, itemIndex) =>
-                        itemIndex === index ? { ...item, body: event.target.value } : item,
+                        itemIndex === index
+                          ? { ...item, body: event.target.value }
+                          : item,
                       ),
                     )
                   }
@@ -368,7 +509,11 @@ export default function AdminSettingsPage() {
             onClick={() =>
               setTemplates((current) => [
                 ...current,
-                { key: "custom.event", subject: "Update from {{company}}", body: "{{title}}\n\n{{body}}" },
+                {
+                  key: "custom.event",
+                  subject: "Update from {{company}}",
+                  body: "{{title}}\n\n{{body}}",
+                },
               ])
             }
           >
@@ -470,7 +615,9 @@ export default function AdminSettingsPage() {
               <select
                 aria-label="Staff role"
                 value={staffRole}
-                onChange={(event) => setStaffRole(event.target.value as "admin" | "super_admin")}
+                onChange={(event) =>
+                  setStaffRole(event.target.value as "admin" | "super_admin")
+                }
                 className="h-9 rounded-lg border border-line bg-card px-2 text-xs text-ink"
               >
                 <option value="admin">Administrator</option>
@@ -487,7 +634,11 @@ export default function AdminSettingsPage() {
                     toast.success("Staff access granted.");
                     setStaffEmail("");
                   } catch (error) {
-                    toast.error(error instanceof Error ? error.message : "Could not grant access.");
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : "Could not grant access.",
+                    );
                   } finally {
                     setPending(false);
                   }
@@ -514,10 +665,14 @@ export default function AdminSettingsPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="text-xs font-medium text-ink">
-                        {member.name ?? member.email} · <span className="capitalize">{(member.role ?? "admin").replace("_", " ")}</span>
+                        {member.name ?? member.email} ·{" "}
+                        <span className="capitalize">
+                          {(member.role ?? "admin").replace("_", " ")}
+                        </span>
                       </p>
                       <p className="text-[0.62rem] text-muted-foreground">
-                        {member.email} · {member.permissions.length || "all"} permissions
+                        {member.email} · {member.permissions.length || "all"}{" "}
+                        permissions
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -544,11 +699,18 @@ export default function AdminSettingsPage() {
                           onClick={async () => {
                             setPending(true);
                             try {
-                              await revoke({ userId: member._id, reason: staffReason });
+                              await revoke({
+                                userId: member._id,
+                                reason: staffReason,
+                              });
                               toast.success("Staff access revoked.");
                               setStaffReason("");
                             } catch (error) {
-                              toast.error(error instanceof Error ? error.message : "Could not revoke access.");
+                              toast.error(
+                                error instanceof Error
+                                  ? error.message
+                                  : "Could not revoke access.",
+                              );
                             } finally {
                               setPending(false);
                             }
@@ -568,19 +730,32 @@ export default function AdminSettingsPage() {
                             try {
                               await setStaffStatus({
                                 userId: member._id,
-                                status: member.status === "suspended" ? "active" : "suspended",
+                                status:
+                                  member.status === "suspended"
+                                    ? "active"
+                                    : "suspended",
                                 reason: staffReason,
                               });
-                              toast.success(member.status === "suspended" ? "Staff reinstated." : "Staff suspended.");
+                              toast.success(
+                                member.status === "suspended"
+                                  ? "Staff reinstated."
+                                  : "Staff suspended.",
+                              );
                               setStaffReason("");
                             } catch (error) {
-                              toast.error(error instanceof Error ? error.message : "Could not change staff status.");
+                              toast.error(
+                                error instanceof Error
+                                  ? error.message
+                                  : "Could not change staff status.",
+                              );
                             } finally {
                               setPending(false);
                             }
                           }}
                         >
-                          {member.status === "suspended" ? "Reinstate" : "Suspend"}
+                          {member.status === "suspended"
+                            ? "Reinstate"
+                            : "Suspend"}
                         </Button>
                       )}
                     </div>
@@ -588,26 +763,36 @@ export default function AdminSettingsPage() {
                   {permissionTarget === member._id && (
                     <div className="mt-3 rounded-xl border border-line p-3">
                       <div className="grid gap-2 sm:grid-cols-2">
-                        {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
-                          <label key={key} className="flex items-start gap-2 text-[0.65rem] leading-4 text-muted-foreground">
-                            <input
-                              type="checkbox"
-                              checked={permissionDraft.includes(key)}
-                              onChange={(event) =>
-                                setPermissionDraft((current) =>
-                                  event.target.checked
-                                    ? [...current, key]
-                                    : current.filter((item) => item !== key),
-                                )
-                              }
-                              className="mt-0.5 accent-[var(--primary)]"
-                            />
-                            {label}
-                          </label>
-                        ))}
+                        {Object.entries(PERMISSION_LABELS).map(
+                          ([key, label]) => (
+                            <label
+                              key={key}
+                              className="flex items-start gap-2 text-[0.65rem] leading-4 text-muted-foreground"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={permissionDraft.includes(key)}
+                                onChange={(event) =>
+                                  setPermissionDraft((current) =>
+                                    event.target.checked
+                                      ? [...current, key]
+                                      : current.filter((item) => item !== key),
+                                  )
+                                }
+                                className="mt-0.5 accent-[var(--primary)]"
+                              />
+                              {label}
+                            </label>
+                          ),
+                        )}
                       </div>
                       <div className="mt-2 flex justify-end gap-2">
-                        <Button size="sm" variant="ghost" className="h-8 rounded-[4px]" onClick={() => setPermissionTarget(null)}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 rounded-[4px]"
+                          onClick={() => setPermissionTarget(null)}
+                        >
                           Cancel
                         </Button>
                         <Button
@@ -617,11 +802,18 @@ export default function AdminSettingsPage() {
                           onClick={async () => {
                             setPending(true);
                             try {
-                              await setPermissions({ userId: member._id, permissions: permissionDraft });
+                              await setPermissions({
+                                userId: member._id,
+                                permissions: permissionDraft,
+                              });
                               toast.success("Permissions updated.");
                               setPermissionTarget(null);
                             } catch (error) {
-                              toast.error(error instanceof Error ? error.message : "Could not update permissions.");
+                              toast.error(
+                                error instanceof Error
+                                  ? error.message
+                                  : "Could not update permissions.",
+                              );
                             } finally {
                               setPending(false);
                             }
@@ -651,37 +843,52 @@ export default function AdminSettingsPage() {
         ) : issues.failed.length === 0 &&
           issues.skipped.length === 0 &&
           issues.stalled.length === 0 ? (
-          <EmptyState icon={MailWarning} title="No delivery issues" description="Queued emails are delivered through the configured integration gateway." />
+          <EmptyState
+            icon={MailWarning}
+            title="No delivery issues"
+            description="Queued emails are delivered through the configured integration gateway."
+          />
         ) : (
           <ul className="max-h-[320px] divide-y divide-line overflow-y-auto">
-            {[...issues.failed, ...issues.stalled, ...issues.skipped].map((item) => (
-              <li key={item._id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-medium text-ink">{item.title}</p>
-                  <p className="text-[0.62rem] text-muted-foreground">
-                    {item.emailStatus === "queued"
-                      ? `stalled · no delivery result after ${issues.stalledAfterMinutes} minutes · ${formatDateTime(item.createdAt)}`
-                      : `${item.emailStatus} · attempts ${item.emailAttempts} · ${formatDateTime(item.createdAt)}`}
-                    {item.emailError ? ` · ${item.emailError}` : ""}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 rounded-[4px] bg-transparent px-3"
-                  onClick={async () => {
-                    try {
-                      await retryEmail({ notificationId: item._id });
-                      toast.success("Delivery queued again.");
-                    } catch (error) {
-                      toast.error(error instanceof Error ? error.message : "Could not retry delivery.");
-                    }
-                  }}
+            {[...issues.failed, ...issues.stalled, ...issues.skipped].map(
+              (item) => (
+                <li
+                  key={item._id}
+                  className="flex flex-wrap items-center justify-between gap-2 px-5 py-3"
                 >
-                  Retry
-                </Button>
-              </li>
-            ))}
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-medium text-ink">
+                      {item.title}
+                    </p>
+                    <p className="text-[0.62rem] text-muted-foreground">
+                      {item.emailStatus === "queued"
+                        ? `stalled · no delivery result after ${issues.stalledAfterMinutes} minutes · ${formatDateTime(item.createdAt)}`
+                        : `${item.emailStatus} · attempts ${item.emailAttempts} · ${formatDateTime(item.createdAt)}`}
+                      {item.emailError ? ` · ${item.emailError}` : ""}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 rounded-[4px] bg-transparent px-3"
+                    onClick={async () => {
+                      try {
+                        await retryEmail({ notificationId: item._id });
+                        toast.success("Delivery queued again.");
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Could not retry delivery.",
+                        );
+                      }
+                    }}
+                  >
+                    Retry
+                  </Button>
+                </li>
+              ),
+            )}
           </ul>
         )}
       </Panel>
@@ -695,7 +902,10 @@ export default function AdminSettingsPage() {
  */
 function SupabasePanel() {
   const checkServer = useAction(api.supabase.status);
-  const [browser, setBrowser] = useState<{ ok: boolean; detail: string } | null>(null);
+  const [browser, setBrowser] = useState<{
+    ok: boolean;
+    detail: string;
+  } | null>(null);
   const [server, setServer] = useState<{
     ok: boolean;
     detail: string;
@@ -731,7 +941,8 @@ function SupabasePanel() {
     } catch (error) {
       setServer({
         ok: false,
-        detail: error instanceof Error ? error.message : "Could not check Supabase.",
+        detail:
+          error instanceof Error ? error.message : "Could not check Supabase.",
         buckets: [],
       });
     } finally {
@@ -768,7 +979,9 @@ function SupabasePanel() {
               disabled={!supabaseConfigured || pending !== null}
               onClick={runBrowserCheck}
             >
-              {pending === "browser" && <Loader2 className="size-3.5 animate-spin" />}
+              {pending === "browser" && (
+                <Loader2 className="size-3.5 animate-spin" />
+              )}
               Test browser keys
             </Button>
             {browser && (
@@ -798,8 +1011,8 @@ function SupabasePanel() {
               ? `Reachable. ${server.buckets.length} storage bucket${server.buckets.length === 1 ? "" : "s"}${
                   server.buckets.length ? `: ${server.buckets.join(", ")}` : ""
                 }.`
-              : server?.detail ??
-                "Add SUPABASE_SERVICE_ROLE_KEY in the Keys tab for server-side storage and admin calls. It is used only inside Convex actions."}
+              : (server?.detail ??
+                "Add SUPABASE_SERVICE_ROLE_KEY in the Keys tab for server-side storage and admin calls. It is used only inside Convex actions.")}
           </p>
           <div className="mt-3">
             <Button
@@ -809,7 +1022,9 @@ function SupabasePanel() {
               disabled={pending !== null}
               onClick={runServerCheck}
             >
-              {pending === "server" && <Loader2 className="size-3.5 animate-spin" />}
+              {pending === "server" && (
+                <Loader2 className="size-3.5 animate-spin" />
+              )}
               Check server connection
             </Button>
           </div>
@@ -819,11 +1034,18 @@ function SupabasePanel() {
       {(!supabaseConfigured || server?.ok === false) && (
         <div className="px-5 pb-5">
           <Callout tone="warning" title="Keys required">
-            Add <code className="font-mono text-[0.68rem]">VITE_SUPABASE_URL</code>,{" "}
-            <code className="font-mono text-[0.68rem]">VITE_SUPABASE_ANON_KEY</code> and{" "}
-            <code className="font-mono text-[0.68rem]">SUPABASE_SERVICE_ROLE_KEY</code> in the
-            project Keys tab (Supabase dashboard → Project Settings → API). Everything
-            else - data access and storage calls - is wired already.
+            Add{" "}
+            <code className="font-mono text-[0.68rem]">VITE_SUPABASE_URL</code>,{" "}
+            <code className="font-mono text-[0.68rem]">
+              VITE_SUPABASE_ANON_KEY
+            </code>{" "}
+            and{" "}
+            <code className="font-mono text-[0.68rem]">
+              SUPABASE_SERVICE_ROLE_KEY
+            </code>{" "}
+            in the project Keys tab (Supabase dashboard → Project Settings →
+            API). Everything else - data access and storage calls - is wired
+            already.
           </Callout>
         </div>
       )}

@@ -94,23 +94,38 @@ function payload(userId?: Id<"users">) {
       endDate: "2027-01-01",
       status: "active" as const,
     },
-    shipment: {
-      carrier: "Brink's Global Services",
-      trackingNumber: "BGS-918273",
-      origin: "Zurich, CH",
-      destination: "London, GB",
-      departureAt: "2026-10-20",
-      estimatedArrivalAt: "2026-10-24",
-      status: "preparing" as const,
-    },
     assignment: userId
       ? { mode: "existing" as const, userId }
       : { mode: "existing" as const },
   };
 }
 
+/** Records a consignment on a mineral that is already on file. */
+async function bookShipment(
+  t: Test,
+  admin: Id<"users">,
+  mineralId: Id<"minerals">,
+  overrides: Record<string, unknown> = {},
+) {
+  return await t
+    .withIdentity({ subject: admin })
+    .mutation(api.minerals.createShipment, {
+      mineralId,
+      shipment: {
+        carrier: "Brink's Global Services",
+        trackingNumber: "BGS-918273",
+        origin: "Zurich, CH",
+        destination: "London, GB",
+        departureAt: "2026-10-20",
+        estimatedArrivalAt: "2026-10-24",
+        status: "preparing" as const,
+        ...overrides,
+      },
+    });
+}
+
 describe("minerals and shipments", () => {
-  it("records a mineral, policy and shipment and assigns an existing member", async () => {
+  it("records a mineral and its policy without booking a shipment", async () => {
     const t = test();
     const admin = await seedAdmin(t);
     const client = await seedCustomer(t);
@@ -125,7 +140,7 @@ describe("minerals and shipments", () => {
     const stored = await t.run(async (ctx) => ({
       mineral: await ctx.db.get(result.mineralId),
       policy: await ctx.db.get(result.policyId),
-      shipment: await ctx.db.get(result.shipmentId),
+      shipments: await ctx.db.query("shipments").collect(),
       events: await ctx.db.query("shipmentEvents").collect(),
       notifications: await ctx.db.query("notifications").collect(),
     }));
@@ -146,14 +161,9 @@ describe("minerals and shipments", () => {
       currency: "GBP",
       status: "active",
     });
-    expect(stored.shipment).toMatchObject({
-      carrier: "Brink's Global Services",
-      origin: "Zurich, CH",
-      destination: "London, GB",
-      status: "preparing",
-      assignedUserId: client,
-    });
-    expect(stored.events).toHaveLength(1);
+    // Nothing is moving until a request is worked or staff book a consignment.
+    expect(stored.shipments).toHaveLength(0);
+    expect(stored.events).toHaveLength(0);
     expect(stored.notifications).toHaveLength(1);
     expect(stored.notifications[0]).toMatchObject({
       userId: client,
@@ -161,12 +171,73 @@ describe("minerals and shipments", () => {
       emailStatus: "queued",
       href: "/dashboard/minerals",
     });
+    expect(stored.notifications[0].body).toContain("request a shipment");
 
     const mine = await t
       .withIdentity({ subject: client })
       .query(api.minerals.mine, {});
     expect(mine).toHaveLength(1);
-    expect(mine[0].shipment?.reference).toBe(stored.shipment?.reference);
+    expect(mine[0].shipment).toBeNull();
+    expect(mine[0].request).toBeNull();
+    expect(mine[0].policy?.policyNumber).toBe("CV-MIN-2026-014");
+  });
+
+  it("books a shipment on an existing mineral and emails its owner", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+
+    const booked = await bookShipment(t, admin, created.mineralId);
+    await t.finishAllScheduledFunctions(() => {});
+
+    expect(booked.notified).toBe(true);
+    const stored = await t.run(async (ctx) => ({
+      shipment: await ctx.db.get(booked.shipmentId),
+      events: await ctx.db.query("shipmentEvents").collect(),
+      notifications: await ctx.db.query("notifications").collect(),
+      audit: await ctx.db.query("auditLogs").collect(),
+    }));
+
+    expect(stored.shipment).toMatchObject({
+      mineralId: created.mineralId,
+      carrier: "Brink's Global Services",
+      origin: "Zurich, CH",
+      destination: "London, GB",
+      status: "preparing",
+      assignedUserId: client,
+      createdBy: admin,
+    });
+    expect(stored.shipment?.reference).toMatch(/^SHP-/);
+    expect(stored.events).toHaveLength(1);
+    expect(stored.events[0]).toMatchObject({
+      shipmentId: booked.shipmentId,
+      status: "preparing",
+    });
+
+    const email = stored.notifications.find(
+      (notification) => notification.type === "shipment.created",
+    );
+    expect(email).toMatchObject({
+      userId: client,
+      emailStatus: "queued",
+      href: "/dashboard/minerals",
+    });
+    expect(email?.emailText).toContain("Brink's Global Services");
+
+    const audit = stored.audit.find(
+      (entry) => entry.action === "mineral.shipment_created",
+    );
+    expect(audit?.entityId).toBe(booked.shipmentId);
+
+    const mine = await t
+      .withIdentity({ subject: client })
+      .query(api.minerals.mine, {});
+    expect(mine[0].shipment?._id).toBe(booked.shipmentId);
     expect(mine[0].policy?.policyNumber).toBe("CV-MIN-2026-014");
   });
 
@@ -252,11 +323,12 @@ describe("minerals and shipments", () => {
     const created = await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.create, payload(client));
+    const booked = await bookShipment(t, admin, created.mineralId);
 
     const result = await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.updateShipmentStatus, {
-        shipmentId: created.shipmentId,
+        shipmentId: booked.shipmentId,
         status: "in_transit",
         location: "Basel, CH",
         note: "Cleared the vault and loaded onto the armoured convoy.",
@@ -265,7 +337,7 @@ describe("minerals and shipments", () => {
 
     expect(result.notified).toBe(true);
     const stored = await t.run(async (ctx) => ({
-      shipment: await ctx.db.get(created.shipmentId),
+      shipment: await ctx.db.get(booked.shipmentId),
       events: await ctx.db.query("shipmentEvents").collect(),
       notifications: await ctx.db.query("notifications").collect(),
     }));
@@ -280,7 +352,6 @@ describe("minerals and shipments", () => {
       "in_transit",
       "preparing",
     ]);
-    expect(stored.notifications).toHaveLength(2);
     const update = stored.notifications.find(
       (notification) => notification.type === "shipment.status_changed",
     );
@@ -307,12 +378,13 @@ describe("minerals and shipments", () => {
     const created = await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.create, payload(client));
+    const booked = await bookShipment(t, admin, created.mineralId);
 
     const nextEta = Date.UTC(2027, 0, 15);
     await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.updateShipmentStatus, {
-        shipmentId: created.shipmentId,
+        shipmentId: booked.shipmentId,
         status: "in_transit",
         location: "Basel, CH",
         estimatedArrivalAt: nextEta,
@@ -320,7 +392,7 @@ describe("minerals and shipments", () => {
     await t.finishAllScheduledFunctions(() => {});
 
     const stored = await t.run(
-      async (ctx) => await ctx.db.get(created.shipmentId),
+      async (ctx) => await ctx.db.get(booked.shipmentId),
     );
     expect(stored?.estimatedArrivalAt).toBe(nextEta);
 
@@ -335,7 +407,7 @@ describe("minerals and shipments", () => {
       t
         .withIdentity({ subject: admin })
         .mutation(api.minerals.updateShipmentStatus, {
-          shipmentId: created.shipmentId,
+          shipmentId: booked.shipmentId,
           status: "customs_hold",
           estimatedArrivalAt: Date.UTC(2020, 5, 1),
         }),
@@ -350,11 +422,12 @@ describe("minerals and shipments", () => {
     const created = await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.create, payload(client));
+    const booked = await bookShipment(t, admin, created.mineralId);
 
     await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.updateShipmentStatus, {
-        shipmentId: created.shipmentId,
+        shipmentId: booked.shipmentId,
         status: "customs_hold",
         note: "Carrier withdrew the sailing; the date is being re-planned.",
         estimatedArrivalAt: null,
@@ -362,7 +435,7 @@ describe("minerals and shipments", () => {
     await t.finishAllScheduledFunctions(() => {});
 
     const stored = await t.run(async (ctx) => ({
-      shipment: await ctx.db.get(created.shipmentId),
+      shipment: await ctx.db.get(booked.shipmentId),
     }));
     // The field is gone, not left holding the old date.
     expect(stored.shipment?.estimatedArrivalAt).toBeUndefined();
@@ -396,12 +469,13 @@ describe("minerals and shipments", () => {
     const created = await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.create, payload(client));
+    const booked = await bookShipment(t, admin, created.mineralId);
 
     await expect(
       t
         .withIdentity({ subject: admin })
         .mutation(api.minerals.updateShipmentStatus, {
-          shipmentId: created.shipmentId,
+          shipmentId: booked.shipmentId,
           status: "preparing",
         }),
     ).rejects.toThrow(/already preparing/i);
@@ -457,6 +531,552 @@ describe("minerals and shipments", () => {
   });
 });
 
+describe("shipment requests", () => {
+  it("lets a member ask for a shipment and tells the logistics desk", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+
+    const { requestId } = await t
+      .withIdentity({ subject: client })
+      .mutation(api.minerals.requestShipment, {
+        mineralId: created.mineralId,
+        destination: "Zurich, CH",
+        preferredDate: "2026-11-02",
+        notes: "Deliver to the Zurich vault, please.",
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    const stored = await t.run(async (ctx) => ({
+      request: await ctx.db.get(requestId),
+      notifications: await ctx.db.query("notifications").collect(),
+      audit: await ctx.db.query("auditLogs").collect(),
+    }));
+
+    expect(stored.request).toMatchObject({
+      mineralId: created.mineralId,
+      customerUserId: client,
+      destination: "Zurich, CH",
+      notes: "Deliver to the Zurich vault, please.",
+      status: "pending",
+    });
+    expect(stored.request?.preferredDate).toBe(Date.UTC(2026, 10, 2));
+
+    const notice = stored.notifications.find(
+      (notification) => notification.type === "shipment.requested",
+    );
+    expect(notice).toMatchObject({
+      userId: admin,
+      emailStatus: "queued",
+      href: "/dashboard/admin/shipments",
+      relatedId: requestId,
+    });
+    expect(notice?.body).toContain("Zurich, CH");
+
+    expect(
+      stored.audit.some((entry) => entry.action === "shipment.requested"),
+    ).toBe(true);
+
+    // The member sees the open request against the mineral.
+    const mine = await t
+      .withIdentity({ subject: client })
+      .query(api.minerals.mine, {});
+    expect(mine[0].request).toMatchObject({
+      status: "pending",
+      destination: "Zurich, CH",
+    });
+
+    const queue = await t
+      .withIdentity({ subject: admin })
+      .query(api.minerals.shipmentRequests, { status: "pending" });
+    expect(queue).toHaveLength(1);
+    expect(queue[0].request._id).toBe(requestId);
+    expect(queue[0].mineral?._id).toBe(created.mineralId);
+    expect(queue[0].requester?.email).toBe("client@cosmicvault.test");
+  });
+
+  it("refuses a duplicate request, an in-flight shipment and another vault", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+
+    await t
+      .withIdentity({ subject: client })
+      .mutation(api.minerals.requestShipment, {
+        mineralId: created.mineralId,
+        destination: "Zurich, CH",
+      });
+
+    await expect(
+      t
+        .withIdentity({ subject: client })
+        .mutation(api.minerals.requestShipment, {
+          mineralId: created.mineralId,
+          destination: "Basel, CH",
+        }),
+    ).rejects.toThrow(/already awaiting review/i);
+
+    // Staff and other members can never request against this mineral.
+    await expect(
+      t
+        .withIdentity({ subject: admin })
+        .mutation(api.minerals.requestShipment, {
+          mineralId: created.mineralId,
+          destination: "Zurich, CH",
+        }),
+    ).rejects.toThrow(/customers and brokers/i);
+
+    const other = await seedCustomer(t, "other@cosmicvault.test");
+    await expect(
+      t
+        .withIdentity({ subject: other })
+        .mutation(api.minerals.requestShipment, {
+          mineralId: created.mineralId,
+          destination: "Zurich, CH",
+        }),
+    ).rejects.toThrow(/not in your vault/i);
+
+    await expect(
+      t.withIdentity({ subject: client }).query(api.minerals.shipmentRequests, {
+        status: "pending",
+      }),
+    ).rejects.toThrow(/restricted to staff/i);
+
+    // A consignment in flight blocks a new request until it is delivered.
+    const second = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, {
+        ...payload(client),
+        policy: { ...payload().policy, policyNumber: "CV-MIN-2026-777" },
+      });
+    await bookShipment(t, admin, second.mineralId);
+    await expect(
+      t
+        .withIdentity({ subject: client })
+        .mutation(api.minerals.requestShipment, {
+          mineralId: second.mineralId,
+          destination: "Zurich, CH",
+        }),
+    ).rejects.toThrow(/shipment in progress/i);
+
+    // A preferred date in the past is not a plan the desk can keep.
+    const third = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, {
+        ...payload(client),
+        policy: { ...payload().policy, policyNumber: "CV-MIN-2026-778" },
+      });
+    await expect(
+      t
+        .withIdentity({ subject: client })
+        .mutation(api.minerals.requestShipment, {
+          mineralId: third.mineralId,
+          destination: "Zurich, CH",
+          preferredDate: "2020-01-01",
+        }),
+    ).rejects.toThrow(/today or a later/i);
+  });
+
+  it("books the requested shipment, emails the owner and clears the queue", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+    const { requestId } = await t
+      .withIdentity({ subject: client })
+      .mutation(api.minerals.requestShipment, {
+        mineralId: created.mineralId,
+        destination: "Zurich, CH",
+        preferredDate: "2026-11-02",
+      });
+
+    const result = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.fulfilShipmentRequest, {
+        requestId,
+        shipment: {
+          carrier: "Malca-Amit",
+          trackingNumber: "MA-55120",
+          origin: "London, GB",
+          destination: "Zurich, CH",
+          departureAt: "2026-11-03",
+          estimatedArrivalAt: "2026-11-05",
+          status: "preparing",
+          currentLocation: "London vault",
+          notes: "Booked as requested.",
+        },
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    expect(result.notified).toBe(true);
+    const stored = await t.run(async (ctx) => ({
+      request: await ctx.db.get(requestId),
+      shipment: await ctx.db.get(result.shipmentId),
+      events: await ctx.db.query("shipmentEvents").collect(),
+      notifications: await ctx.db.query("notifications").collect(),
+      audit: await ctx.db.query("auditLogs").collect(),
+    }));
+
+    expect(stored.request).toMatchObject({
+      status: "approved",
+      shipmentId: result.shipmentId,
+      decidedBy: admin,
+    });
+    expect(stored.request?.decidedAt).toBeTypeOf("number");
+    expect(stored.shipment).toMatchObject({
+      carrier: "Malca-Amit",
+      origin: "London, GB",
+      destination: "Zurich, CH",
+      status: "preparing",
+      assignedUserId: client,
+    });
+    expect(stored.events).toHaveLength(1);
+    expect(stored.events[0].note).toMatch(/member's request/i);
+
+    const email = stored.notifications.find(
+      (notification) => notification.type === "shipment.created",
+    );
+    expect(email).toMatchObject({ userId: client, emailStatus: "queued" });
+    expect(
+      stored.audit.some(
+        (entry) => entry.action === "shipment.request_approved",
+      ),
+    ).toBe(true);
+
+    // The member sees the booked consignment against the approved request.
+    const mine = await t
+      .withIdentity({ subject: client })
+      .query(api.minerals.mine, {});
+    expect(mine[0].request?.status).toBe("approved");
+    expect(mine[0].shipment?._id).toBe(result.shipmentId);
+
+    // The queue no longer holds it, and it cannot be decided twice.
+    expect(
+      await t
+        .withIdentity({ subject: admin })
+        .query(api.minerals.shipmentRequests, { status: "pending" }),
+    ).toHaveLength(0);
+    await expect(
+      t
+        .withIdentity({ subject: admin })
+        .mutation(api.minerals.fulfilShipmentRequest, {
+          requestId,
+          shipment: {
+            carrier: "Malca-Amit",
+            origin: "London, GB",
+            destination: "Zurich, CH",
+            status: "preparing",
+          },
+        }),
+    ).rejects.toThrow(/already been decided/i);
+  });
+
+  it("declines a request with a reason the member is sent", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+    const { requestId } = await t
+      .withIdentity({ subject: client })
+      .mutation(api.minerals.requestShipment, {
+        mineralId: created.mineralId,
+        destination: "Zurich, CH",
+      });
+
+    await expect(
+      t
+        .withIdentity({ subject: admin })
+        .mutation(api.minerals.declineShipmentRequest, {
+          requestId,
+          note: "   ",
+        }),
+    ).rejects.toThrow(/reason is required/i);
+
+    const result = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.declineShipmentRequest, {
+        requestId,
+        note: "Cover lapsed before the requested date.",
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    expect(result.notified).toBe(true);
+    const stored = await t.run(async (ctx) => ({
+      request: await ctx.db.get(requestId),
+      notifications: await ctx.db.query("notifications").collect(),
+      audit: await ctx.db.query("auditLogs").collect(),
+    }));
+    expect(stored.request).toMatchObject({
+      status: "declined",
+      decisionNote: "Cover lapsed before the requested date.",
+      decidedBy: admin,
+    });
+
+    const notice = stored.notifications.find(
+      (notification) => notification.type === "shipment.request_declined",
+    );
+    expect(notice).toMatchObject({ userId: client, emailStatus: "queued" });
+    expect(notice?.body).toContain("Cover lapsed");
+
+    expect(
+      stored.audit.some(
+        (entry) => entry.action === "shipment.request_declined",
+      ),
+    ).toBe(true);
+
+    await expect(
+      t
+        .withIdentity({ subject: admin })
+        .mutation(api.minerals.fulfilShipmentRequest, {
+          requestId,
+          shipment: {
+            carrier: "Malca-Amit",
+            origin: "London, GB",
+            destination: "Zurich, CH",
+            status: "preparing",
+          },
+        }),
+    ).rejects.toThrow(/already been decided/i);
+  });
+
+  it("answers an open request when staff book a shipment directly", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+    const { requestId } = await t
+      .withIdentity({ subject: client })
+      .mutation(api.minerals.requestShipment, {
+        mineralId: created.mineralId,
+        destination: "Zurich, CH",
+      });
+
+    const booked = await bookShipment(t, admin, created.mineralId, {
+      destination: "Zurich, CH",
+    });
+    await t.finishAllScheduledFunctions(() => {});
+
+    expect(booked.requestId).toBe(requestId);
+    const stored = await t.run(async (ctx) => await ctx.db.get(requestId));
+    expect(stored).toMatchObject({
+      status: "approved",
+      shipmentId: booked.shipmentId,
+      decidedBy: admin,
+    });
+    expect(stored?.decisionNote).toMatch(/directly/i);
+  });
+
+  it("keeps answered requests in the member's history, newest first", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+
+    const declined = await t
+      .withIdentity({ subject: client })
+      .mutation(api.minerals.requestShipment, {
+        mineralId: created.mineralId,
+        destination: "Zurich, CH",
+      });
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.declineShipmentRequest, {
+        requestId: declined.requestId,
+        note: "Cover lapsed before that date.",
+      });
+
+    const approved = await t
+      .withIdentity({ subject: client })
+      .mutation(api.minerals.requestShipment, {
+        mineralId: created.mineralId,
+        destination: "Basel, CH",
+      });
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.fulfilShipmentRequest, {
+        requestId: approved.requestId,
+        shipment: {
+          carrier: "Malca-Amit",
+          origin: "London, GB",
+          destination: "Basel, CH",
+          status: "preparing",
+        },
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    const mine = await t
+      .withIdentity({ subject: client })
+      .query(api.minerals.mine, {});
+    // The answered requests stay on the record instead of being replaced by the
+    // latest one, so the member can see what happened to each ask.
+    expect(mine[0].requests.map((entry) => entry.status)).toEqual([
+      "approved",
+      "declined",
+    ]);
+    expect(mine[0].request?.status).toBe("approved");
+    expect(mine[0].requests[1].decisionNote).toContain("Cover lapsed");
+    expect(mine[0].requests[0].shipmentId).toBe(mine[0].shipment?._id);
+  });
+
+  it("carries the same request history into the staff register", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+
+    const declined = await t
+      .withIdentity({ subject: client })
+      .mutation(api.minerals.requestShipment, {
+        mineralId: created.mineralId,
+        destination: "Zurich, CH",
+      });
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.declineShipmentRequest, {
+        requestId: declined.requestId,
+        note: "Cover lapsed before that date.",
+      });
+
+    const approved = await t
+      .withIdentity({ subject: client })
+      .mutation(api.minerals.requestShipment, {
+        mineralId: created.mineralId,
+        destination: "Basel, CH",
+      });
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.fulfilShipmentRequest, {
+        requestId: approved.requestId,
+        shipment: {
+          carrier: "Malca-Amit",
+          origin: "London, GB",
+          destination: "Basel, CH",
+          status: "preparing",
+        },
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    /* The dispatch board reads the register, so it must carry the same trail
+       the member sees - otherwise staff cannot explain an earlier decline. */
+    const rows = await t
+      .withIdentity({ subject: admin })
+      .query(api.minerals.list, {});
+    expect(rows).toHaveLength(1);
+    expect(rows[0].requests.map((entry) => entry.status)).toEqual([
+      "approved",
+      "declined",
+    ]);
+    expect(rows[0].request?._id).toBe(approved.requestId);
+    expect(rows[0].requests[0].shipmentId).toBe(rows[0].shipment?._id);
+    expect(rows[0].requests[1].decisionNote).toContain("Cover lapsed");
+  });
+
+  it("closes a request the mineral can no longer answer when it changes owner", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    const newOwner = await seedCustomer(t, "new-owner@cosmicvault.test");
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+    const { requestId } = await t
+      .withIdentity({ subject: client })
+      .mutation(api.minerals.requestShipment, {
+        mineralId: created.mineralId,
+        destination: "Zurich, CH",
+      });
+
+    await t.withIdentity({ subject: admin }).mutation(api.minerals.reassign, {
+      mineralId: created.mineralId,
+      assignment: { mode: "existing" as const, userId: newOwner },
+    });
+    await t.finishAllScheduledFunctions(() => {});
+
+    const stored = await t.run(async (ctx) => await ctx.db.get(requestId));
+    expect(stored).toMatchObject({ status: "declined", decidedBy: admin });
+    expect(stored?.decisionNote).toMatch(/moved to another account/i);
+
+    // The queue is clear, and the new owner can ask for their own shipment.
+    expect(
+      await t
+        .withIdentity({ subject: admin })
+        .query(api.minerals.shipmentRequests, { status: "pending" }),
+    ).toHaveLength(0);
+    await expect(
+      t
+        .withIdentity({ subject: newOwner })
+        .mutation(api.minerals.requestShipment, {
+          mineralId: created.mineralId,
+          destination: "London, GB",
+        }),
+    ).resolves.toHaveProperty("requestId");
+  });
+
+  it("refuses a second consignment while one is still moving", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+    await bookShipment(t, admin, created.mineralId);
+
+    await expect(bookShipment(t, admin, created.mineralId)).rejects.toThrow(
+      /shipment in progress/i,
+    );
+
+    // Once the consignment is closed the mineral can move again.
+    const booked = await t.run(async (ctx) => {
+      const [row] = await ctx.db.query("shipments").collect();
+      if (!row) throw new Error("Expected a booked shipment.");
+      return row;
+    });
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.updateShipmentStatus, {
+        shipmentId: booked._id,
+        status: "delivered",
+      });
+
+    const next = await bookShipment(t, admin, created.mineralId);
+    expect(next.shipmentId).not.toBe(booked._id);
+  });
+});
+
 describe("reassigning minerals and shipments", () => {
   it("moves the mineral and all of its shipments to another member", async () => {
     const t = test();
@@ -468,6 +1088,7 @@ describe("reassigning minerals and shipments", () => {
     const created = await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.create, payload(previousOwner));
+    const booked = await bookShipment(t, admin, created.mineralId);
 
     // A second consignment on the same mineral must follow the owner too.
     const secondShipment = await t.run(
@@ -503,7 +1124,7 @@ describe("reassigning minerals and shipments", () => {
       notified: true,
     });
     expect(result.shipmentIds.sort()).toEqual(
-      [created.shipmentId, secondShipment].sort(),
+      [booked.shipmentId, secondShipment].sort(),
     );
 
     const stored = await t.run(async (ctx) => ({
@@ -662,6 +1283,7 @@ describe("minerals for a customer record", () => {
     const first = await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.create, payload(client));
+    const booked = await bookShipment(t, admin, first.mineralId);
     await t.withIdentity({ subject: admin }).mutation(api.minerals.create, {
       ...payload(other),
       policy: { ...payload().policy, policyNumber: "CV-MIN-2026-200" },
@@ -679,7 +1301,7 @@ describe("minerals for a customer record", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].mineral._id).toBe(first.mineralId);
     expect(rows[0].policy?.policyNumber).toBe("CV-MIN-2026-014");
-    expect(rows[0].shipment?._id).toBe(first.shipmentId);
+    expect(rows[0].shipment?._id).toBe(booked.shipmentId);
     expect(rows[0].shipments).toHaveLength(1);
 
     await t.withIdentity({ subject: admin }).mutation(api.minerals.reassign, {
@@ -710,6 +1332,7 @@ describe("unassigned minerals", () => {
     const created = await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.create, payload(client));
+    const booked = await bookShipment(t, admin, created.mineralId);
 
     // Detach the record so it becomes an attach candidate on a customer page.
     await t.run(async (ctx) => {
@@ -732,7 +1355,7 @@ describe("unassigned minerals", () => {
       .query(api.minerals.unassigned, {});
     expect(rows).toHaveLength(1);
     expect(rows[0].mineral._id).toBe(created.mineralId);
-    expect(rows[0].shipment?._id).toBe(created.shipmentId);
+    expect(rows[0].shipment?._id).toBe(booked.shipmentId);
 
     const result = await t
       .withIdentity({ subject: admin })
@@ -755,7 +1378,7 @@ describe("unassigned minerals", () => {
 
     const stored = await t.run(async (ctx) => ({
       mineral: await ctx.db.get(created.mineralId),
-      shipment: await ctx.db.get(created.shipmentId),
+      shipment: await ctx.db.get(booked.shipmentId),
       audit: await ctx.db.query("auditLogs").collect(),
     }));
     expect(stored.mineral?.assignedUserId).toBe(client);
@@ -776,6 +1399,7 @@ describe("detaching minerals", () => {
     const created = await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.create, payload(client));
+    const booked = await bookShipment(t, admin, created.mineralId);
 
     await expect(
       t.withIdentity({ subject: client }).mutation(api.minerals.detach, {
@@ -793,12 +1417,12 @@ describe("detaching minerals", () => {
 
     expect(result).toMatchObject({
       previousUserId: client,
-      shipmentIds: [created.shipmentId],
+      shipmentIds: [booked.shipmentId],
     });
 
     const stored = await t.run(async (ctx) => ({
       mineral: await ctx.db.get(created.mineralId),
-      shipment: await ctx.db.get(created.shipmentId),
+      shipment: await ctx.db.get(booked.shipmentId),
       audit: await ctx.db.query("auditLogs").collect(),
       notifications: await ctx.db.query("notifications").collect(),
     }));
@@ -897,6 +1521,19 @@ describe("shipment status email", () => {
     expect(email.html).toContain("https://vault.test/dashboard/minerals");
     expect(email.text).toContain("Status: In transit");
     expect(email.text).toContain("Route: Zurich, CH to London, GB");
+  });
+
+  it("never reports the status as the consignment's location", () => {
+    const email = renderShipmentStatusEmail({
+      ...base,
+      location: undefined,
+      shipment: { ...base.shipment, eta: undefined },
+    });
+
+    // Without an estimate the row falls back to the position, so an unrecorded
+    // one is said plainly instead of wearing the status word.
+    expect(email.html).toContain("Current location");
+    expect(email.html).toContain("Not recorded");
   });
 
   it("escapes member-facing values instead of injecting markup", () => {

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalQuery, mutation, query } from "./_generated/server";
 import { PERMISSIONS, requirePermission, requireViewer } from "./lib/authz";
 import { writeAudit } from "./lib/audit";
 import { cleanText, isValidEmail, requiredText } from "./lib/refs";
@@ -36,6 +36,7 @@ export const update = mutation({
   args: {
     companyName: v.string(),
     supportEmail: v.string(),
+    emailFromAddress: v.optional(v.string()),
     defaultCurrency: v.string(),
     commissionEnabled: v.boolean(),
     renewalNoticeDays: v.number(),
@@ -52,18 +53,38 @@ export const update = mutation({
   handler: async (ctx, args) => {
     const viewer = await requirePermission(ctx, PERMISSIONS.SETTINGS_MANAGE);
     const settings = await ensureSettings(ctx);
-    const email = requiredText(args.supportEmail, "Support email", 160).toLowerCase();
-    if (!isValidEmail(email)) throw new Error("Enter a valid support email address.");
+    const email = requiredText(
+      args.supportEmail,
+      "Support email",
+      160,
+    ).toLowerCase();
+    if (!isValidEmail(email))
+      throw new Error("Enter a valid support email address.");
+    /* Blank means "use the deployment's address", so it is allowed and stored
+       as absent rather than as an empty string. */
+    const fromAddress = cleanText(
+      args.emailFromAddress,
+      "Email from address",
+      160,
+    ).toLowerCase();
+    if (fromAddress && !isValidEmail(fromAddress)) {
+      throw new Error(
+        "Enter a valid email from address, or leave it blank to use the deployment's.",
+      );
+    }
     if (args.allowedCurrencies.length === 0) {
       throw new Error("Keep at least one supported currency.");
     }
     const currencies = await ctx.db.query("currencies").take(50);
     const known = new Set(currencies.map((currency) => currency.code));
     for (const code of args.allowedCurrencies) {
-      if (!known.has(code)) throw new Error(`${code} is not a configured currency.`);
+      if (!known.has(code))
+        throw new Error(`${code} is not a configured currency.`);
     }
     if (!args.allowedCurrencies.includes(args.defaultCurrency)) {
-      throw new Error("The default currency must be one of the supported currencies.");
+      throw new Error(
+        "The default currency must be one of the supported currencies.",
+      );
     }
     const keys = new Set<string>();
     for (const template of args.emailTemplates) {
@@ -77,6 +98,7 @@ export const update = mutation({
     const before = {
       companyName: settings.companyName,
       supportEmail: settings.supportEmail,
+      emailFromAddress: settings.emailFromAddress,
       defaultCurrency: settings.defaultCurrency,
       commissionEnabled: settings.commissionEnabled,
       renewalNoticeDays: settings.renewalNoticeDays,
@@ -86,11 +108,16 @@ export const update = mutation({
     await ctx.db.patch(settings._id, {
       companyName: requiredText(args.companyName, "Company name", 160),
       supportEmail: email,
+      emailFromAddress: fromAddress || undefined,
       defaultCurrency: args.defaultCurrency,
       commissionEnabled: args.commissionEnabled,
-      renewalNoticeDays: Math.max(1, Math.min(180, Math.round(args.renewalNoticeDays))),
+      renewalNoticeDays: Math.max(
+        1,
+        Math.min(180, Math.round(args.renewalNoticeDays)),
+      ),
       claimSlaDays: Math.max(1, Math.min(90, Math.round(args.claimSlaDays))),
-      bankAccountName: cleanText(args.bankAccountName, "Bank account name", 160) || undefined,
+      bankAccountName:
+        cleanText(args.bankAccountName, "Bank account name", 160) || undefined,
       bankIban: cleanText(args.bankIban, "IBAN", 64) || undefined,
       bankSortCode: cleanText(args.bankSortCode, "Sort code", 24) || undefined,
       bankSwift: cleanText(args.bankSwift, "SWIFT/BIC", 24) || undefined,
@@ -111,6 +138,7 @@ export const update = mutation({
       after: {
         companyName: args.companyName,
         supportEmail: email,
+        emailFromAddress: fromAddress || undefined,
         defaultCurrency: args.defaultCurrency,
         commissionEnabled: args.commissionEnabled,
         renewalNoticeDays: args.renewalNoticeDays,
@@ -119,6 +147,22 @@ export const update = mutation({
       },
     });
     return true;
+  },
+});
+
+/**
+ * The sender a delivery action should stamp on its message: the address the
+ * admin set in Settings, and the company name it is sent under. Internal
+ * because only the delivery actions read it, and they run without a viewer.
+ */
+export const emailSender = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const settings = await getSettings(ctx);
+    return {
+      emailFromAddress: settings.emailFromAddress,
+      companyName: settings.companyName,
+    };
   },
 });
 

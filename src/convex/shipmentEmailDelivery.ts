@@ -75,7 +75,12 @@ export const sendUpdate = action({
 
     try {
       const { vly } = await import("./lib/vly");
+      const { emailSender } = await import("./lib/sender");
+      /* Read at send time, so the sender the admin set in Settings is the one
+         this consignment update arrives from. */
+      const sender = await ctx.runQuery(internal.settings.emailSender, {});
       const result = await vly.email.send({
+        from: emailSender(sender),
         to: queued.to,
         subject: queued.subject,
         text: queued.text,

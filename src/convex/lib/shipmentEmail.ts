@@ -300,7 +300,18 @@ export function renderShipmentStatusEmail(input: ShipmentEmailInput) {
           ${input.shipment.trackingNumber ? detailRow("Tracking number", input.shipment.trackingNumber) : ""}
           ${detailRow("Route", `${input.shipment.origin} → ${input.shipment.destination}`)}
           ${input.shipment.departure ? detailRow("Departed", input.shipment.departure) : ""}
-          ${input.shipment.eta ? detailRow("Estimated arrival", input.shipment.eta, true) : detailRow("Current location", input.location || "In transit", true)}
+          ${
+            /* With no estimate the row falls back to where the consignment is;
+               an unrecorded place is said plainly rather than filled in with
+               the status, which is already named above. */
+            input.shipment.eta
+              ? detailRow("Estimated arrival", input.shipment.eta, true)
+              : detailRow(
+                  "Current location",
+                  input.location ?? "Not recorded",
+                  true,
+                )
+          }
         </table>
       </td>
     </tr>
@@ -416,7 +427,11 @@ export function renderAssignmentEmail(input: AssignmentEmailInput) {
         <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${ELECTRIC};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Mineral assigned</p>
         <h1 class="cv-headline" style="margin:10px 0 0;font-size:27px;line-height:1.18;font-weight:600;letter-spacing:-0.03em;color:${INK};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Your mineral record is live</h1>
         <p style="margin:12px 0 0;font-size:14px;line-height:23px;color:${MUTED};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-          Hello ${escapeHtml(input.recipientName)}, ${escapeHtml(input.companyName)} has recorded ${escapeHtml(input.mineral.name)} under your name and linked its cover and shipment to your account. Status changes will be emailed to you automatically.
+          Hello ${escapeHtml(input.recipientName)}, ${escapeHtml(input.companyName)} has recorded ${escapeHtml(input.mineral.name)} under your name and linked its ${input.policy ? "cover" : "record"} to your account.${
+            input.shipment
+              ? " Its shipment sits below. Status changes will be emailed to you automatically."
+              : " You can request a shipment whenever you need it moved, and we will email you when one is booked."
+          }
         </p>
       </td>
     </tr>
@@ -480,7 +495,10 @@ export function renderAssignmentEmail(input: AssignmentEmailInput) {
   const lines = [
     `Hello ${input.recipientName},`,
     "",
-    `${input.companyName} has recorded ${input.mineral.name} (${input.mineral.reference}) under your account, with its policy and shipment details.`,
+    `${input.companyName} has recorded ${input.mineral.name} (${input.mineral.reference}) under your account, with its policy details.`,
+    input.shipment
+      ? ""
+      : "You can request a shipment from your minerals page whenever you need it moved.",
     "",
     `Category: ${input.mineral.category}`,
     `Quantity: ${input.mineral.quantity}`,

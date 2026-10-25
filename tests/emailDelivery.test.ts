@@ -113,17 +113,30 @@ function payload(userId: Id<"users">) {
       endDate: "2027-01-01",
       status: "active" as const,
     },
-    shipment: {
-      carrier: "Brink's Global Services",
-      trackingNumber: "BGS-918273",
-      origin: "Zurich, CH",
-      destination: "London, GB",
-      departureAt: "2026-10-20",
-      estimatedArrivalAt: "2026-10-24",
-      status: "preparing" as const,
-    },
     assignment: { mode: "existing" as const, userId },
   };
+}
+
+/** Records a consignment on a mineral that is already on file. */
+async function bookShipment(
+  t: Test,
+  admin: Id<"users">,
+  mineralId: Id<"minerals">,
+) {
+  return await t
+    .withIdentity({ subject: admin })
+    .mutation(api.minerals.createShipment, {
+      mineralId,
+      shipment: {
+        carrier: "Brink's Global Services",
+        trackingNumber: "BGS-918273",
+        origin: "Zurich, CH",
+        destination: "London, GB",
+        departureAt: "2026-10-20",
+        estimatedArrivalAt: "2026-10-24",
+        status: "preparing" as const,
+      },
+    });
 }
 
 async function statusNotification(t: Test) {
@@ -152,11 +165,12 @@ describe("shipment status email delivery", () => {
     const created = await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.create, payload(client));
+    const booked = await bookShipment(t, admin, created.mineralId);
 
     await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.updateShipmentStatus, {
-        shipmentId: created.shipmentId,
+        shipmentId: booked.shipmentId,
         status: "in_transit",
         location: "Basel, CH",
         note: "Cleared the vault and loaded onto the armoured convoy.",
@@ -265,48 +279,55 @@ describe("consignment delivery log", () => {
           policyNumber: "CV-MIN-2026-099",
         },
       });
+    const firstShipment = await bookShipment(t, admin, first.mineralId);
+    const secondShipment = await bookShipment(t, admin, second.mineralId);
 
     // A status change queues its email immediately, so the row reports "queued".
     await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.updateShipmentStatus, {
-        shipmentId: first.shipmentId,
+        shipmentId: firstShipment.shipmentId,
         status: "in_transit",
       });
 
-    // A send that never reported back is the case staff could not see before.
-    await t.run(
-      async (ctx) =>
-        await ctx.db.insert("notifications", {
-          userId: client,
-          type: "shipment.status_changed",
-          title: "Silver ingot is in transit",
-          body: "Never delivered.",
-          relatedType: "shipments",
-          relatedId: second.shipmentId,
-          dedupeKey: "test:stalled-send",
-          emailStatus: "queued",
-          emailAttempts: 0,
-          createdAt: Date.now() - 30 * 60_000,
-        }),
-    );
+    // A send that never reported back is the case staff could not see before:
+    // the second consignment's booking email is still "queued" half an hour on.
+    await t.run(async (ctx) => {
+      const rows = await ctx.db.query("notifications").collect();
+      const row = rows.find(
+        (item) =>
+          item.relatedId === secondShipment.shipmentId &&
+          item.type === "shipment.created",
+      );
+      if (!row) throw new Error("Expected the booking email to be queued.");
+      await ctx.db.patch(row._id, {
+        emailStatus: "queued",
+        emailError: undefined,
+        emailAttempts: 0,
+        emailQueuedAt: Date.now() - 30 * 60_000,
+      });
+    });
 
     const log = await t
       .withIdentity({ subject: admin })
       .query(api.minerals.emailLog, {
-        shipmentIds: [first.shipmentId, second.shipmentId],
+        shipmentIds: [firstShipment.shipmentId, secondShipment.shipmentId],
       });
 
     expect(log).toHaveLength(2);
-    const queued = log.find((row) => row.shipmentId === first.shipmentId);
+    const queued = log.find(
+      (row) => row.shipmentId === firstShipment.shipmentId,
+    );
     expect(queued).toMatchObject({ emailStatus: "queued", stalled: false });
-    const stalled = log.find((row) => row.shipmentId === second.shipmentId);
+    const stalled = log.find(
+      (row) => row.shipmentId === secondShipment.shipmentId,
+    );
     expect(stalled).toMatchObject({ emailStatus: "queued", stalled: true });
 
     // The delivery log is the mineral console's, so members cannot read it.
     await expect(
       t.withIdentity({ subject: client }).query(api.minerals.emailLog, {
-        shipmentIds: [first.shipmentId],
+        shipmentIds: [firstShipment.shipmentId],
       }),
     ).rejects.toThrow(/restricted to staff/i);
 
@@ -322,10 +343,11 @@ describe("consignment delivery log", () => {
     const created = await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.create, payload(client));
+    const booked = await bookShipment(t, admin, created.mineralId);
     await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.updateShipmentStatus, {
-        shipmentId: created.shipmentId,
+        shipmentId: booked.shipmentId,
         status: "in_transit",
         location: "Basel, CH",
       });
@@ -335,7 +357,11 @@ describe("consignment delivery log", () => {
     // The provider rejected the status email: the row turns amber on the board.
     const failedId = await t.run(async (ctx) => {
       const rows = await ctx.db.query("notifications").collect();
-      const row = rows.find((item) => item.relatedId === created.shipmentId)!;
+      const row = rows.find(
+        (item) =>
+          item.relatedId === booked.shipmentId &&
+          item.type === "shipment.status_changed",
+      )!;
       await ctx.db.patch(row._id, {
         emailStatus: "failed",
         emailError: "Provider rejected the recipient address.",
@@ -347,7 +373,7 @@ describe("consignment delivery log", () => {
     const result = await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.resendShipmentEmail, {
-        shipmentId: created.shipmentId,
+        shipmentId: booked.shipmentId,
       });
     expect(result.to).toBe("client@cosmicvault.test");
     await t.finishAllScheduledFunctions(vi.runAllTimers);
@@ -374,7 +400,7 @@ describe("consignment delivery log", () => {
       t
         .withIdentity({ subject: admin })
         .mutation(api.minerals.resendShipmentEmail, {
-          shipmentId: created.shipmentId,
+          shipmentId: booked.shipmentId,
         }),
     ).rejects.toThrow(/already accepted/i);
 
@@ -383,7 +409,7 @@ describe("consignment delivery log", () => {
       t
         .withIdentity({ subject: client })
         .mutation(api.minerals.resendShipmentEmail, {
-          shipmentId: created.shipmentId,
+          shipmentId: booked.shipmentId,
         }),
     ).rejects.toThrow(/restricted to staff/i);
 

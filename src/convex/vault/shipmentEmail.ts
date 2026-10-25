@@ -103,7 +103,13 @@ const FONT_STACK =
 
 const STEP_COPY: Record<
   ShipmentEmailStatus,
-  { label: string; stamp: string; headline: string; subject: string; description: string }
+  {
+    label: string;
+    stamp: string;
+    headline: string;
+    subject: string;
+    description: string;
+  }
 > = {
   pending: {
     label: "Authorised",
@@ -200,7 +206,10 @@ const HTML_ESCAPES: Record<string, string> = {
 };
 
 function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (character) => HTML_ESCAPES[character] ?? "&amp;");
+  return value.replace(
+    /[&<>"']/g,
+    (character) => HTML_ESCAPES[character] ?? "&amp;",
+  );
 }
 
 function escapeAttribute(value: string) {
@@ -273,7 +282,8 @@ function buildSteps(input: ShipmentEmailInput) {
 
   return SHIPMENT_EMAIL_STATUSES.map((status, index) => {
     const event = latest.get(status);
-    const at = event?.at ?? (status === input.status ? input.updatedAt : undefined);
+    const at =
+      event?.at ?? (status === input.status ? input.updatedAt : undefined);
     let state: StepState;
     if (index < currentIndex) {
       state = at ? "complete" : "skipped";
@@ -286,10 +296,17 @@ function buildSteps(input: ShipmentEmailInput) {
   });
 }
 
-function stepStamp(step: ReturnType<typeof buildSteps>[number], estimatedDelivery: number) {
+function stepStamp(
+  step: ReturnType<typeof buildSteps>[number],
+  estimatedDelivery: number,
+) {
   if (step.state === "complete" || step.state === "active") {
-    if (!step.at) return { primary: STEP_COPY[step.status].stamp, secondary: "" };
-    return { primary: dayStamp(step.at), secondary: TIME.format(new Date(step.at)) };
+    if (!step.at)
+      return { primary: STEP_COPY[step.status].stamp, secondary: "" };
+    return {
+      primary: dayStamp(step.at),
+      secondary: TIME.format(new Date(step.at)),
+    };
   }
   if (step.state === "skipped") return { primary: "Skipped", secondary: "" };
   if (step.status === "shipped") {
@@ -396,7 +413,12 @@ type Station = {
  * (0-1). The diamond waypoints sit midway through each passed segment, exactly
  * like the dispatch board in the member's shipping view.
  */
-function rail(stations: Station[], progress: number, accent: string, waypoints: boolean) {
+function rail(
+  stations: Station[],
+  progress: number,
+  accent: string,
+  waypoints: boolean,
+) {
   const count = stations.length;
   const lastIndex = count - 1;
 
@@ -404,7 +426,8 @@ function rail(stations: Station[], progress: number, accent: string, waypoints: 
     .map((station, index) => {
       const thresholdLeft = lastIndex === 0 ? 0 : (index - 0.5) / lastIndex;
       const thresholdRight = lastIndex === 0 ? 0 : (index + 0.5) / lastIndex;
-      const left = index > 0 ? railSegment(progress >= thresholdLeft, accent) : "";
+      const left =
+        index > 0 ? railSegment(progress >= thresholdLeft, accent) : "";
       const right =
         index < lastIndex
           ? railSegment(progress >= thresholdRight, accent, waypoints)
@@ -529,9 +552,11 @@ function serviceCell(glyph: string, title: string, copy: string, last = false) {
 }
 
 function photoCell(input: ShipmentEmailInput, origin: string | undefined) {
-  const path = input.photoPath && /^\/[a-z0-9/_-]+\.(webp|png|jpe?g|svg)$/i.test(input.photoPath)
-    ? input.photoPath
-    : undefined;
+  const path =
+    input.photoPath &&
+    /^\/[a-z0-9/_-]+\.(webp|png|jpe?g|svg)$/i.test(input.photoPath)
+      ? input.photoPath
+      : undefined;
   const src = path && origin ? safeUrl(`${origin}${path}`) : undefined;
 
   if (src) {
@@ -601,11 +626,10 @@ export function renderShipmentUpdateEmail(
       lines: [`Released ${dayStamp(releasedAt)}`, input.carrier],
     },
     {
-      marker: stepMarker(
-        delivered ? "complete" : "active",
-        input.status,
-      ),
-      kicker: "Position",
+      marker: stepMarker(delivered ? "complete" : "active", input.status),
+      /* The vault record carries no position, so this station names the state
+         of the journey rather than a place the email does not have. */
+      kicker: "Progress",
       title: STATUS_CHIP_LABEL[input.status],
       titleColor: input.status === "on_hold" ? PALETTE.amber : PALETTE.ink,
       lines: [
@@ -632,7 +656,9 @@ export function renderShipmentUpdateEmail(
       kicker: "Destination",
       title: destinationCity,
       lines: [
-        delivered ? `Delivered ${dayStamp(input.events[input.events.length - 1]?.at ?? input.updatedAt)}` : `Est. delivery ${dayStamp(input.estimatedDelivery)}`,
+        delivered
+          ? `Delivered ${dayStamp(input.events[input.events.length - 1]?.at ?? input.updatedAt)}`
+          : `Est. delivery ${dayStamp(input.estimatedDelivery)}`,
         delivered ? "Signature on delivery" : "Door to door",
       ],
     },
@@ -964,7 +990,9 @@ export function renderShipmentUpdateEmail(
 
   const textLines = steps.map((step) => {
     const stamp = stepStamp(step, input.estimatedDelivery);
-    const when = stamp.secondary ? `${stamp.primary} ${stamp.secondary}` : stamp.primary;
+    const when = stamp.secondary
+      ? `${stamp.primary} ${stamp.secondary}`
+      : stamp.primary;
     return `  ${STEP_COPY[step.status].label.padEnd(12, " ")} ${when}`;
   });
 

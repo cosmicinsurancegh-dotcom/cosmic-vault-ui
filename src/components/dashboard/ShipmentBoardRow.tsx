@@ -4,6 +4,7 @@ import {
   type JourneyPolicy,
 } from "./LiveShipmentPanel";
 import { ShipmentRouteRail } from "./ShipmentRouteRail";
+import { StatusPill } from "./PlatformUI";
 import {
   ShipmentSignalChip,
   ShipmentStateChip,
@@ -26,7 +27,6 @@ import {
   Mail,
   MailCheck,
   MailX,
-  Maximize2,
   RotateCw,
   UserRoundPlus,
 } from "lucide-react";
@@ -125,6 +125,17 @@ function ShipmentEmailChip({
   );
 }
 
+/** One request behind a consignment, as the dispatch board reads it. */
+export type ShipmentRequestEntry = {
+  _id: string;
+  destination: string;
+  preferredDate?: number;
+  status: "pending" | "approved" | "declined";
+  decisionNote?: string;
+  decidedAt?: number;
+  createdAt: number;
+};
+
 /** Anything the row itself controls, which a card click must leave alone. */
 const ROW_ACTIONS =
   "a, button, input, select, textarea, [role='menuitem'], [data-row-action]";
@@ -148,6 +159,7 @@ export function ShipmentBoardRow({
   owner,
   email,
   onResendEmail,
+  requests = [],
   controls,
   menu,
   className,
@@ -164,6 +176,11 @@ export function ShipmentBoardRow({
   email?: ShipmentEmailState | null;
   /** Staff only: queues the last email again; shown only if a send failed. */
   onResendEmail?: () => Promise<void>;
+  /**
+   * Staff only: every request behind the mineral, newest first. The latest one
+   * opened this consignment; the answered ones explain the ones before it.
+   */
+  requests?: ShipmentRequestEntry[];
   /** Staff only: status and assignment controls. */
   controls?: ReactNode;
   /** Member only: the row's actions menu. */
@@ -209,9 +226,18 @@ export function ShipmentBoardRow({
               <p className="text-[0.52rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Shipping ID
               </p>
-              <p className="truncate text-[0.8rem] font-semibold tracking-[-0.01em] text-ink">
+              {/* The reference is the way in: the record opens its own tracking,
+                  so the row needs no expand button beside its controls. */}
+              <button
+                type="button"
+                onClick={showTracking}
+                aria-haspopup="dialog"
+                aria-label={`Open live tracking for ${label}`}
+                title="Open live tracking"
+                className="block max-w-full truncate text-left text-[0.8rem] font-semibold tracking-[-0.01em] text-ink transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
                 {shipment.reference}
-              </p>
+              </button>
             </div>
           </div>
 
@@ -258,7 +284,9 @@ export function ShipmentBoardRow({
             />
           ) : null}
 
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {/* Two bare labels, so they need air between them rather than the
+              padding a chip used to provide. */}
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             <ShipmentStateChip status={shipment.status} />
             <ShipmentSignalChip shipment={shipment} />
           </div>
@@ -284,21 +312,47 @@ export function ShipmentBoardRow({
         />
 
         <div className="flex flex-wrap items-center gap-1.5 lg:flex-col lg:items-end">
-          <button
-            type="button"
-            onClick={showTracking}
-            aria-haspopup="dialog"
-            aria-label={`Open live tracking for ${label}`}
-            title="Open live tracking"
-            className="grid size-8 shrink-0 place-items-center rounded-[4px] border border-line text-muted-foreground transition-colors hover:border-primary/35 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-          >
-            <Maximize2 className="size-3.5" strokeWidth={2.2} />
-          </button>
-
           {menu}
           {controls}
         </div>
       </div>
+
+      {requests.length > 0 && (
+        <div
+          /* Reference material, not a shortcut into the tracking dialog. */
+          data-row-action
+          className="border-t border-line/60 px-4 pb-3.5 pt-3 sm:px-5"
+        >
+          <p className="mb-2 text-[0.52rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Request history
+          </p>
+          <ul className="space-y-1.5">
+            {requests.map((entry) => (
+              <li
+                key={entry._id}
+                className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1"
+              >
+                <div className="min-w-0">
+                  <p className="text-[0.64rem] font-medium text-ink">
+                    {entry.destination}
+                    {entry.preferredDate
+                      ? ` · preferred ${formatDate(entry.preferredDate)}`
+                      : ""}
+                  </p>
+                  <p className="mt-0.5 text-[0.56rem] leading-4 text-muted-foreground">
+                    Requested {formatDate(entry.createdAt)}
+                    {entry.decidedAt
+                      ? ` · decided ${formatDate(entry.decidedAt)}`
+                      : ""}
+                    {entry.decisionNote ? ` · ${entry.decisionNote}` : ""}
+                  </p>
+                </div>
+                <StatusPill status={entry.status} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <Dialog
         open={open}

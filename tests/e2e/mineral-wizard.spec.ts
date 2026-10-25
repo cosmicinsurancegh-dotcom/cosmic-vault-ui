@@ -3,11 +3,12 @@ import { expect, test } from "./support/fixtures";
 import type { E2ESession } from "./stubs/session";
 
 /**
- * The "Add a mineral" dialog is a four-step wizard: mineral, policy, shipment,
- * member. Only the current step is mounted, each step gates its own Next
- * button, and the save button exists on the last step alone. The Convex client
- * is the suite's double, so this spec asserts on the mutation the dialog sends
- * while the write path itself stays covered by convex-test.
+ * The "Add a mineral" dialog records a holding, not a consignment: mineral,
+ * policy, then the member who owns it. Only the current step is mounted, each
+ * step gates its own Next button, and the save button exists on the last step
+ * alone. A shipment is booked later, from the member's request (see
+ * shipment-request.spec.ts), so this spec also asserts the save sends no
+ * shipment block.
  */
 const FIXTURES: Record<string, unknown> = {
   "minerals.list": [],
@@ -65,14 +66,8 @@ async function fillPolicyStep(dialog: Locator) {
   await dialog.getByLabel("Cover limit (GBP)").fill("500000");
 }
 
-async function fillShipmentStep(dialog: Locator) {
-  await dialog.getByLabel("Carrier").fill("Brink's Global Services");
-  await dialog.getByLabel("Origin").fill("Zurich, CH");
-  await dialog.getByLabel("Destination").fill("London, GB");
-}
-
 test.describe("add mineral wizard", () => {
-  test("walks the four steps and saves against an existing member", async ({
+  test("walks the three steps and saves against an existing member", async ({
     page,
   }) => {
     const dialog = await openWizard(page);
@@ -100,24 +95,21 @@ test.describe("add mineral wizard", () => {
     await fillPolicyStep(dialog);
     await dialog.getByRole("button", { name: "Next" }).click();
 
-    // Step 3.
-    await expect(dialog.getByLabel("Carrier")).toBeVisible();
-    await expect(dialog.getByLabel("Policy number")).toHaveCount(0);
-    await expect(dialog.getByRole("button", { name: "Next" })).toBeDisabled();
-    await fillShipmentStep(dialog);
-    await dialog.getByRole("button", { name: "Next" }).click();
-
-    // Step 4: the save button only exists here, and it needs an owner.
+    // Step 3: the save button only exists here, and it needs an owner.
     await expect(dialog.getByLabel("Member")).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Next" })).toHaveCount(0);
     await expect(
       dialog.getByRole("button", { name: "Add mineral" }),
     ).toBeDisabled();
 
-    // Back keeps what was typed, and Next returns to the owner step.
+    // Shipment details are not part of recording a holding.
+    await expect(dialog.getByLabel("Carrier")).toHaveCount(0);
+    await expect(dialog.getByLabel("Origin")).toHaveCount(0);
+
+    // Back keeps what was typed.
     await dialog.getByRole("button", { name: "Back" }).click();
-    await expect(dialog.getByLabel("Carrier")).toHaveValue(
-      "Brink's Global Services",
+    await expect(dialog.getByLabel("Provider")).toHaveValue(
+      "Cosmic Vault Insurance",
     );
     await dialog.getByRole("button", { name: "Next" }).click();
 
@@ -133,9 +125,8 @@ test.describe("add mineral wizard", () => {
     await expect(page.getByRole("dialog")).toHaveCount(0);
 
     const mutations = await page.evaluate(() => window.__E2E_MUTATIONS__ ?? []);
-    expect(
-      mutations.find((call) => call.ref === "minerals.create")?.args,
-    ).toMatchObject({
+    const args = mutations.find((call) => call.ref === "minerals.create")?.args;
+    expect(args).toMatchObject({
       mineral: {
         name: "Gold bullion, 999.9",
         category: "Precious metals",
@@ -148,13 +139,10 @@ test.describe("add mineral wizard", () => {
         provider: "Cosmic Vault Insurance",
         coverage: "cargo_transit",
       },
-      shipment: {
-        carrier: "Brink's Global Services",
-        origin: "Zurich, CH",
-        destination: "London, GB",
-      },
       assignment: { mode: "existing", userId: "user-1" },
     });
+    // A shipment is requested by the member later, never at creation.
+    expect(args).not.toHaveProperty("shipment");
 
     // Reopening starts from the first step with an empty form.
     await page.getByRole("button", { name: "Add mineral" }).first().click();
@@ -171,8 +159,6 @@ test.describe("add mineral wizard", () => {
     await fillMineralStep(dialog);
     await dialog.getByRole("button", { name: "Next" }).click();
     await fillPolicyStep(dialog);
-    await dialog.getByRole("button", { name: "Next" }).click();
-    await fillShipmentStep(dialog);
     await dialog.getByRole("button", { name: "Next" }).click();
 
     await dialog.getByRole("button", { name: "Create a new member" }).click();

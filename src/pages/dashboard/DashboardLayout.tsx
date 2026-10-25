@@ -229,6 +229,13 @@ function adminNav(
     { to: "/dashboard/admin/vault", label: "Vault", Icon: Gem },
     { to: "/dashboard/admin/shipments", label: "Shipments", Icon: Truck },
   ];
+  if (allow(STAFF_PERMISSIONS.POLICIES_MANAGE)) {
+    operations.push({
+      to: "/dashboard/admin/minerals",
+      label: "Minerals",
+      Icon: Gem,
+    });
+  }
   if (allow(STAFF_PERMISSIONS.CUSTOMERS_VIEW)) {
     operations.push({
       to: "/dashboard/admin/customers",
@@ -255,11 +262,6 @@ function adminNav(
       to: "/dashboard/admin/policies",
       label: "Policies",
       Icon: ScrollText,
-    });
-    operations.push({
-      to: "/dashboard/admin/minerals",
-      label: "Minerals",
-      Icon: Gem,
     });
   }
   if (allow(STAFF_PERMISSIONS.CLAIMS_REVIEW)) {

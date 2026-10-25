@@ -158,10 +158,7 @@ export function CommandCentre({
       (sum, point) => sum + point.newBusiness,
       0,
     );
-    const collected = window.reduce(
-      (sum, point) => sum + point.collected,
-      0,
-    );
+    const collected = window.reduce((sum, point) => sum + point.collected, 0);
     const earned = board.kpis.premiumInForce * (months / 12);
     const change = (current: number, previous: number) =>
       previous > 0 ? Math.round(((current - previous) / previous) * 100) : null;
@@ -172,8 +169,7 @@ export function CommandCentre({
         claimsInWindow: Math.round(claims),
         collected: Math.round(collected),
         newBusiness: Math.round(newBusiness),
-        lossRatio:
-          earned > 0 ? Math.round((claims / earned) * 100) : 0,
+        lossRatio: earned > 0 ? Math.round((claims / earned) * 100) : 0,
         newBusinessChange: change(newBusiness, priorBusiness),
         claimsChange: change(claims, priorClaims),
       },
@@ -182,7 +178,9 @@ export function CommandCentre({
   const { monthly, kpis } = view;
 
   const plansHref =
-    board.scope === "company" ? "/dashboard/admin/policies" : "/dashboard/policies";
+    board.scope === "company"
+      ? "/dashboard/admin/policies"
+      : "/dashboard/policies";
   const claimsHref =
     board.scope === "company"
       ? "/dashboard/admin/claims"
@@ -272,11 +270,13 @@ export function CommandCentre({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-auto">
+        {/* The controls keep their width so the range group and the two
+            actions stay on one line rather than squeezing apart. */}
+        <div className="flex shrink-0 flex-wrap items-center gap-2.5 self-start lg:self-auto">
           <div
             role="group"
             aria-label="Chart range"
-            className="relative flex items-center rounded-[4px] border border-line bg-card p-0.5"
+            className="relative flex h-10 items-center rounded-[4px] border border-line bg-card p-0.5"
           >
             {[6, 12].map((value) => {
               const active = value === months;
@@ -287,7 +287,7 @@ export function CommandCentre({
                   onClick={() => onMonthsChange(value)}
                   aria-pressed={active}
                   className={cn(
-                    "relative rounded-[4px] px-3.5 py-1.5 text-[0.68rem] font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                    "relative flex h-9 items-center rounded-[4px] px-3.5 text-[0.68rem] font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
                     active
                       ? "text-primary-foreground"
                       : "text-muted-foreground hover:text-ink",
@@ -330,7 +330,10 @@ export function CommandCentre({
       {/* Portfolio pulse */}
       <div className="grid overflow-hidden rounded-2xl border border-line bg-card/70 sm:grid-cols-2 sm:divide-x sm:divide-line lg:grid-cols-4">
         {pulse.map(({ label, value, helper, Icon, tone }) => (
-          <div key={label} className="flex items-start gap-3 px-4 py-3.5 sm:px-5">
+          <div
+            key={label}
+            className="flex items-start gap-3 px-4 py-3.5 sm:px-5"
+          >
             <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-[4px] bg-primary/[0.07] text-primary">
               <Icon className="size-3.5" strokeWidth={1.9} />
             </span>

@@ -184,7 +184,9 @@ test.describe("member shipment tracking", () => {
     await expect(page.getByText("Opal cabochon")).toHaveCount(0);
 
     // Members never get the staff controls.
-    await expect(page.getByLabel(/Update shipment status/)).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: /Change status for/ }),
+    ).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "Assign", exact: true }),
     ).toHaveCount(0);

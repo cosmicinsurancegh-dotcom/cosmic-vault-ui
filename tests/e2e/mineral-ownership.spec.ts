@@ -371,16 +371,12 @@ test.describe("mineral ownership from a customer record", () => {
     await detachConfirm
       .getByLabel("Reason for detaching")
       .fill("Ownership dispute under review.");
-    await detachConfirm
-      .getByRole("button", { name: "Detach mineral" })
-      .click();
+    await detachConfirm.getByRole("button", { name: "Detach mineral" }).click();
     await expect(
       page.getByText("Aurum bar is back in the unassigned pool."),
     ).toBeVisible();
 
-    const mutations = await page.evaluate(
-      () => window.__E2E_MUTATIONS__ ?? [],
-    );
+    const mutations = await page.evaluate(() => window.__E2E_MUTATIONS__ ?? []);
 
     const move = mutations.find(
       (call) =>
@@ -445,9 +441,7 @@ test.describe("mineral ownership from a customer record", () => {
     await expect(customer.getByText("Move Aurum bar")).toBeVisible();
 
     // Close the panel itself as well, so the next action starts clean.
-    await customer
-      .getByRole("button", { name: "Cancel", exact: true })
-      .click();
+    await customer.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(customer.getByText("Move Aurum bar")).toHaveCount(0);
 
     // Abandon a detach at the confirmation step.
@@ -457,9 +451,7 @@ test.describe("mineral ownership from a customer record", () => {
     await detachConfirm.getByRole("button", { name: "Cancel" }).click();
     await expect(detachConfirm).toHaveCount(0);
 
-    const mutations = await page.evaluate(
-      () => window.__E2E_MUTATIONS__ ?? [],
-    );
+    const mutations = await page.evaluate(() => window.__E2E_MUTATIONS__ ?? []);
     expect(mutations).toEqual([]);
   });
 
@@ -507,9 +499,7 @@ test.describe("mineral ownership from a customer record", () => {
       customer.getByRole("button", { name: "Attach mineral", exact: true }),
     ).toHaveCount(0);
 
-    const queries = await page.evaluate(
-      () => window.__E2E_QUERY_CALLS__ ?? [],
-    );
+    const queries = await page.evaluate(() => window.__E2E_QUERY_CALLS__ ?? []);
     expect(queries.filter((ref) => ref.startsWith("minerals."))).toEqual([]);
     await expect(customer.getByText("Preview runtime error")).toHaveCount(0);
   });
@@ -533,12 +523,25 @@ test.describe("mineral ownership from a customer record", () => {
     const register = page.getByRole("dialog");
     await expect(register.getByText("Change owner")).toBeVisible();
 
+    // Ownership is the least frequent change, so the record keeps it last,
+    // below the policy and shipment staff open the dialog for.
+    const history = await register.getByText("Shipment history").boundingBox();
+    const ownership = await register.getByText("Change owner").boundingBox();
+    expect(ownership?.y ?? 0).toBeGreaterThan(history?.y ?? 0);
+
     // The record wears the same route rail as the tracking desk.
     const rail = register.getByLabel("Route from Zurich, CH to London, GB");
     await expect(rail).toBeVisible();
     await expect(rail.getByText("Position")).toBeVisible();
     await expect(rail.getByText("Basel, CH", { exact: true })).toBeVisible();
 
+    // The reassignment form stays folded so the record reads short; one action
+    // opens it with the draft fields it needs.
+    await expect(register.getByLabel("New owner")).toHaveCount(0);
+    await register
+      .getByRole("button", { name: "Reassign", exact: true })
+      .click();
+    await expect(register.getByLabel("New owner")).toBeVisible();
 
     // Existing account.
     await register.getByLabel("New owner").selectOption(OTHER_CUSTOMER_ID);
@@ -558,10 +561,14 @@ test.describe("mineral ownership from a customer record", () => {
       page.getByText("Reassigned. The new owner has been emailed.").last(),
     ).toBeVisible();
 
+    // A finished move folds the form away again.
+    await expect(register.getByLabel("New owner")).toHaveCount(0);
+
     // New member from an email address.
     await register
-      .getByRole("button", { name: "Create a new member" })
+      .getByRole("button", { name: "Reassign", exact: true })
       .click();
+    await register.getByRole("button", { name: "Create a new member" }).click();
     await register.getByLabel("Full name").fill("Rae Receiver");
     await register.getByLabel("Email").fill("rae@example.com");
     await register.getByRole("button", { name: "Reassign mineral" }).click();
@@ -575,9 +582,7 @@ test.describe("mineral ownership from a customer record", () => {
       page.getByText("Reassigned. The new owner has been emailed.").last(),
     ).toBeVisible();
 
-    const mutations = await page.evaluate(
-      () => window.__E2E_MUTATIONS__ ?? [],
-    );
+    const mutations = await page.evaluate(() => window.__E2E_MUTATIONS__ ?? []);
     const reassignments = mutations.filter(
       (call) => call.ref === "minerals.reassign",
     );
@@ -596,5 +601,107 @@ test.describe("mineral ownership from a customer record", () => {
     });
 
     await expect(register.getByText("Preview runtime error")).toHaveCount(0);
+  });
+
+  test("folds the status form until staff publish a change", async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      ({ session, fixtures }) => {
+        window.__E2E_SESSION__ = session;
+        window.__E2E_FIXTURES__ = fixtures;
+        window.__E2E_MUTATIONS__ = [];
+      },
+      { session: ADMIN_SESSION, fixtures: REGISTER_FIXTURES },
+    );
+
+    await page.goto("/dashboard/admin/minerals");
+    await page.getByRole("button", { name: "Manage" }).click();
+
+    const register = page.getByRole("dialog");
+    const trigger = register.getByRole("button", { name: "Update status" });
+
+    // The shipment section reads as route, status and history; the fields only
+    // appear when a change is about to be published.
+    await expect(register.getByLabel("New shipment status")).toHaveCount(0);
+    await expect(register.getByText("Shipment history")).toBeVisible();
+
+    // The status pill stands beside the action, so the two line up.
+    const pill = await trigger
+      .locator("..")
+      .locator("span")
+      .first()
+      .boundingBox();
+    const action = await trigger.boundingBox();
+    expect(pill?.height).toBe(action?.height);
+    expect(pill?.y).toBe(action?.y);
+
+    await trigger.click();
+
+    await register.getByLabel("New shipment status").selectOption("delayed");
+    await register.getByLabel("Shipment location").fill("Frankfurt, DE");
+    await register
+      .getByLabel("Shipment note")
+      .fill("Held for a paperwork check.");
+    await register.getByRole("button", { name: "Update status" }).click();
+
+    await expect(
+      page.getByText("Status updated. The email is queued to ada@example.com."),
+    ).toBeVisible();
+
+    // The form folds again once the update is published.
+    await expect(register.getByLabel("New shipment status")).toHaveCount(0);
+
+    const calls = await page.evaluate(() => window.__E2E_MUTATIONS__ ?? []);
+    const updates = calls.filter(
+      (call) => call.ref === "minerals.updateShipmentStatus",
+    );
+    expect(updates).toHaveLength(1);
+    expect(updates[0].args).toEqual({
+      shipmentId: SHIPMENT_ID,
+      status: "delayed",
+      location: "Frankfurt, DE",
+      note: "Held for a paperwork check.",
+    });
+  });
+
+  test("keeps the shipment history to a summary line until staff open it", async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      ({ session, fixtures }) => {
+        window.__E2E_SESSION__ = session;
+        window.__E2E_FIXTURES__ = fixtures;
+      },
+      { session: ADMIN_SESSION, fixtures: REGISTER_FIXTURES },
+    );
+
+    await page.goto("/dashboard/admin/minerals");
+    await page.getByRole("button", { name: "Manage" }).click();
+
+    const register = page.getByRole("dialog");
+    const toggle = register.getByRole("button", { name: /Shipment history/ });
+
+    // The last recorded step stands in for the timeline, so the record opens
+    // without the full history in the way.
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(
+      register.getByText("In transit · Basel, CH · 12 Jan 2026 · 1 update"),
+    ).toBeVisible();
+    await expect(
+      register.getByText("Loaded onto the armoured convoy."),
+    ).toHaveCount(0);
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(
+      register.getByText("Loaded onto the armoured convoy."),
+    ).toBeVisible();
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(
+      register.getByText("Loaded onto the armoured convoy."),
+    ).toHaveCount(0);
   });
 });

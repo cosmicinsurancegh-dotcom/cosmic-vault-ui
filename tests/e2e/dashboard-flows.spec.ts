@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./support/fixtures";
-import { CUSTOMER_SESSION } from "./stubs/session";
+import { ADMIN_SESSION, CUSTOMER_SESSION } from "./stubs/session";
 
 /**
  * Dashboard coverage: a signed-in customer can open every route in their nav,
@@ -88,6 +88,105 @@ test.describe("customer dashboard", () => {
       page.getByRole("button", { name: /sign out/i }).first(),
     ).toBeVisible();
   });
+});
+
+/**
+ * A minimal staff snapshot for `reports.board`: enough shape for the Command
+ * Centre to render its header, pulse and empty line cards. Without it the
+ * overview stops at its skeleton and the header never mounts.
+ */
+const STAFF_BOARD: Record<string, unknown> = {
+  scope: "company",
+  currency: "GBP",
+  months: 12,
+  asOf: Date.UTC(2026, 9, 25),
+  canSeeMoney: true,
+  otherCurrencies: 0,
+  kpis: {
+    premiumInForce: 120000,
+    activePolicies: 24,
+    openClaims: 2,
+    renewalsDue: 3,
+    pendingApplications: 1,
+    customers: 40,
+    collected: 90000,
+    newBusiness: 15000,
+    claimsInWindow: 8000,
+    lossRatio: 12,
+    avgPremium: 5000,
+    newBusinessChange: 10,
+    claimsChange: -4,
+  },
+  monthly: Array.from({ length: 12 }, (_, index) => ({
+    label: `${index + 1}/2026`,
+    premium: 10000,
+    claims: 500,
+    collected: 7500,
+    newBusiness: 1200,
+    policies: 2,
+    ratio: 5,
+  })),
+  lines: [],
+  claimsMix: [],
+  plans: [],
+  recentClaims: [],
+  alerts: [],
+};
+
+/**
+ * The Command Centre speaks three ways: the company book, a broker's book and
+ * a member's own cover, each with its own primary action. The header row is the
+ * same markup in all three, so each variant has to keep its controls level.
+ */
+const HEADER_SCOPES = [
+  { scope: "company", primary: "Review underwriting" },
+  { scope: "book", primary: "New quotation" },
+  { scope: "member", primary: "Explore cover" },
+] as const;
+
+test.describe("staff command centre", () => {
+  for (const variant of HEADER_SCOPES) {
+    test(`the ${variant.scope} header controls share one height on one row`, async ({
+      page,
+    }) => {
+      await page.addInitScript(
+        ({ session, fixtures }) => {
+          window.__E2E_SESSION__ = session;
+          window.__E2E_FIXTURES__ = fixtures;
+        },
+        {
+          session: ADMIN_SESSION,
+          fixtures: {
+            "reports.board": { ...STAFF_BOARD, scope: variant.scope },
+          },
+        },
+      );
+
+      await page.goto("/dashboard");
+      await expect.poll(() => new URL(page.url()).pathname).toBe("/dashboard");
+
+      /* The range switch, "Add mineral" and the primary action are one control
+         row: same height, same baseline, so the row reads as a single group. */
+      const range = page.getByRole("group", { name: "Chart range" });
+      await expect(range).toBeVisible();
+      /* Scoped to the header row: the empty state repeats the primary action. */
+      const row = range.locator("..");
+      const controls = [
+        range,
+        row.getByRole("link", { name: "Add mineral" }),
+        row.getByRole("link", { name: variant.primary }),
+      ];
+      for (const control of controls) await expect(control).toBeVisible();
+
+      const boxes = await Promise.all(
+        controls.map((item) => item.boundingBox()),
+      );
+      const heights = boxes.map((box) => Math.round(box?.height ?? 0));
+      const offsets = boxes.map((box) => Math.round(box?.y ?? -1));
+      expect(heights).toEqual([40, 40, 40]);
+      expect(new Set(offsets).size).toBe(1);
+    });
+  }
 });
 
 test.describe("staff permissions", () => {

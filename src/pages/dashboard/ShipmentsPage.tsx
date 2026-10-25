@@ -118,7 +118,7 @@ export default function ShipmentsPage() {
           </>
         }
         title="Every movement, on the record."
-        description="Vault operations start and move every consignment. Each status change, location and note is published here as it happens, and we email you the update."
+        description="Request a shipment for any mineral in your vault, then follow it here. Vault operations book and move it, and every status change, location and note is published as it happens."
         actions={
           <Button
             asChild
@@ -202,8 +202,8 @@ export default function ShipmentsPage() {
           </div>
         </div>
         <p className="mt-2 border-t border-line/70 pt-2 text-[0.6rem] text-muted-foreground">
-          Times shown in your local timezone · only vault operations can move a
-          consignment
+          Times shown in your local timezone · request a shipment from My
+          minerals, then vault operations move it
         </p>
       </div>
 
@@ -218,8 +218,8 @@ export default function ShipmentsPage() {
             }
             description={
               search.trim() || status !== "all"
-                ? "Try another status or clear the search. Only vault operations can initiate or change a shipment."
-                : "Once vault operations start a consignment for one of your minerals, its live tracking will appear here and we will email you."
+                ? "Try another status or clear the search. Shipments start from a request you send from My minerals, and only vault operations can change one."
+                : "Request a shipment from My minerals and it will appear here once the logistics desk has booked it. We email you every update."
             }
             action={
               search.trim() || status !== "all" ? (
@@ -301,10 +301,11 @@ export default function ShipmentsPage() {
 
       <div className="flex flex-wrap items-start justify-between gap-3 rounded-[4px] border border-line bg-card px-4 py-3">
         <p className="max-w-xl text-[0.62rem] leading-5 text-muted-foreground">
-          Tracking statuses are controlled only by vault operations: preparing,
-          in transit, held at customs, out for delivery, delivered, delayed and
-          cancelled. If a shipment needs attention, the latest update will say
-          what is happening.
+          Shipments start when the logistics desk books one you have requested;
+          tracking statuses are then controlled only by vault operations:
+          preparing, in transit, held at customs, out for delivery, delivered,
+          delayed and cancelled. If a shipment needs attention, the latest
+          update will say what is happening.
         </p>
         <p className="text-[0.6rem] font-medium text-ink">
           {stats.active} active · {stats.delivered} delivered

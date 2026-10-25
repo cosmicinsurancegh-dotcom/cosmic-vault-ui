@@ -9,6 +9,7 @@ import {
 import {
   PERMISSIONS,
   requirePermission,
+  requireSelfServiceRole,
   requireViewer,
   type Viewer,
 } from "./lib/authz";
@@ -19,6 +20,7 @@ import {
   normalizeInviteName,
 } from "./lib/invite";
 import {
+  notifyStaff,
   notifyUser,
   requeueNotificationEmail,
   STALLED_EMAIL_MS,
@@ -31,6 +33,7 @@ import {
   parseDateInput,
   reference,
   requiredText,
+  startOfToday,
 } from "./lib/refs";
 import {
   renderAssignmentEmail,
@@ -118,6 +121,266 @@ async function latestPolicy(
     .order("desc")
     .take(5);
   return policies.sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
+}
+
+/** A consignment still being planned or moved; a finished one frees the mineral. */
+function isOpenShipment(status: ShipmentStatus) {
+  return status !== "delivered" && status !== "cancelled";
+}
+
+async function latestShipment(
+  ctx: QueryCtx | MutationCtx,
+  mineralId: Id<"minerals">,
+) {
+  const shipments = await ctx.db
+    .query("shipments")
+    .withIndex("by_mineral", (q) => q.eq("mineralId", mineralId))
+    .order("desc")
+    .take(5);
+  return shipments.sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
+}
+
+/** The request a member is still waiting on, if one is open. */
+async function openRequest(
+  ctx: QueryCtx | MutationCtx,
+  mineralId: Id<"minerals">,
+) {
+  const requests = await ctx.db
+    .query("shipmentRequests")
+    .withIndex("by_mineral", (q) => q.eq("mineralId", mineralId))
+    .order("desc")
+    .take(10);
+  return (
+    requests
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .find((request) => request.status === "pending") ?? null
+  );
+}
+
+/** Shared shape for booking a consignment, from a request or on instruction. */
+const shipmentDetailsValidator = v.object({
+  carrier: v.string(),
+  trackingNumber: v.optional(v.string()),
+  origin: v.string(),
+  destination: v.string(),
+  departureAt: v.optional(v.string()),
+  estimatedArrivalAt: v.optional(v.string()),
+  status: shipmentStatusValidator,
+  currentLocation: v.optional(v.string()),
+  notes: v.optional(v.string()),
+});
+
+function readShipmentDetails(input: {
+  carrier: string;
+  trackingNumber?: string;
+  origin: string;
+  destination: string;
+  departureAt?: string;
+  estimatedArrivalAt?: string;
+  status: ShipmentStatus;
+  currentLocation?: string;
+  notes?: string;
+}) {
+  const carrier = requiredText(input.carrier, "Carrier", 120);
+  const origin = requiredText(input.origin, "Origin", 120);
+  const destination = requiredText(input.destination, "Destination", 120);
+  const departureAt = input.departureAt
+    ? parseDateInput(input.departureAt, "Departure date")
+    : undefined;
+  const estimatedArrivalAt = input.estimatedArrivalAt
+    ? parseDateInput(input.estimatedArrivalAt, "Estimated arrival")
+    : undefined;
+  if (
+    departureAt !== undefined &&
+    estimatedArrivalAt !== undefined &&
+    estimatedArrivalAt < departureAt
+  ) {
+    throw new Error("Estimated arrival must be after departure.");
+  }
+  return {
+    carrier,
+    origin,
+    destination,
+    departureAt,
+    estimatedArrivalAt,
+    status: input.status,
+    trackingNumber:
+      cleanText(input.trackingNumber, "Tracking number", 80) || undefined,
+    currentLocation:
+      cleanText(input.currentLocation, "Current location", 120) || undefined,
+    notes: cleanText(input.notes, "Shipment notes", 2000) || undefined,
+  };
+}
+
+/**
+ * Books a consignment on a mineral and tells its owner. Shared by the two ways
+ * a shipment starts now: a member's request being worked, and staff recording
+ * one directly from a phone instruction. The caller decides what happens to an
+ * open request, because only it knows which one it is answering.
+ */
+async function insertShipment(
+  ctx: MutationCtx,
+  viewer: Viewer,
+  mineral: Doc<"minerals">,
+  input: ReturnType<typeof readShipmentDetails>,
+  note: string,
+) {
+  const now = Date.now();
+  const shipmentReference = reference("SHP");
+  const shipmentId = await ctx.db.insert("shipments", {
+    mineralId: mineral._id,
+    reference: shipmentReference,
+    carrier: input.carrier,
+    trackingNumber: input.trackingNumber,
+    origin: input.origin,
+    destination: input.destination,
+    departureAt: input.departureAt,
+    estimatedArrivalAt: input.estimatedArrivalAt,
+    status: input.status,
+    currentLocation: input.currentLocation,
+    notes: input.notes,
+    assignedUserId: mineral.assignedUserId,
+    createdBy: viewer.user._id,
+    lastStatusAt: now,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  await ctx.db.insert("shipmentEvents", {
+    shipmentId,
+    mineralId: mineral._id,
+    status: input.status,
+    location: input.currentLocation,
+    note,
+    actorId: viewer.user._id,
+    actorRole: viewer.role,
+    createdAt: now,
+  });
+
+  await writeAudit(ctx, viewer, {
+    action: "mineral.shipment_created",
+    entityType: "shipments",
+    entityId: shipmentId,
+    after: {
+      mineralId: mineral._id,
+      carrier: input.carrier,
+      trackingNumber: input.trackingNumber ?? null,
+      origin: input.origin,
+      destination: input.destination,
+      departureAt: input.departureAt ?? null,
+      estimatedArrivalAt: input.estimatedArrivalAt ?? null,
+      status: input.status,
+    },
+  });
+
+  let notified = false;
+  const ownerId = mineral.assignedUserId;
+  if (ownerId) {
+    const owner = await ctx.db.get(ownerId);
+    if (owner) {
+      const settings = await getSettings(ctx);
+      const policy = await latestPolicy(ctx, mineral._id);
+      const email = renderShipmentStatusEmail({
+        recipientName: (owner.name ?? displayName(owner)).split(" ")[0],
+        updatedAt: formatDateTime(now),
+        status: input.status,
+        location: input.currentLocation,
+        note: input.notes,
+        companyName: settings.companyName,
+        supportEmail: settings.supportEmail,
+        appUrl: appUrl(),
+        mineral: toEmailMineral(mineral),
+        policy: policy ? toEmailPolicy(policy) : undefined,
+        shipment: {
+          reference: shipmentReference,
+          carrier: input.carrier,
+          trackingNumber: input.trackingNumber,
+          origin: input.origin,
+          destination: input.destination,
+          departure: input.departureAt
+            ? formatDate(input.departureAt)
+            : undefined,
+          eta: input.estimatedArrivalAt
+            ? formatDate(input.estimatedArrivalAt)
+            : undefined,
+        },
+      });
+      await notifyUser(ctx, {
+        userId: owner._id,
+        type: "shipment.created",
+        title: `A shipment has been booked for ${mineral.name}`,
+        body: `${input.origin} → ${input.destination} with ${input.carrier}.${input.notes ? ` ${input.notes}` : ""}`,
+        href: "/dashboard/minerals",
+        relatedType: "shipments",
+        relatedId: shipmentId,
+        dedupeKey: `shipment.created:${shipmentId}:${owner._id}`,
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
+      });
+      notified = Boolean(owner.email) && !owner.isAnonymous;
+    }
+  }
+
+  return { shipmentId, notified };
+}
+
+/**
+ * Clears the request a mineral can no longer answer, because the record is
+ * leaving the account that asked. The member is told why the mineral moved, so
+ * the request itself is closed quietly rather than emailed twice.
+ */
+async function withdrawOpenRequests(
+  ctx: MutationCtx,
+  viewer: Viewer,
+  mineralId: Id<"minerals">,
+  note: string,
+) {
+  const pending = await openRequest(ctx, mineralId);
+  if (!pending) return;
+  const now = Date.now();
+  await ctx.db.patch(pending._id, {
+    status: "declined",
+    decidedBy: viewer.user._id,
+    decisionNote: note,
+    decidedAt: now,
+    updatedAt: now,
+  });
+  await writeAudit(ctx, viewer, {
+    action: "shipment.request_declined",
+    entityType: "shipmentRequests",
+    entityId: pending._id,
+    before: { status: "pending" },
+    after: { status: "declined" },
+    reason: note,
+  });
+}
+
+/** Records staff's decision on a request and keeps the audit trail complete. */
+async function closeRequest(
+  ctx: MutationCtx,
+  viewer: Viewer,
+  request: Doc<"shipmentRequests">,
+  shipmentId: Id<"shipments">,
+  note: string,
+) {
+  const now = Date.now();
+  await ctx.db.patch(request._id, {
+    status: "approved",
+    shipmentId,
+    decidedBy: viewer.user._id,
+    decisionNote: note,
+    decidedAt: now,
+    updatedAt: now,
+  });
+  await writeAudit(ctx, viewer, {
+    action: "shipment.request_approved",
+    entityType: "shipmentRequests",
+    entityId: request._id,
+    before: { status: "pending" },
+    after: { status: "approved", shipmentId },
+    reason: note,
+  });
 }
 
 function toEmailMineral(mineral: Doc<"minerals">) {
@@ -233,17 +496,6 @@ export const create = mutation({
       status: mineralPolicyStatusValidator,
       notes: v.optional(v.string()),
     }),
-    shipment: v.object({
-      carrier: v.string(),
-      trackingNumber: v.optional(v.string()),
-      origin: v.string(),
-      destination: v.string(),
-      departureAt: v.optional(v.string()),
-      estimatedArrivalAt: v.optional(v.string()),
-      status: shipmentStatusValidator,
-      currentLocation: v.optional(v.string()),
-      notes: v.optional(v.string()),
-    }),
     assignment: v.object({
       mode: v.union(v.literal("existing"), v.literal("new")),
       userId: v.optional(v.id("users")),
@@ -283,27 +535,6 @@ export const create = mutation({
       .first();
     if (duplicatePolicy) {
       throw new Error("A policy with that number already exists.");
-    }
-
-    const carrier = requiredText(args.shipment.carrier, "Carrier", 120);
-    const origin = requiredText(args.shipment.origin, "Origin", 120);
-    const destination = requiredText(
-      args.shipment.destination,
-      "Destination",
-      120,
-    );
-    const departureAt = args.shipment.departureAt
-      ? parseDateInput(args.shipment.departureAt, "Departure date")
-      : undefined;
-    const estimatedArrivalAt = args.shipment.estimatedArrivalAt
-      ? parseDateInput(args.shipment.estimatedArrivalAt, "Estimated arrival")
-      : undefined;
-    if (
-      departureAt !== undefined &&
-      estimatedArrivalAt !== undefined &&
-      estimatedArrivalAt < departureAt
-    ) {
-      throw new Error("Estimated arrival must be after departure.");
     }
 
     const { userId, isNewAccount } = await resolveAssignee(
@@ -349,43 +580,6 @@ export const create = mutation({
       updatedAt: now,
     });
 
-    const shipmentId = await ctx.db.insert("shipments", {
-      mineralId,
-      reference: reference("SHP"),
-      carrier,
-      trackingNumber:
-        cleanText(args.shipment.trackingNumber, "Tracking number", 80) ||
-        undefined,
-      origin,
-      destination,
-      departureAt,
-      estimatedArrivalAt,
-      status: args.shipment.status,
-      currentLocation:
-        cleanText(args.shipment.currentLocation, "Current location", 120) ||
-        undefined,
-      notes:
-        cleanText(args.shipment.notes, "Shipment notes", 2000) || undefined,
-      assignedUserId: userId,
-      createdBy: viewer.user._id,
-      lastStatusAt: now,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    await ctx.db.insert("shipmentEvents", {
-      shipmentId,
-      mineralId,
-      status: args.shipment.status,
-      location:
-        cleanText(args.shipment.currentLocation, "Current location", 120) ||
-        undefined,
-      note: "Mineral recorded and shipment created.",
-      actorId: viewer.user._id,
-      actorRole: viewer.role,
-      createdAt: now,
-    });
-
     await writeAudit(ctx, viewer, {
       action: "mineral.created",
       entityType: "minerals",
@@ -398,16 +592,14 @@ export const create = mutation({
         declaredValue,
         currency: args.mineral.currency,
         policyNumber,
-        shipmentStatus: args.shipment.status,
         assignedUserId: userId,
         newAccount: isNewAccount,
       },
     });
 
-    const [mineral, policy, shipment] = await Promise.all([
+    const [mineral, policy] = await Promise.all([
       ctx.db.get(mineralId),
       ctx.db.get(policyId),
-      ctx.db.get(shipmentId),
     ]);
     const assignedUser = await ctx.db.get(userId);
     const settings = await getSettings(ctx);
@@ -423,13 +615,12 @@ export const create = mutation({
         appUrl: appUrl(),
         mineral: toEmailMineral(mineral),
         policy: policy ? toEmailPolicy(policy) : undefined,
-        shipment: shipment ? toEmailShipment(shipment) : undefined,
       });
       await notifyUser(ctx, {
         userId,
         type: "mineral.assigned",
         title: `${name} has been added to your vault`,
-        body: `${name} (${mineral.reference}) was assigned to you by ${settings.companyName}. Shipment ${shipment?.reference ?? ""} is ${SHIPMENT_STATUS_LABELS[args.shipment.status].toLowerCase()}.`,
+        body: `${name} (${mineral.reference}) was assigned to you by ${settings.companyName}.${policy ? ` Policy ${policy.policyNumber} is recorded with it.` : ""} You can request a shipment whenever you need it moved.`,
         href: "/dashboard/minerals",
         relatedType: "minerals",
         relatedId: mineralId,
@@ -442,11 +633,246 @@ export const create = mutation({
 
     return {
       mineralId,
-      shipmentId,
       policyId,
       assignedUserId: userId,
       isNewAccount,
     };
+  },
+});
+
+/**
+ * A member asks for one of their minerals to be moved. The request is only a
+ * request: staff still choose the carrier, route and dates in the shipment
+ * form, so nothing moves until the logistics desk books it. One request at a
+ * time, and only while nothing is already in flight.
+ */
+export const requestShipment = mutation({
+  args: {
+    mineralId: v.id("minerals"),
+    destination: v.string(),
+    preferredDate: v.optional(v.string()),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const viewer = await requireSelfServiceRole(ctx);
+    const mineral = await ctx.db.get(args.mineralId);
+    if (!mineral || mineral.assignedUserId !== viewer.user._id) {
+      throw new Error("This mineral is not in your vault.");
+    }
+
+    const destination = requiredText(args.destination, "Destination", 120);
+    const preferredDate = args.preferredDate
+      ? parseDateInput(args.preferredDate, "Preferred date")
+      : undefined;
+    if (preferredDate !== undefined && preferredDate < startOfToday()) {
+      throw new Error("Choose today or a later preferred date.");
+    }
+    const notes = cleanText(args.notes, "Notes", 1000) || undefined;
+
+    const pending = await openRequest(ctx, mineral._id);
+    if (pending) {
+      throw new Error(
+        "A shipment request for this mineral is already awaiting review.",
+      );
+    }
+    const shipment = await latestShipment(ctx, mineral._id);
+    if (shipment && isOpenShipment(shipment.status)) {
+      throw new Error(
+        `This mineral already has a shipment in progress (${SHIPMENT_STATUS_LABELS[
+          shipment.status
+        ].toLowerCase()}).`,
+      );
+    }
+
+    const now = Date.now();
+    const requestId = await ctx.db.insert("shipmentRequests", {
+      mineralId: mineral._id,
+      customerUserId: viewer.user._id,
+      destination,
+      preferredDate,
+      notes,
+      status: "pending",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await notifyStaff(ctx, {
+      type: "shipment.requested",
+      title: `Shipment requested for ${mineral.name}`,
+      body: `${displayName(viewer.user)} asked for ${formatQuantity(
+        mineral.quantity,
+        mineral.unit,
+      )} of ${mineral.name} (${mineral.reference}) to be shipped to ${destination}.${notes ? ` ${notes}` : ""}`,
+      href: "/dashboard/admin/shipments",
+      relatedType: "shipmentRequests",
+      relatedId: requestId,
+      permission: PERMISSIONS.POLICIES_MANAGE,
+    });
+
+    await writeAudit(ctx, viewer, {
+      action: "shipment.requested",
+      entityType: "shipmentRequests",
+      entityId: requestId,
+      after: {
+        mineralId: mineral._id,
+        destination,
+        preferredDate: preferredDate ?? null,
+        notes: notes ?? null,
+      },
+    });
+
+    return { requestId };
+  },
+});
+
+/**
+ * Staff book a consignment straight onto a mineral, for the instruction that
+ * arrived by phone rather than through a member's request. An open request for
+ * the same mineral is answered by this shipment instead of being left pending.
+ */
+export const createShipment = mutation({
+  args: {
+    mineralId: v.id("minerals"),
+    shipment: shipmentDetailsValidator,
+  },
+  handler: async (ctx, args) => {
+    const viewer = await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+    const mineral = await ctx.db.get(args.mineralId);
+    if (!mineral) throw new Error("Mineral not found.");
+
+    const latest = await latestShipment(ctx, mineral._id);
+    if (latest && isOpenShipment(latest.status)) {
+      throw new Error(
+        `This mineral already has a shipment in progress (${SHIPMENT_STATUS_LABELS[
+          latest.status
+        ].toLowerCase()}).`,
+      );
+    }
+
+    const input = readShipmentDetails(args.shipment);
+    const { shipmentId, notified } = await insertShipment(
+      ctx,
+      viewer,
+      mineral,
+      input,
+      "Shipment recorded by the logistics desk.",
+    );
+
+    const pending = await openRequest(ctx, mineral._id);
+    if (pending) {
+      await closeRequest(
+        ctx,
+        viewer,
+        pending,
+        shipmentId,
+        "Booked directly by the logistics desk.",
+      );
+    }
+
+    return { shipmentId, notified, requestId: pending?._id ?? null };
+  },
+});
+
+/**
+ * Turn a member's request into a consignment. The shipment details come from
+ * staff, not from the request, and approving the request and booking the
+ * shipment happen in one transaction so the queue can never hold a request that
+ * already has a shipment.
+ */
+export const fulfilShipmentRequest = mutation({
+  args: {
+    requestId: v.id("shipmentRequests"),
+    shipment: shipmentDetailsValidator,
+  },
+  handler: async (ctx, args) => {
+    const viewer = await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+    const request = await ctx.db.get(args.requestId);
+    if (!request) throw new Error("Request not found.");
+    if (request.status !== "pending") {
+      throw new Error("This request has already been decided.");
+    }
+    const mineral = await ctx.db.get(request.mineralId);
+    if (!mineral) {
+      throw new Error("The mineral for this request no longer exists.");
+    }
+    if (mineral.assignedUserId !== request.customerUserId) {
+      throw new Error(
+        "This mineral now belongs to another account. Reassign it, then book the shipment from the mineral register.",
+      );
+    }
+
+    const input = readShipmentDetails(args.shipment);
+    const { shipmentId, notified } = await insertShipment(
+      ctx,
+      viewer,
+      mineral,
+      input,
+      "Shipment booked from the member's request.",
+    );
+    await closeRequest(
+      ctx,
+      viewer,
+      request,
+      shipmentId,
+      "Shipment booked from the member's request.",
+    );
+
+    return { requestId: request._id, shipmentId, notified };
+  },
+});
+
+/** Close a request that will not become a shipment, with the reason the member
+ *  is shown. A decline is final, so the request cannot be half-answered later. */
+export const declineShipmentRequest = mutation({
+  args: { requestId: v.id("shipmentRequests"), note: v.string() },
+  handler: async (ctx, args) => {
+    const viewer = await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+    const request = await ctx.db.get(args.requestId);
+    if (!request) throw new Error("Request not found.");
+    if (request.status !== "pending") {
+      throw new Error("This request has already been decided.");
+    }
+    const mineral = await ctx.db.get(request.mineralId);
+    if (!mineral) {
+      throw new Error("The mineral for this request no longer exists.");
+    }
+
+    const note = requiredText(args.note, "Reason", 500);
+    const now = Date.now();
+    await ctx.db.patch(request._id, {
+      status: "declined",
+      decidedBy: viewer.user._id,
+      decisionNote: note,
+      decidedAt: now,
+      updatedAt: now,
+    });
+
+    const owner = await ctx.db.get(request.customerUserId);
+    let notified = false;
+    if (owner) {
+      await notifyUser(ctx, {
+        userId: owner._id,
+        type: "shipment.request_declined",
+        title: `Shipment request declined for ${mineral.name}`,
+        body: `${mineral.name} (${mineral.reference}) will not be shipped as requested. ${note}`,
+        href: "/dashboard/minerals",
+        relatedType: "shipmentRequests",
+        relatedId: request._id,
+        dedupeKey: `shipment-request-declined:${request._id}`,
+      });
+      notified = Boolean(owner.email) && !owner.isAnonymous;
+    }
+
+    await writeAudit(ctx, viewer, {
+      action: "shipment.request_declined",
+      entityType: "shipmentRequests",
+      entityId: request._id,
+      before: { status: "pending" },
+      after: { status: "declined" },
+      reason: note,
+    });
+
+    return { requestId: request._id, notified };
   },
 });
 
@@ -488,6 +914,14 @@ export const reassign = mutation({
       : null;
     const note = cleanText(args.note, "Note", 500) || undefined;
     const now = Date.now();
+
+    // A request made by the previous owner cannot be shipped for the new one.
+    await withdrawOpenRequests(
+      ctx,
+      viewer,
+      mineral._id,
+      "The mineral moved to another account before this shipment was booked.",
+    );
 
     await ctx.db.patch(mineral._id, {
       assignedUserId: userId,
@@ -620,6 +1054,14 @@ export const detach = mutation({
     const previousUser = await ctx.db.get(previousUserId);
     const note = cleanText(args.note, "Note", 500) || undefined;
     const now = Date.now();
+
+    // Nothing is left to ship for an account that no longer holds the mineral.
+    await withdrawOpenRequests(
+      ctx,
+      viewer,
+      mineral._id,
+      "The mineral was removed from the vault before this shipment was booked.",
+    );
 
     await ctx.db.patch(mineral._id, {
       assignedUserId: undefined,
@@ -839,10 +1281,11 @@ export const list = query({
   args: { search: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
-    const [minerals, policies, shipments, users] = await Promise.all([
+    const [minerals, policies, shipments, requests, users] = await Promise.all([
       ctx.db.query("minerals").order("desc").take(300),
       ctx.db.query("mineralPolicies").take(600),
       ctx.db.query("shipments").take(600),
+      ctx.db.query("shipmentRequests").take(600),
       ctx.db.query("users").take(500),
     ]);
 
@@ -872,6 +1315,16 @@ export const list = query({
           shipments
             .filter((item) => item.mineralId === mineral._id)
             .sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
+        /* Newest first, so the board reads the latest ask and lists the
+           answered ones under it as the consignment's request history. */
+        const history = requests
+          .filter((item) => item.mineralId === mineral._id)
+          .sort(
+            (a, b) =>
+              b.createdAt - a.createdAt || b._creationTime - a._creationTime,
+          )
+          .slice(0, 10);
+        const request = history[0] ?? null;
         const assignee = mineral.assignedUserId
           ? userMap.get(mineral.assignedUserId)
           : undefined;
@@ -879,6 +1332,8 @@ export const list = query({
           mineral,
           policy,
           shipment,
+          request,
+          requests: history,
           assignee: assignee
             ? {
                 _id: assignee._id,
@@ -951,7 +1406,7 @@ export const mine = query({
 
     return await Promise.all(
       minerals.map(async (mineral) => {
-        const [policies, shipments] = await Promise.all([
+        const [policies, shipments, requests] = await Promise.all([
           ctx.db
             .query("mineralPolicies")
             .withIndex("by_mineral", (q) => q.eq("mineralId", mineral._id))
@@ -962,8 +1417,22 @@ export const mine = query({
             .withIndex("by_mineral", (q) => q.eq("mineralId", mineral._id))
             .order("desc")
             .take(5),
+          ctx.db
+            .query("shipmentRequests")
+            .withIndex("by_mineral", (q) => q.eq("mineralId", mineral._id))
+            .order("desc")
+            .take(10),
         ]);
         const shipment = shipments[0] ?? null;
+        /* Newest first: the card reads the open one and lists the rest as its
+           request history, so answered requests stay visible. */
+        /* Requests made in the same millisecond still read newest first: the
+           server's creation stamp resolves what the wall clock cannot. */
+        const history = requests.sort(
+          (a, b) =>
+            b.createdAt - a.createdAt || b._creationTime - a._creationTime,
+        );
+        const request = history[0] ?? null;
         const events = shipment
           ? await ctx.db
               .query("shipmentEvents")
@@ -975,10 +1444,57 @@ export const mine = query({
           mineral,
           policy: policies[0] ?? null,
           shipment,
+          request,
+          requests: history,
           events,
         };
       }),
     );
+  },
+});
+
+/**
+ * The shipment-request queue the logistics desk works from. Requests are only
+ * ever created by a member for a mineral already in their vault, and each one
+ * names where it should go and when, which is the starting point for the
+ * shipment form rather than the finished instruction.
+ */
+export const shipmentRequests = query({
+  args: { status: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+
+    const all = await ctx.db.query("shipmentRequests").take(300);
+    const rows =
+      !args.status || args.status === "all"
+        ? all
+        : all.filter((request) => request.status === args.status);
+
+    const [minerals, people] = await Promise.all([
+      ctx.db.query("minerals").take(300),
+      ctx.db.query("users").take(300),
+    ]);
+    const mineralMap = new Map(minerals.map((item) => [item._id, item]));
+    const peopleMap = new Map(people.map((person) => [person._id, person]));
+
+    return rows
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .map((request) => {
+        const mineral = mineralMap.get(request.mineralId) ?? null;
+        const requester = peopleMap.get(request.customerUserId);
+        return {
+          request,
+          mineral,
+          requester: requester
+            ? {
+                _id: requester._id,
+                name: displayName(requester),
+                email: requester.email ?? "",
+              }
+            : null,
+        };
+      })
+      .filter((row) => row.mineral !== null);
   },
 });
 
@@ -1077,7 +1593,12 @@ export const emailLog = query({
           .query("notifications")
           .withIndex("by_related", (q) => q.eq("relatedId", shipmentId))
           .take(8);
-        const latest = attempts.sort((a, b) => b.createdAt - a.createdAt)[0];
+        // A booking and its first status change can share a timestamp, so the
+        // system creation order decides which attempt is the latest.
+        const latest = attempts.sort(
+          (a, b) =>
+            b.createdAt - a.createdAt || b._creationTime - a._creationTime,
+        )[0];
         if (!latest) return null;
         return {
           shipmentId,
@@ -1122,7 +1643,9 @@ export const resendShipmentEmail = mutation({
       .query("notifications")
       .withIndex("by_related", (q) => q.eq("relatedId", shipment._id))
       .take(8);
-    const latest = attempts.sort((a, b) => b.createdAt - a.createdAt)[0];
+    const latest = attempts.sort(
+      (a, b) => b.createdAt - a.createdAt || b._creationTime - a._creationTime,
+    )[0];
     if (!latest) {
       throw new Error(
         "This consignment has no email on record. Publish a status change to send one.",

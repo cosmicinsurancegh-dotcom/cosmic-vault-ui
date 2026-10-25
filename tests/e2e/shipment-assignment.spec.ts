@@ -105,6 +105,8 @@ const UNASSIGNED_SHIPMENT = {
 };
 
 const FIXTURES: Record<string, unknown> = {
+  // No member has asked for a shipment, so the request queue stays hidden.
+  "minerals.shipmentRequests": [],
   "minerals.list": [
     {
       mineral: OWNED_MINERAL,
@@ -192,7 +194,147 @@ const FIXTURES: Record<string, unknown> = {
   ],
 };
 
+/**
+ * The requests behind the current consignment: one the desk booked, and one it
+ * turned down first. The board has to keep both, or staff cannot explain an
+ * earlier decline when the member asks.
+ */
+const REQUEST_HISTORY = [
+  {
+    _id: "e2e-ship-request-2",
+    mineralId: OWNED_MINERAL_ID,
+    customerUserId: ADA_ID,
+    destination: "Zurich vault",
+    preferredDate: Date.UTC(2026, 2, 10, 12),
+    status: "approved",
+    shipmentId: OWNED_SHIPMENT_ID,
+    decidedBy: ADMIN_SESSION._id,
+    decisionNote: "Booked on our standard Zurich run.",
+    decidedAt: CREATED_AT + 1000,
+    createdAt: CREATED_AT - 8000,
+    updatedAt: CREATED_AT + 1000,
+  },
+  {
+    _id: "e2e-ship-request-1",
+    mineralId: OWNED_MINERAL_ID,
+    customerUserId: ADA_ID,
+    destination: "Geneva vault",
+    status: "declined",
+    decidedBy: ADMIN_SESSION._id,
+    decisionNote: "No courier cover to Geneva that week.",
+    decidedAt: CREATED_AT - 9000,
+    createdAt: CREATED_AT - 12000,
+    updatedAt: CREATED_AT - 9000,
+  },
+];
+
+/**
+ * A consignment nobody has given a position yet. The rail names the place or
+ * says it has none, so the row never states the status twice.
+ */
+const NO_LOCATION_SHIPMENT = { ...OWNED_SHIPMENT, currentLocation: undefined };
+
+const NO_LOCATION_FIXTURES: Record<string, unknown> = {
+  ...FIXTURES,
+  "minerals.list": [
+    {
+      mineral: OWNED_MINERAL,
+      policy: null,
+      shipment: NO_LOCATION_SHIPMENT,
+      assignee: { _id: ADA_ID, name: ADA.name, email: ADA.email },
+    },
+    {
+      mineral: UNASSIGNED_MINERAL,
+      policy: null,
+      shipment: UNASSIGNED_SHIPMENT,
+      assignee: null,
+    },
+  ],
+};
+
+const HISTORY_FIXTURES: Record<string, unknown> = {
+  ...FIXTURES,
+  "minerals.list": [
+    {
+      mineral: OWNED_MINERAL,
+      policy: null,
+      shipment: OWNED_SHIPMENT,
+      assignee: { _id: ADA_ID, name: ADA.name, email: ADA.email },
+      requests: REQUEST_HISTORY,
+    },
+    {
+      mineral: UNASSIGNED_MINERAL,
+      policy: null,
+      shipment: UNASSIGNED_SHIPMENT,
+      assignee: null,
+      requests: [],
+    },
+  ],
+};
+
 test.describe("staff shipment control", () => {
+  test("shows every request behind a consignment, answered or declined", async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      ({ session, fixtures }) => {
+        window.__E2E_SESSION__ = session;
+        window.__E2E_FIXTURES__ = fixtures;
+      },
+      { session: ADMIN_SESSION, fixtures: HISTORY_FIXTURES },
+    );
+
+    await page.goto("/dashboard/admin/shipments");
+
+    const row = page.locator("article").filter({ hasText: "CV-SHP-2001" });
+    await expect(row.getByText("Request history")).toBeVisible();
+
+    // Both decisions are on the consignment, newest first, with the reason the
+    // member was sent.
+    await expect(
+      row.getByText(/Zurich vault · preferred/).first(),
+    ).toBeVisible();
+    await expect(
+      row.getByText(/Booked on our standard Zurich run/),
+    ).toBeVisible();
+    await expect(row.getByText("Geneva vault")).toBeVisible();
+    await expect(
+      row.getByText(/No courier cover to Geneva that week/),
+    ).toBeVisible();
+    await expect(row.getByText("Approved", { exact: true })).toBeVisible();
+    await expect(row.getByText("Declined", { exact: true })).toBeVisible();
+
+    // A mineral with no requests keeps its row quiet.
+    const other = page.locator("article").filter({ hasText: "CV-SHP-2002" });
+    await expect(other.getByText("Request history")).toHaveCount(0);
+
+    // The history is reference material, not a shortcut into live tracking.
+    await row.getByText("Geneva vault").click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    // The board narrows to the consignments carrying a decision, and counts
+    // what each choice would leave.
+    const requests = page.getByRole("group", {
+      name: "Filter by request state",
+    });
+    await expect(
+      requests.getByRole("button", { name: "Approved (1)" }),
+    ).toBeVisible();
+    await expect(
+      requests.getByRole("button", { name: "Pending (0)" }),
+    ).toBeVisible();
+
+    await requests.getByRole("button", { name: "Approved (1)" }).click();
+    await expect(page.getByText("CV-SHP-2001")).toBeVisible();
+    await expect(page.getByText("CV-SHP-2002")).toHaveCount(0);
+
+    await requests.getByRole("button", { name: "Pending (0)" }).click();
+    await expect(page.getByText("No consignments match.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Show every consignment" }).click();
+    await expect(page.getByText("CV-SHP-2002")).toBeVisible();
+  });
+
   test("shows whether each consignment's last email reached its owner", async ({
     page,
   }) => {
@@ -346,10 +488,13 @@ test.describe("staff shipment control", () => {
 
     await expect(row.getByText("Ada Vault · ada@example.com")).toBeVisible();
 
-    // Staff controls stay on the row, outside the tracking dialog.
+    // Staff controls stay on the row, outside the tracking dialog. The status
+    // is written once, as the dot and word on the left, so the row offers the
+    // action rather than a second copy of the value.
     await expect(
-      row.getByLabel("Update shipment status for Aurum bar"),
-    ).toHaveValue("in_transit");
+      row.getByRole("button", { name: "Change status for Aurum bar" }),
+    ).toBeVisible();
+    await expect(row.locator("select")).toHaveCount(0);
     await expect(
       row.getByRole("button", { name: "Reassign", exact: true }),
     ).toBeVisible();
@@ -379,6 +524,29 @@ test.describe("staff shipment control", () => {
     // The whole card opens the same view as its button.
     await row.getByText("CV-SHP-2001").click();
     await expect(panel).toBeVisible();
+  });
+
+  test("names the position, or says it has none, instead of the status", async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      ({ session, fixtures }) => {
+        window.__E2E_SESSION__ = session;
+        window.__E2E_FIXTURES__ = fixtures;
+      },
+      { session: ADMIN_SESSION, fixtures: NO_LOCATION_FIXTURES },
+    );
+
+    await page.goto("/dashboard/admin/shipments");
+    const row = page.locator("article").filter({ hasText: "CV-SHP-2001" });
+    const rail = row.getByLabel("Route from London vault to Zurich vault");
+
+    // The intermediate station answers "where is it", so an unrecorded place
+    // is said plainly rather than filled in with the status.
+    await expect(rail.getByText("No location recorded")).toBeVisible();
+    await expect(rail.getByText("In transit")).toHaveCount(0);
+    // The status therefore appears once on the row: the dot and its word.
+    await expect(row.getByText("In transit", { exact: true })).toHaveCount(1);
   });
 
   test("opens live tracking straight from a shared link", async ({ page }) => {
@@ -423,10 +591,11 @@ test.describe("staff shipment control", () => {
     await page.goto("/dashboard/admin/shipments");
     const row = page.locator("article").filter({ hasText: "CV-SHP-2001" });
     await row
-      .getByLabel("Update shipment status for Aurum bar")
-      .selectOption("delivered");
+      .getByRole("button", { name: "Change status for Aurum bar" })
+      .click();
 
-    // The select stages the change: nothing is published until it is confirmed.
+    // Opening the dialog changes nothing: the status is chosen inside it, and
+    // nothing is published until it is confirmed.
     expect(await page.evaluate(() => window.__E2E_MUTATIONS__ ?? [])).toEqual(
       [],
     );
@@ -435,7 +604,10 @@ test.describe("staff shipment control", () => {
     await expect(
       dialog.getByRole("heading", { name: "Publish a status change" }),
     ).toBeVisible();
-    await expect(dialog.getByLabel("New status")).toHaveValue("delivered");
+    // The status it already has is no change, so it is not on offer.
+    await expect(dialog.getByText("In transit", { exact: true })).toBeVisible();
+    await expect(dialog.getByLabel("New status")).not.toHaveValue("in_transit");
+    await dialog.getByLabel("New status").selectOption("delivered");
     await dialog.getByLabel("Location").fill("Zurich vault");
     await dialog.getByLabel("Estimated delivery").fill("2026-04-02");
     await dialog
@@ -476,10 +648,11 @@ test.describe("staff shipment control", () => {
     await page.goto("/dashboard/admin/shipments");
     const row = page.locator("article").filter({ hasText: "CV-SHP-2001" });
     await row
-      .getByLabel("Update shipment status for Aurum bar")
-      .selectOption("out_for_delivery");
+      .getByRole("button", { name: "Change status for Aurum bar" })
+      .click();
 
     const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("New status").selectOption("out_for_delivery");
     await expect(dialog.getByLabel("Estimated delivery")).not.toHaveValue("");
     await dialog.getByRole("button", { name: "Publish update" }).click();
     await expect(
@@ -510,10 +683,11 @@ test.describe("staff shipment control", () => {
     await page.goto("/dashboard/admin/shipments");
     const row = page.locator("article").filter({ hasText: "CV-SHP-2001" });
     await row
-      .getByLabel("Update shipment status for Aurum bar")
-      .selectOption("customs_hold");
+      .getByRole("button", { name: "Change status for Aurum bar" })
+      .click();
 
     const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("New status").selectOption("customs_hold");
     const eta = dialog.getByLabel("Estimated delivery");
     await expect(eta).not.toHaveValue("");
     await dialog.getByLabel("No estimate").click();
@@ -558,15 +732,18 @@ test.describe("staff shipment control", () => {
 
     await page.goto("/dashboard/admin/shipments");
     const row = page.locator("article").filter({ hasText: "CV-SHP-2001" });
-    const select = row.getByLabel("Update shipment status for Aurum bar");
-    await select.selectOption("customs_hold");
+    await row
+      .getByRole("button", { name: "Change status for Aurum bar" })
+      .click();
 
     const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("New status").selectOption("customs_hold");
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(dialog).toHaveCount(0);
 
-    // The row falls back to the published status, not the staged one.
-    await expect(select).toHaveValue("in_transit");
+    // Cancelling discards the choice: the row still shows the published status,
+    // not the one that was picked and never sent.
+    await expect(row.getByText("Held at customs")).toHaveCount(0);
     const calls = await page.evaluate(() => window.__E2E_MUTATIONS__ ?? []);
     expect(calls).toEqual([]);
   });

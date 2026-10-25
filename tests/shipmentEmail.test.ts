@@ -22,7 +22,11 @@ function demoMineral(status: string) {
 describe("shipment update email", () => {
   it("addresses the member with the piece, status and tracking reference", () => {
     const mineral = demoMineral("in_transit");
-    const args = shipmentEmailArgs(mineral, "in_transit", "Handed to the crew.");
+    const args = shipmentEmailArgs(
+      mineral,
+      "in_transit",
+      "Handed to the crew.",
+    );
     expect(args).not.toBeNull();
 
     const email = previewShipmentEmail(args!, { appOrigin: ORIGIN });
@@ -36,7 +40,9 @@ describe("shipment update email", () => {
     expect(email.html).toContain("Handed to the crew.");
     expect(email.html).toContain(`${ORIGIN}/dashboard/shipments`);
     expect(email.text).toContain(mineral.ownerName.split(" ")[0]);
-    expect(email.text).toContain(`Track your shipment: ${ORIGIN}/dashboard/shipments`);
+    expect(email.text).toContain(
+      `Track your shipment: ${ORIGIN}/dashboard/shipments`,
+    );
     expect(email.text).not.toContain("<div");
     expect(email.text).not.toContain("<table");
   });
@@ -193,6 +199,11 @@ describe("shipment update email", () => {
     expect(email.text).toContain(
       `Route: ${mineral.shipping!.origin.city} to ${mineral.shipping!.destination.city}`,
     );
+
+    // The vault records no position, so the middle station names the progress
+    // of the journey instead of offering the status as a place.
+    expect(email.html).toContain("Progress");
+    expect(email.html).not.toContain("Position");
   });
 
   it("returns nothing for a mineral that is still in the vault", () => {

@@ -57,7 +57,6 @@ export function PublishShipmentDialog({
   currentStatus,
   currentLocation,
   currentEta,
-  initialStatus,
   onSubmit,
 }: {
   open: boolean;
@@ -67,7 +66,6 @@ export function PublishShipmentDialog({
   currentStatus: ShipmentStatus;
   currentLocation?: string;
   currentEta?: number;
-  initialStatus?: ShipmentStatus;
   onSubmit: (input: {
     status: ShipmentStatus;
     location?: string;
@@ -75,14 +73,12 @@ export function PublishShipmentDialog({
     estimatedArrivalAt?: number | null;
   }) => Promise<void>;
 }) {
+  /* The status it already has is not a change, so the dialog opens on the next
+     one in the journey and staff move from there. */
   const options = SHIPMENT_STATUSES.filter(
     (status) => status !== currentStatus,
   );
-  const [status, setStatus] = useState<ShipmentStatus>(
-    initialStatus && initialStatus !== currentStatus
-      ? initialStatus
-      : options[0],
-  );
+  const [status, setStatus] = useState<ShipmentStatus>(options[0]);
   const [location, setLocation] = useState("");
   const [note, setNote] = useState("");
   const initialEta = dateInputValue(currentEta);
