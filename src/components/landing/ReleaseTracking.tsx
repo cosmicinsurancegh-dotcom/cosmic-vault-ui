@@ -1,5 +1,6 @@
 import { Reveal } from "@/components/site/Reveal";
 import { cn } from "@/lib/utils";
+import { motion, useInView, useReducedMotion } from "framer-motion";
 import {
   Check,
   MapPin,
@@ -9,7 +10,12 @@ import {
   ShieldCheck,
   Truck,
 } from "lucide-react";
+import { useRef } from "react";
 import { SectionLabel } from "./SectionLabel";
+
+const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
+/* One beat per stage on the rail, so the release reads left to right. */
+const STAGE_STEP = 0.09;
 
 const STAGES = [
   {
@@ -33,7 +39,7 @@ const STAGES = [
   {
     label: "In Transit",
     time: "19 Oct · 09:00",
-    note: "Collected by Malca-Amit. Air waybill CVX-8842-1190-GB active.",
+    note: "Collected by Halcyon Armoured Transit. Air waybill issued and active.",
     state: "active",
   },
   {
@@ -46,12 +52,33 @@ const STAGES = [
 
 type StageState = (typeof STAGES)[number]["state"];
 
-/** One marker per stage: charged, live, skipped, or still to come. */
-function StageMarker({ state }: { state: StageState }) {
+/**
+ * One marker per stage: charged, live, skipped, or still to come. Each marker
+ * pops in as its stage arrives, and the live one keeps a slow halo so the rail
+ * reads as a process still in motion rather than a static diagram.
+ */
+function StageMarker({
+  state,
+  delay,
+  shown,
+  reduceMotion,
+}: {
+  state: StageState;
+  delay: number;
+  shown: boolean;
+  reduceMotion: boolean | null;
+}) {
   return (
-    <span
+    <motion.span
+      initial={reduceMotion ? false : { opacity: 0, scale: 0.5 }}
+      animate={
+        reduceMotion || shown
+          ? { opacity: 1, scale: 1 }
+          : { opacity: 0, scale: 0.5 }
+      }
+      transition={{ duration: 0.45, delay, ease: EASE }}
       className={cn(
-        "relative z-10 grid size-8 shrink-0 place-items-center rounded-full ring-4 ring-card",
+        "relative isolate z-10 grid size-8 shrink-0 place-items-center rounded-full ring-4 ring-card",
         state === "done" &&
           "bg-primary text-primary-foreground shadow-[0_6px_14px_-8px_var(--electric)]",
         state === "active" &&
@@ -61,6 +88,26 @@ function StageMarker({ state }: { state: StageState }) {
         state === "next" && "border border-line bg-card",
       )}
     >
+      {state === "active" && !reduceMotion && (
+        <motion.span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-10 rounded-full bg-primary/25"
+          initial={{ opacity: 0, scale: 1 }}
+          animate={
+            shown ? { opacity: [0.5, 0], scale: [1, 2.2] } : { opacity: 0, scale: 1 }
+          }
+          transition={
+            shown
+              ? {
+                  duration: 2.4,
+                  delay: delay + 0.6,
+                  repeat: Infinity,
+                  ease: "easeOut",
+                }
+              : { duration: 0.2 }
+          }
+        />
+      )}
       {state === "done" ? (
         <Check className="size-4" strokeWidth={2.6} />
       ) : state === "active" ? (
@@ -70,7 +117,7 @@ function StageMarker({ state }: { state: StageState }) {
       ) : (
         <span className="size-1.5 rounded-full bg-line" />
       )}
-    </span>
+    </motion.span>
   );
 }
 
@@ -97,6 +144,11 @@ export function ReleaseTracking() {
   const travelled =
     activeIndex === -1 ? 0 : ((activeIndex + 0.5) / STAGES.length) * 100 - 10;
 
+  const reduceMotion = useReducedMotion();
+  const cardRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(cardRef, { once: true, amount: 0.35 });
+  const shown = inView;
+
   return (
     <section
       id="tracking"
@@ -122,21 +174,27 @@ export function ReleaseTracking() {
         </div>
 
         <Reveal y={26}>
-          <div className="mt-10 overflow-hidden rounded-[4px] border border-line bg-card shadow-[0_30px_60px_-50px_rgba(8,18,39,0.5)]">
+          <div
+            ref={cardRef}
+            className="mt-10 overflow-hidden rounded-[4px] border border-line bg-card shadow-[0_30px_60px_-50px_rgba(8,18,39,0.5)]"
+          >
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line px-5 py-4 sm:px-7">
               <div className="flex items-start gap-3">
                 <span className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_10px_20px_-12px_var(--electric)]">
                   <MapPin className="size-5" strokeWidth={2} />
                 </span>
                 <div>
-                  <p className="text-[0.55rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  <p className="flex flex-wrap items-center gap-2 text-[0.55rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                     Release record
+                    <span className="rounded-full border border-ink/15 bg-ice px-2 py-0.5 text-[0.5rem] tracking-[0.16em] text-ink/50">
+                      Sample
+                    </span>
                   </p>
                   <p className="mt-0.5 text-[0.92rem] font-semibold tracking-[-0.02em] text-ink">
-                    Sovereign 1 kg Gold Bar
+                    1 kg gold bar
                   </p>
                   <p className="text-[0.65rem] text-muted-foreground">
-                    CV-A-1042 · Malca-Amit · ETA 22 Oct 2026
+                    Halcyon Armoured Transit · ETA 22 Oct 2026
                   </p>
                 </div>
               </div>
@@ -152,22 +210,47 @@ export function ReleaseTracking() {
                 className="relative grid grid-cols-5"
                 aria-label="Release stages"
               >
-                <span
+                <motion.span
                   aria-hidden="true"
-                  className="pointer-events-none absolute left-[10%] right-[10%] top-4 h-0 -translate-y-1/2 border-t-2 border-dashed border-muted-foreground/30"
+                  className="pointer-events-none absolute left-[10%] right-[10%] top-[15px] h-0 border-t-2 border-dashed border-muted-foreground/30"
+                  initial={reduceMotion ? false : { opacity: 0 }}
+                  animate={reduceMotion || shown ? { opacity: 1 } : { opacity: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
                 />
-                <span
+                <motion.span
                   aria-hidden="true"
-                  className="pointer-events-none absolute left-[10%] top-4 h-[3px] -translate-y-1/2 rounded-full bg-primary shadow-[0_2px_7px_-1px_var(--electric)]"
-                  style={{ width: `${travelled}%` }}
+                  className="pointer-events-none absolute left-[10%] top-[14.5px] h-[3px] rounded-full bg-primary shadow-[0_2px_7px_-1px_var(--electric)]"
+                  initial={reduceMotion ? false : { width: 0 }}
+                  animate={
+                    reduceMotion || shown
+                      ? { width: `${travelled}%` }
+                      : { width: 0 }
+                  }
+                  transition={{ duration: 1, delay: 0.25, ease: EASE }}
                 />
-                {STAGES.map((stage) => (
-                  <li
+                {STAGES.map((stage, index) => (
+                  <motion.li
                     key={stage.label}
                     className="relative flex min-w-0 flex-col items-center px-2 text-center"
                     aria-current={stage.state === "active" ? "step" : undefined}
+                    initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                    animate={
+                      reduceMotion || shown
+                        ? { opacity: 1, y: 0 }
+                        : { opacity: 0, y: 8 }
+                    }
+                    transition={{
+                      duration: 0.5,
+                      delay: 0.28 + index * STAGE_STEP,
+                      ease: EASE,
+                    }}
                   >
-                    <StageMarker state={stage.state} />
+                    <StageMarker
+                      state={stage.state}
+                      delay={0.2 + index * STAGE_STEP}
+                      shown={shown}
+                      reduceMotion={reduceMotion}
+                    />
                     <p
                       className={cn(
                         "mt-3 text-[0.72rem] font-semibold tracking-[-0.01em]",
@@ -193,7 +276,7 @@ export function ReleaseTracking() {
                     >
                       {stage.note}
                     </p>
-                  </li>
+                  </motion.li>
                 ))}
               </ol>
             </div>
@@ -201,13 +284,24 @@ export function ReleaseTracking() {
             {/* Mobile stack */}
             <ol className="px-5 py-6 md:hidden" aria-label="Release stages">
               {STAGES.map((stage, index) => (
-                <li
+                <motion.li
                   key={stage.label}
                   className={cn(
                     "relative flex gap-3.5",
                     index === STAGES.length - 1 ? "pb-0" : "pb-5",
                   )}
                   aria-current={stage.state === "active" ? "step" : undefined}
+                  initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                  animate={
+                    reduceMotion || shown
+                      ? { opacity: 1, y: 0 }
+                      : { opacity: 0, y: 8 }
+                  }
+                  transition={{
+                    duration: 0.5,
+                    delay: 0.2 + index * STAGE_STEP,
+                    ease: EASE,
+                  }}
                 >
                   {index < STAGES.length - 1 && (
                     <span
@@ -215,7 +309,12 @@ export function ReleaseTracking() {
                       className="absolute left-[15px] top-8 h-[calc(100%-32px)] border-l-2 border-dashed border-muted-foreground/30"
                     />
                   )}
-                  <StageMarker state={stage.state} />
+                  <StageMarker
+                    state={stage.state}
+                    delay={0.14 + index * STAGE_STEP}
+                    shown={shown}
+                    reduceMotion={reduceMotion}
+                  />
                   <div className="min-w-0 pt-0.5">
                     <p className="flex flex-wrap items-baseline gap-2">
                       <span
@@ -238,16 +337,23 @@ export function ReleaseTracking() {
                       {stage.note}
                     </p>
                   </div>
-                </li>
+                </motion.li>
               ))}
             </ol>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-ice/40 px-5 py-3 sm:px-7">
-              <p className="text-[0.6rem] text-muted-foreground">
-                Origin: Cosmic Vault, 18 Finsbury Circus, London EC2M 7EB
-              </p>
-              <p className="text-[0.6rem] text-muted-foreground">
-                Destination: Noor Haddad, Bristol BS1 4TT
+            <div className="border-t border-line bg-ice/40 px-5 py-3 sm:px-7">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-[0.6rem] text-muted-foreground">
+                  Origin: Cosmic Vault, 18 Finsbury Circus, London EC2M 7EB
+                </p>
+                <p className="text-[0.6rem] text-muted-foreground">
+                  Destination: member address, Bristol BS1
+                </p>
+              </div>
+              <p className="mt-1.5 text-[0.58rem] leading-4 text-muted-foreground/80">
+                Illustration only. A sample release drawn to show how the five
+                stages read; the object, carrier, destination and timestamps
+                are placeholders, not a live shipment.
               </p>
             </div>
           </div>
