@@ -21,9 +21,13 @@ export function depthOf([x, y, z], projection) {
     const { sinA, cosA, sinE, cosE } = cameraOf(projection);
     return (x * cosA + y * sinA) * cosE + z * sinE;
 }
+/* vault-door: same output as (Math.round(v * 10) / 10).toFixed(1) without a trailing ".0" or "-0", minus the regexp: this is the hot loop when the swing redraws the door every frame */
 const tenth = (value) => {
-    const text = (Math.round(value * 10) / 10).toFixed(1).replace(/\.0$/, "");
-    return text === "-0" ? "0" : text;
+    const tenths = Math.round(value * 10);
+    if (tenths === 0) return "0";
+    const whole = Math.trunc(Math.abs(tenths) / 10);
+    const digit = Math.abs(tenths) - whole * 10;
+    return (tenths < 0 ? "-" : "") + whole + (digit ? "." + digit : "");
 };
 export function pathOf(points, closed = false) {
     if (!points.length)

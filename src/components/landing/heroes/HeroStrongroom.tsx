@@ -1,4 +1,4 @@
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useSpring } from "framer-motion";
 import { ArrowDown, ArrowUpRight, ShieldCheck } from "lucide-react";
 import { lazy, Suspense, useCallback, useRef } from "react";
 import type { VaultStatus } from "../vault-door/VaultDoor";
@@ -20,9 +20,16 @@ const LINES = [
  * Cosmic Vault white, ink and electric blue. An isometric round vault door: dial the
  * combination and three wheels drop their gates, the drive ring turns and twelve bolts
  * withdraw. It runs the combination itself until someone puts a hand on the dial.
+ *
+ * The hero is pinned for one more screen of scrolling: the first sixth of that travel turns the dial and
+ * withdraws the bolts, the rest swings the door ninety degrees. The pin lets go as the door finishes, and
+ * scrolling back up shuts it. With reduced motion the door stands open and nothing is pinned.
  */
 export function HeroStrongroom({ onQuote }: HeroVariantProps) {
   const reduce = useReducedMotion();
+  const track = useRef<HTMLDivElement | null>(null);
+  const { scrollYProgress } = useScroll({ target: track, offset: ["start start", "end end"] });
+  const openProgress = useSpring(scrollYProgress, { stiffness: 160, damping: 28, mass: 0.4, restDelta: 0.0005 });
   const dialNumber = useRef<HTMLSpanElement | null>(null);
   const dialText = useRef<HTMLSpanElement | null>(null);
 
@@ -33,9 +40,11 @@ export function HeroStrongroom({ onQuote }: HeroVariantProps) {
   }, []);
 
   return (
+    <div ref={track} id="top" className={reduce ? undefined : "h-[calc(max(40rem,100svh)+100svh)]"}>
     <section
-      id="top"
-      className="relative isolate flex min-h-[max(40rem,88svh)] flex-col justify-center overflow-hidden bg-[#2B61EB] pb-10 pt-20 text-white"
+      className={`relative isolate flex flex-col justify-center overflow-hidden bg-[#2B61EB] pb-10 pt-20 text-white ${
+        reduce ? "min-h-[max(40rem,88svh)]" : "sticky top-0 h-[max(40rem,100svh)]"
+      }`}
     >
       {/* Ice-tinted ground fading to white, with one soft electric bloom behind the door and a faint tooth. */}
       <div
@@ -61,13 +70,13 @@ export function HeroStrongroom({ onQuote }: HeroVariantProps) {
           className="w-full"
         >
           <Suspense fallback={null}>
-            <VaultDoor onStatus={onStatus} />
+            <VaultDoor onStatus={onStatus} openProgress={reduce ? 1 : openProgress} />
           </Suspense>
           <p
             aria-hidden="true"
             className="mt-1 flex items-center justify-between gap-6 px-[5%] text-[0.55rem] font-semibold uppercase tracking-[0.24em] text-white/70"
           >
-            <span className="hidden sm:inline">Drag the dial</span>
+            <span className="hidden sm:inline">Drag the dial · scroll to open</span>
             <span ref={dialText} className="ml-auto text-right">
               Locked
             </span>
@@ -161,5 +170,6 @@ export function HeroStrongroom({ onQuote }: HeroVariantProps) {
         </motion.div>
       </div>
     </section>
+    </div>
   );
 }

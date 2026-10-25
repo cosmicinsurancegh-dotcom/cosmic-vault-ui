@@ -117,6 +117,7 @@
   --anatomy-weight:.6px;--anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
 }
 .vd .iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.vd .iso-fill{fill-rule:evenodd}
 /* Site rule -- an Anatomy figure floats under the fixed navbar, so it is centred in the band
    below the bar and never taller than that band; it cannot slide under the bar on a short window.
    --iso-nav is the bar (its padding plus the 3.25rem rounded box) and its gap, --iso-gap the air
@@ -129,6 +130,8 @@
   max-width:calc((max(40rem,88svh) - var(--iso-nav) - var(--iso-gap) - var(--iso-caption)) * var(--iso-aspect));
 }
 @media (min-width:640px){.iso-band{--iso-nav:5.25rem}}
+.vd .vd-recess{--anatomy-paper:#0b2a7d;--anatomy-top:#16419f;--anatomy-shade-0:#061a58;--anatomy-shade-1:#0a2670;--anatomy-shade-2:#10358f;--anatomy-shade-3:#1a49b0}
+.vd .vd-shadow{fill:#061a58;filter:blur(7px)}
 .vd .vd-slot{fill:rgb(10 36 130/.55);stroke:var(--anatomy-mid);stroke-width:.6px;stroke-linejoin:round}
 .vd .vd-num{font-family:var(--anatomy-mono);font-weight:600}
 .vd [data-vd="lamp"] .iso-solid>.iso-fill{fill:#1d46bd}

@@ -1,12 +1,17 @@
-import { useReducedMotion } from "framer-motion";
+import { useReducedMotion, type MotionValue } from "framer-motion";
 import { useEffect, useRef, type KeyboardEvent } from "react";
+import { pathOf } from "../../../../scripts/vault-door/kit/iso-kit.mjs";
+import { makeDoor } from "../../../../scripts/vault-door/door-model.mjs";
 import { VAULT_ART as ART } from "./art.generated";
 import "./vault-door.css";
 
 /**
- * The hero's vault door. The drawing is finished SVG built by scripts/vault-door/build.mjs;
- * this file only moves it, and every number it shows comes from the same model that moves it:
+ * The hero's vault door. The shut door is finished SVG built by scripts/vault-door/build.mjs and moved here with
+ * cheap transforms; every number it shows comes from the same model that moves it:
  * dial reading -> three wheels -> drive ring angle -> pin radius -> bolt travel.
+ *
+ * `openProgress` (0 to 1) opens it: the first 15% turns the dial a quarter turn and withdraws the bolts; the rest swings
+ * the door ninety degrees about its hinge. While it swings the door is redrawn from the build's door model at every angle.
  */
 
 export interface VaultStatus {
@@ -105,16 +110,30 @@ const easeInOut = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p 
 const OPEN_HOLD = 3.4;
 const IDLE_RESUME = 6;
 
+/* openProgress -> what the door does: the bolts and the wheel first, then the swing */
+const UNLOCKED_AT = 0.15;
+const SWUNG_AT = 0.85;
+const MAX_SWING = 90;
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+function doorAt(progress: number) {
+  const p = clamp01(progress);
+  const unlock = easeInOut(clamp01(p / UNLOCKED_AT));
+  return { unlock, wheel: 90 * unlock, angle: MAX_SWING * easeInOut(clamp01((p - UNLOCKED_AT) / (SWUNG_AT - UNLOCKED_AT))) };
+}
+
 interface Props {
   className?: string;
   onStatus?: (status: VaultStatus) => void;
+  /** 0 = shut and locked, 1 = standing open. A MotionValue moves the door without re-rendering the hero. */
+  openProgress?: number | MotionValue<number>;
 }
 
-export function VaultDoor({ className, onStatus }: Props) {
+export function VaultDoor({ className, onStatus, openProgress = 0 }: Props) {
   const reduce = useReducedMotion();
   const root = useRef<HTMLDivElement | null>(null);
   const svg = useRef<SVGSVGElement | null>(null);
   const press = useRef<(key: string, shift: boolean) => void>(() => {});
+  const setProgress = useRef<(progress: number) => void>(() => {});
   const statusRef = useRef(onStatus);
   useEffect(() => {
     statusRef.current = onStatus;
@@ -134,6 +153,12 @@ export function VaultDoor({ className, onStatus }: Props) {
     const knobTop = host.querySelector<SVGElement>('[data-vd="rot"][data-id="knob"]')!;
     const needle = host.querySelector<SVGElement>('[data-vd="rot"][data-id="needle"]')!;
     const knurl = host.querySelector<SVGElement>('[data-vd="knurl"]')!;
+    const shutTree = host.querySelector<SVGElement>('[data-vd="closed"]')!;
+    const swingTree = host.querySelector<SVGElement>('[data-vd="swing"]')!;
+    const swingDoor = host.querySelector<SVGElement>('[data-vd="door"]')!;
+    const swingArms = host.querySelector<SVGElement>('[data-vd="arms"]')!;
+    const hull = host.querySelector<SVGElement>('[data-vd="hull"]')!;
+    const shadow = host.querySelector<SVGElement>('[data-vd="shadow"]')!;
 
     const rings = { b: basis(Number(ring.dataset.s)) };
     const dials = { b: basis(Number(dialFace.dataset.s)) };
@@ -176,21 +201,41 @@ export function VaultDoor({ className, onStatus }: Props) {
     let shown = { reading: -1, text: "" };
     let lampsOn = -1;
 
+    /* what openProgress asks for; the dial, bolts and lamps follow it on top of whatever the combination lock is doing */
+    let scroll = doorAt(reduce ? 1 : 0);
+    let swinging = false;
+    let drawnAngle = -1;
+    let drawnDial = NaN;
+    let settleTimer = 0;
+
     const readingOf = (rot: number) => mod100(Math.round(rot / DEG_PER_NUMBER));
 
     const textNow = () => {
+      if (scroll.angle > 0.5) return scroll.angle > 89.5 ? "Door open · 90°" : `Door opening · ${Math.round(scroll.angle)}°`;
+      if (scroll.unlock > 0.01 && scroll.unlock < 0.99) return "Bolts withdrawing";
       if (lock.x < 0.98) return lock.x < 0.04 ? "Open · 12 bolts withdrawn" : "Drive ring turning · bolts withdrawing";
       if (door.stage >= 3) return "Wheel 3 set · drive ring free";
       const next = STEPS[door.stage];
       return `Wheel ${door.stage + 1} of 3 · turn ${sideWord(next.dir)} to ${pad(next.to)}`;
     };
 
+    /* the door at its angle, drawn from the build's own model: the shut art is hidden and the swing tree shows */
+    const drawSwing = (angle: number, dialRot: number, detail: number) => {
+      const door = makeDoor(ART.P, angle, detail);
+      const parts = door.swing({ dialRot });
+      swingDoor.innerHTML = parts.main;
+      swingArms.innerHTML = parts.arms;
+      hull.setAttribute("d", `M0 0H${ART.viewBox[0]}V${ART.viewBox[1]}H0Z${pathOf(door.frontHull(), true)}`);
+      shadow.setAttribute("d", door.shadow());
+      shadow.setAttribute("opacity", String(0.5 * Math.min(1, angle / 25)));
+    };
+
     const draw = () => {
-      const rot = dial.x;
+      const rot = dial.x + scroll.wheel;
       dialFace.setAttribute("transform", turnMatrix(dials.b, rot));
       knobTop.setAttribute("transform", turnMatrix(knobs.b, rot));
       knurl.setAttribute("d", knurlPath(rot));
-      const open = 1 - Math.min(1, Math.max(0, lock.x));
+      const open = Math.max(1 - Math.min(1, Math.max(0, lock.x)), scroll.unlock);
       ring.setAttribute("transform", turnMatrix(rings.b, ART.ringSweep * (1 - open)));
       needle.setAttribute("transform", turnMatrix(needles.b, -270 * open));
       const home = ART.pinTravel * open;
@@ -199,10 +244,27 @@ export function VaultDoor({ className, onStatus }: Props) {
         const [sx, sy] = slide[Number(el.dataset.i)];
         el.setAttribute("transform", `translate(${(sx * home).toFixed(2)} ${(sy * home).toFixed(2)})`);
       }
-      const lit = door.stage;
+      const lit = Math.max(door.stage, Math.round(scroll.unlock * 3));
       if (lit !== lampsOn) {
         lampsOn = lit;
         lamps.forEach((el, i) => (i < lit ? el.setAttribute("data-on", "") : el.removeAttribute("data-on")));
+      }
+      const swung = scroll.angle > 0.05;
+      if (swung !== swinging) {
+        swinging = swung;
+        shutTree.setAttribute("display", swung ? "none" : "inline");
+        swingTree.setAttribute("display", swung ? "inline" : "none");
+        if (!swung) shadow.setAttribute("opacity", "0");
+        drawnAngle = -1;
+      }
+      if (swung && (scroll.angle !== drawnAngle || rot !== drawnDial)) {
+        /* while it moves the door is drawn coarser; once it rests a beat it is redrawn in full */
+        const moving = drawnAngle >= 0;
+        drawnAngle = scroll.angle;
+        drawnDial = rot;
+        drawSwing(drawnAngle, rot, moving ? 0.6 : 1);
+        window.clearTimeout(settleTimer);
+        if (moving) settleTimer = window.setTimeout(() => drawSwing(drawnAngle, drawnDial, 1), 140);
       }
       const next = { reading: readingOf(rot), text: textNow() };
       if (next.reading !== shown.reading || next.text !== shown.text) {
@@ -263,7 +325,7 @@ export function VaultDoor({ className, onStatus }: Props) {
       const dt = last ? Math.min((now - last) / 1000, 1 / 30) : 1 / 60;
       last = now;
       clock += dt;
-      if (door.mode === "hand" && clock - door.lastInput > IDLE_RESUME && !door.drag) {
+      if (door.mode === "hand" && clock - door.lastInput > IDLE_RESUME && !door.drag && scroll.unlock === 0) {
         /* nobody has touched it for a while: wait for the door to close, then run the combination again */
         if (lock.x >= 0.99 || want.lock === 1) {
           door.mode = "tour";
@@ -332,7 +394,7 @@ export function VaultDoor({ className, onStatus }: Props) {
       return { u: (sx * face.ez[1] - sy * face.ez[0]) / det, v: (face.ex[0] * sy - face.ex[1] * sx) / det };
     };
     const onDown = (e: PointerEvent) => {
-      if (e.pointerType === "touch") return;
+      if (e.pointerType === "touch" || swinging) return;
       const { u, v } = toFace(e);
       if (Math.hypot(u, v) > 80) return;
       takeOver();
@@ -374,6 +436,7 @@ export function VaultDoor({ className, onStatus }: Props) {
       run();
     };
     press.current = (key, shift) => {
+      if (swinging) return;
       if (key === "Enter" || key === " ") {
         door.mode = "tour";
         door.step = -1;
@@ -390,6 +453,16 @@ export function VaultDoor({ className, onStatus }: Props) {
       takeOver(); // first: it parks the dial where it is, so the key steps from what the reader sees
       const here = Math.round(want.dial / DEG_PER_NUMBER) * DEG_PER_NUMBER;
       want.dial = key === "Home" ? Math.round(dial.x / 360) * 360 : here + (left ? step : -step);
+      run();
+    };
+
+    setProgress.current = (progress) => {
+      const next = doorAt(reduce ? 1 : progress);
+      if (next.unlock > 0) {
+        if (door.mode === "tour") takeOver();
+        door.lastInput = clock;
+      }
+      scroll = next;
       run();
     };
 
@@ -412,12 +485,21 @@ export function VaultDoor({ className, onStatus }: Props) {
     return () => {
       io.disconnect();
       cancelAnimationFrame(frame);
+      window.clearTimeout(settleTimer);
+      setProgress.current = () => {};
       wrap.removeEventListener("pointerdown", onDown);
       wrap.removeEventListener("pointermove", onMove);
       wrap.removeEventListener("pointerup", onUp);
       wrap.removeEventListener("pointercancel", onUp);
     };
   }, [reduce]);
+
+  /* openProgress is read after the effect above has built its hooks, and a MotionValue never re-renders the hero */
+  useEffect(() => {
+    if (typeof openProgress === "number") return void setProgress.current(openProgress);
+    setProgress.current(openProgress.get());
+    return openProgress.on("change", (value) => setProgress.current(value));
+  }, [openProgress, reduce]);
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (!["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Home", "Enter", " "].includes(e.key)) return;

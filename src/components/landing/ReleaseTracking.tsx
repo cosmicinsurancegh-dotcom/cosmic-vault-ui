@@ -1,6 +1,6 @@
 import { Reveal } from "@/components/site/Reveal";
 import { cn } from "@/lib/utils";
-import { motion, useInView, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   Check,
   MapPin,
@@ -10,12 +10,47 @@ import {
   ShieldCheck,
   Truck,
 } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SectionLabel } from "./SectionLabel";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
-/* One beat per stage on the rail, so the release reads left to right. */
-const STAGE_STEP = 0.09;
+
+/**
+ * Drives the rail on every visit: true once a third of the card is on screen,
+ * and false again only after the card has left the viewport entirely. Two
+ * thresholds rather than one, because a single observer would rewind the rail
+ * while a third of it was still in front of the reader.
+ */
+function useReplayInView(ref: { readonly current: Element | null }) {
+  const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || typeof IntersectionObserver === "undefined") {
+      setShown(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.intersectionRatio >= 0.35) setShown(true);
+        else if (!entry.isIntersecting) setShown(false);
+      },
+      { threshold: [0, 0.35] },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [ref]);
+
+  return shown;
+}
+/* One beat per stage on the rail, so the release reads left to right. The step
+   is slow enough that each stage is legible on its own; the whole sequence runs
+   about 2.3s, so a visitor who scrolls the card into view sees it from the first
+   marker to the drawn rail rather than catching the tail of it. */
+const STAGE_STEP = 0.22;
+const MARKER_DURATION = 0.6;
+const LABEL_DURATION = 0.6;
 
 const STAGES = [
   {
@@ -76,7 +111,11 @@ function StageMarker({
           ? { opacity: 1, scale: 1 }
           : { opacity: 0, scale: 0.5 }
       }
-      transition={{ duration: 0.45, delay, ease: EASE }}
+      transition={
+        shown
+          ? { duration: MARKER_DURATION, delay, ease: EASE }
+          : /* Reset happens off screen, so it can be instant. */ { duration: 0 }
+      }
       className={cn(
         "relative isolate z-10 grid size-8 shrink-0 place-items-center rounded-full ring-4 ring-card",
         state === "done" &&
@@ -100,11 +139,11 @@ function StageMarker({
             shown
               ? {
                   duration: 2.4,
-                  delay: delay + 0.6,
+                  delay: delay + 0.9,
                   repeat: Infinity,
                   ease: "easeOut",
                 }
-              : { duration: 0.2 }
+              : { duration: 0 }
           }
         />
       )}
@@ -146,8 +185,7 @@ export function ReleaseTracking() {
 
   const reduceMotion = useReducedMotion();
   const cardRef = useRef<HTMLDivElement>(null);
-  const inView = useInView(cardRef, { once: true, amount: 0.35 });
-  const shown = inView;
+  const shown = useReplayInView(cardRef);
 
   return (
     <section
@@ -215,7 +253,11 @@ export function ReleaseTracking() {
                   className="pointer-events-none absolute left-[10%] right-[10%] top-[15px] h-0 border-t-2 border-dashed border-muted-foreground/30"
                   initial={reduceMotion ? false : { opacity: 0 }}
                   animate={reduceMotion || shown ? { opacity: 1 } : { opacity: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
+                  transition={
+                    shown
+                      ? { duration: 0.6, delay: 0.1, ease: "easeOut" }
+                      : { duration: 0 }
+                  }
                 />
                 <motion.span
                   aria-hidden="true"
@@ -226,7 +268,11 @@ export function ReleaseTracking() {
                       ? { width: `${travelled}%` }
                       : { width: 0 }
                   }
-                  transition={{ duration: 1, delay: 0.25, ease: EASE }}
+                  transition={
+                    shown
+                      ? { duration: 1.8, delay: 0.5, ease: EASE }
+                      : { duration: 0 }
+                  }
                 />
                 {STAGES.map((stage, index) => (
                   <motion.li
@@ -239,15 +285,19 @@ export function ReleaseTracking() {
                         ? { opacity: 1, y: 0 }
                         : { opacity: 0, y: 8 }
                     }
-                    transition={{
-                      duration: 0.5,
-                      delay: 0.28 + index * STAGE_STEP,
-                      ease: EASE,
-                    }}
+                    transition={
+                      shown
+                        ? {
+                            duration: LABEL_DURATION,
+                            delay: 0.4 + index * STAGE_STEP,
+                            ease: EASE,
+                          }
+                        : { duration: 0 }
+                    }
                   >
                     <StageMarker
                       state={stage.state}
-                      delay={0.2 + index * STAGE_STEP}
+                      delay={0.25 + index * STAGE_STEP}
                       shown={shown}
                       reduceMotion={reduceMotion}
                     />
@@ -297,11 +347,15 @@ export function ReleaseTracking() {
                       ? { opacity: 1, y: 0 }
                       : { opacity: 0, y: 8 }
                   }
-                  transition={{
-                    duration: 0.5,
-                    delay: 0.2 + index * STAGE_STEP,
-                    ease: EASE,
-                  }}
+                  transition={
+                    shown
+                      ? {
+                          duration: LABEL_DURATION,
+                          delay: 0.3 + index * STAGE_STEP,
+                          ease: EASE,
+                        }
+                      : { duration: 0 }
+                  }
                 >
                   {index < STAGES.length - 1 && (
                     <span
@@ -311,7 +365,7 @@ export function ReleaseTracking() {
                   )}
                   <StageMarker
                     state={stage.state}
-                    delay={0.14 + index * STAGE_STEP}
+                    delay={0.2 + index * STAGE_STEP}
                     shown={shown}
                     reduceMotion={reduceMotion}
                   />

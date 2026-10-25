@@ -13,38 +13,21 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as k from "./kit/iso-kit.mjs";
 import * as G from "./kit/lathe.mjs";
+import * as M from "./door-model.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, "..", "..", "src", "components", "landing", "vault-door");
 const rad = (deg) => (deg * Math.PI) / 180;
+const { BOLTS, BOLT_AT, PIN_FROM, PIN_TRAVEL, RING_SWEEP, COMBINATION, ZC, R_BODY, R_FLANGE, R_BORE, R_DOOR, R_FACE, R_RING_OUT, RING_S, BOLT_LEN, RHO_IN, DIAL_S, KNOB_S, DIAL_R, KNOB_R, HINGE_X, HINGE_Y, ARM_V, KNUCKLE_R, polyRadial, rrect } = M;
 
 /* Camera: azimuth 90 looks straight down +y at the door face, so the dial and drive ring read as true circles;
    elevation 8 keeps a sliver of the top, enough to show the frame's depth. With the face frontal, depth order is
    decided by height off the face (s) alone, so the painter's order below needs no per-angle sorting. */
 
-/* ── The truth the figure runs on ─────────────────────────────────────────── */
-const BOLTS = 12;
-const BOLT_AT = (i) => 15 + 30 * i; // degrees, counter-clockwise from +x on the door face
-const PIN_FROM = 104; // pin radius with the bolts withdrawn
-const PIN_TRAVEL = 34; // pin (and bolt) travel
-const RING_SWEEP = 28; // drive ring turns this far, and the spiral slots are cut to match
-const COMBINATION = [24, 61, 8];
-
 /* ── World ────────────────────────────────────────────────────────────────── */
 const WIDTH = 640;
 const HEIGHT = 620;
-const ZC = 240; // door axis height above the plinth top
-const R_BODY = 204;
-const R_FLANGE = 214;
-const R_BORE = 154.5;
-const R_DOOR = 152;
-const R_FACE = 148;
-const R_RING_IN = 86;
-const R_RING_OUT = 144;
-const RING_S = [4.2, 7.6];
-const BOLT_W = 4.8; // half width
-const BOLT_LEN = 44;
-const BOLT_S = [0.3, 3.6];
+const CHAMBER = 150; // how far behind the door's face the vault's back wall stands
 
 const PLATE = { x: -262, y: -92, w: 510, d: 176, r: 10 };
 const PLATE_H = 14;
@@ -61,6 +44,7 @@ const P = k.fitProjection(
 );
 
 const F0 = G.frameOf([0, 0, ZC], [0, 1, 0], [1, 0, 0], [0, 0, 1]); // door face frame: s along +y, u = x, v = z
+const door = M.makeDoor(P, 0); // the shut door; the swing is drawn at runtime by the same model
 const at = (p) => k.iso(p, P);
 const S = (paths, style) => k.solidSvg(paths, style);
 const L = (d, style) => k.lineSvg(d, style);
@@ -72,41 +56,15 @@ const solid = (paths, style) => {
   return S(paths, style);
 };
 
-/* a point on the door face, in the door's own (u, v) = (x, z) coordinates, at depth s */
-const face = (u, v, s = 0) => [u, s, ZC + v];
-const faceAt = (u, v, s = 0) => at(face(u, v, s));
+const faceAt = door.faceAt;
 const polar = (r, deg) => [r * Math.cos(rad(deg)), r * Math.sin(rad(deg))];
-
-/* a rounded rectangle in radial coordinates (rho outward, tau across), rotated onto the door */
-function rrect(rho0, rho1, tau0, tau1, deg, rc = 1, n = 2) {
-  const c = Math.cos(rad(deg));
-  const s = Math.sin(rad(deg));
-  const to = (rho, tau) => [rho * c - tau * s, rho * s + tau * c];
-  const r = Math.min(rc, (rho1 - rho0) / 2, (tau1 - tau0) / 2);
-  const out = [];
-  const corner = (cr, ct, a0) => {
-    for (let j = 0; j <= n; j++) {
-      const a = rad(a0 + (90 * j) / n);
-      out.push(to(cr + r * Math.cos(a), ct + r * Math.sin(a)));
-    }
-  };
-  corner(rho1 - r, tau1 - r, 0);
-  corner(rho0 + r, tau1 - r, 90);
-  corner(rho0 + r, tau0 + r, 180);
-  corner(rho1 - r, tau0 + r, 270);
-  return out;
-}
-const polyRadial = (points, deg) => {
-  const c = Math.cos(rad(deg));
-  const s = Math.sin(rad(deg));
-  return points.map(([rho, tau]) => [rho * c - tau * s, rho * s + tau * c]);
-};
-/* facet counts only set the tone fills (outlines are analytic), so keep them modest */
+const r1 = (p) => p.map((n) => Math.round(n * 10) / 10).join(" ");
+const prism = (poly, s0, s1) => G.prismOf(F0, poly, s0, s1, P);
 const facets = (r) => Math.max(14, Math.min(88, Math.round(r * 0.5)));
 const disc = (s0, s1, r, F) => G.disc(s0, s1, r, F, P, { steps: facets(r) });
-const band = (s0, s1, rIn, rOut, F) => G.ringBand(s0, s1, rIn, rOut, F, P, { steps: facets(rOut) });
-const prism = (poly, s0, s1) => G.prismOf(F0, poly, s0, s1, P);
-const frameAtFace = (u, v) => G.frameOf([u, 0, ZC + v], [0, 1, 0], [1, 0, 0], [0, 0, 1]);
+/* a ring band's fill is the hull of its rims, so a ring the door leaves open needs `hole` cutting its bore out (the fills are even-odd, see the CSS) */
+const band = (s0, s1, rIn, rOut, F, hole = null) => G.ringBand(s0, s1, rIn, rOut, F, P, { steps: facets(rOut), hole });
+const frameAtFace = door.frameAtFace;
 
 /* The matrix that turns a flat group about the door's axis (or any point on the face) in the plane at depth s. */
 function turnMatrix(s, deg, cx = 0, cz = 0) {
@@ -178,10 +136,7 @@ function pedestal() {
   return out.join("");
 }
 
-/* ── Hinge post with three knuckles, joined to the ring by arms ───────────── */
-const HINGE_X = -229;
-const HINGE_Y = -40;
-const KNUCKLE_DZ = [112, 0, -112];
+/* ── Hinge post: a rod on the plinth with three heavy knuckles; the door's arms wrap them ── */
 function hinge() {
   const out = [];
   out.push(solid(k.cylinder(HINGE_X, HINGE_Y, 15, 0, 4, P, 32), { tone: "lo" }));
@@ -190,16 +145,12 @@ function hinge() {
   out.push(L([60, 170].map((z) => k.sideArc(HINGE_X, HINGE_Y, 5.5, z, P, 14)).join(""), { tone: "faint" }));
   out.push(solid(k.cylinder(HINGE_X, HINGE_Y, 8, ZC + 150, 5, P, 28), { tone: "mid" }));
   out.push(solid(k.cylinder(HINGE_X, HINGE_Y, 3.4, ZC + 155, 3, P, 20), { tone: "mid" }));
-  for (const dz of KNUCKLE_DZ) {
+  for (const dz of ARM_V) {
     const z0 = ZC + dz - 14;
-    out.push(solid(k.cylinder(HINGE_X, HINGE_Y, 11, z0, 28, P, 36, 0.6), { tone: "hi", crease: "lo" }));
-    out.push(L(k.sideArc(HINGE_X, HINGE_Y, 11, z0 + 8, P, 24) + k.sideArc(HINGE_X, HINGE_Y, 11, z0 + 20, P, 24), { tone: "faint" }));
+    out.push(solid(k.cylinder(HINGE_X, HINGE_Y, KNUCKLE_R, z0, 28, P, 36, 0.6), { tone: "hi", crease: "lo" }));
+    out.push(L(k.sideArc(HINGE_X, HINGE_Y, KNUCKLE_R, z0 + 8, P, 24) + k.sideArc(HINGE_X, HINGE_Y, KNUCKLE_R, z0 + 20, P, 24), { tone: "faint" }));
     out.push(L(k.ring(HINGE_X, HINGE_Y, 7.6, z0 + 28, P, 20), { tone: "lo" }));
     out.push(D([at([HINGE_X, HINGE_Y, z0 + 28])], { size: 0.55, tone: "hi" }));
-    const edge = Math.sqrt(R_BODY ** 2 - dz ** 2);
-    const arm = { x: HINGE_X + 11, y: HINGE_Y - 8, w: -edge - (HINGE_X + 11), d: 16, r: 1.5 };
-    out.push(solid(k.slabOf(arm, ZC + dz - 8, 16, P, 3, 0.5), { tone: "mid" }));
-    out.push(D([at([arm.x + 8, HINGE_Y, ZC + dz + 8]), at([arm.x + arm.w - 8, HINGE_Y, ZC + dz + 8])], { size: 0.45 }));
   }
   return out.join("");
 }
@@ -207,15 +158,17 @@ function hinge() {
 /* ── Frame ring: body, flange, ribs, bolt circle, instruments ─────────────── */
 function frameBody() {
   const out = [];
-  out.push(solid(band(-50, -8, R_BORE, R_BODY, F0), { tone: "mid" }));
+  out.push(solid(band(-50, -8, R_BORE, R_BODY, F0, [-8, R_BORE]), { tone: "mid" }));
   out.push(k.fadedSvg(G.ribsOf(F0, -46, -12, R_BODY, 168, P, { fade: [0.08, 0.5], seams: true }), { tone: "lo" }));
   return out.join("");
 }
+/* the flange is drawn in two groups so the swing can redraw just its lip over the door (see lipMask) */
 function frameFlange() {
+  const lip = [];
+  lip.push(solid(band(-8, 0, R_BORE, R_FLANGE, F0, [0, R_BORE]), { tone: "mid" }));
+  lip.push(L(G.circleOf(F0, 0, R_FLANGE - 5, P, 120) + G.circleOf(F0, 0, R_BORE + 3.2, P, 120), { tone: "faint" }));
+  lip.push(L(G.circleOf(F0, 0, R_FLANGE - 1, P, 120), { tone: "mid" })); // bright rim: the flange's thickness, seen head-on
   const out = [];
-  out.push(solid(band(-8, 0, R_BORE, R_FLANGE, F0), { tone: "mid" }));
-  out.push(L(G.circleOf(F0, 0, R_FLANGE - 5, P, 120) + G.circleOf(F0, 0, R_BORE + 3.2, P, 120), { tone: "faint" }));
-  out.push(L(G.circleOf(F0, 0, R_FLANGE - 1, P, 120), { tone: "mid" })); // bright rim: the flange's thickness, seen head-on
   /* scale ticks hanging from the engraved ring, a long one every 15 degrees; the lamp plate and nameplate cover their own stretch */
   const ticks = [];
   for (let a = 0; a < 360; a += 3) {
@@ -234,7 +187,7 @@ function frameFlange() {
     out.push(solid(disc(0, 1.8, 3.6, f), { tone: "hi", crease: "lo" }));
     out.push(L(G.circleOf(f, 1.8, 1.7, P, 12), { tone: "mid" }), D([faceAt(u, v, 1.8)], { size: 0.5, tone: "hi" }));
   }
-  return out.join("");
+  return { lip: lip.join(""), detail: out.join("") };
 }
 /* twelve stiffener ribs welded to the flange between the brackets */
 function stiffeners() {
@@ -257,211 +210,6 @@ function bracket(deg) {
   });
   /* head-on the cheeks sit either side of the bolt and never overlap it, so their order is free */
   return { first: far[0], second: far[1], bridge, dots: D(dots, { size: 0.4, tone: "lo" }) };
-}
-
-/* ── One bolt: body, nose, serrations; pin drawn later above the ring ─────── */
-const RHO_IN = PIN_FROM + PIN_TRAVEL - 8; // locked position
-function bolt(deg) {
-  const body = solid(prism(rrect(RHO_IN, RHO_IN + BOLT_LEN - 6, -BOLT_W, BOLT_W, deg, 0.8), BOLT_S[0], BOLT_S[1]), { tone: "lit", lit: true });
-  const nose = solid(prism(polyRadial([[RHO_IN + BOLT_LEN - 6, -BOLT_W], [RHO_IN + BOLT_LEN - 0.4, -2.4], [RHO_IN + BOLT_LEN - 0.4, 2.4], [RHO_IN + BOLT_LEN - 6, BOLT_W]], deg), BOLT_S[0], BOLT_S[1]), { tone: "lit", lit: true, crease: "none" });
-  const ticks = [];
-  for (let rho = RHO_IN + 12; rho <= RHO_IN + BOLT_LEN - 9; rho += 4) {
-    for (const sign of [-1, 1]) {
-      const [u0, v0] = polyRadial([[rho, sign * BOLT_W]], deg)[0];
-      const [u1, v1] = polyRadial([[rho, sign * (BOLT_W - 1.7)]], deg)[0];
-      ticks.push(`M${faceAt(u0, v0, BOLT_S[1]).map((n) => Math.round(n * 10) / 10).join(" ")}L${faceAt(u1, v1, BOLT_S[1]).map((n) => Math.round(n * 10) / 10).join(" ")}`);
-    }
-  }
-  const [gu0, gv0] = polyRadial([[RHO_IN + 11, 0]], deg)[0];
-  const [gu1, gv1] = polyRadial([[RHO_IN + BOLT_LEN - 9, 0]], deg)[0];
-  const groove = `M${faceAt(gu0, gv0, BOLT_S[1]).map((n) => Math.round(n * 10) / 10).join(" ")}L${faceAt(gu1, gv1, BOLT_S[1]).map((n) => Math.round(n * 10) / 10).join(" ")}`;
-  return body + nose + L(ticks.join(""), { tone: "mid" }) + L(groove, { tone: "mid", free: true });
-}
-
-function pin(deg) {
-  const [u, v] = polar(RHO_IN + 8, deg);
-  const f = frameAtFace(u, v);
-  return solid(disc(BOLT_S[1], RING_S[1] + 0.4, 2.7, f), { tone: "hi" }) + solid(disc(RING_S[1] + 0.4, RING_S[1] + 1.8, 4, f), { tone: "hi" });
-}
-
-/* ── Door ─────────────────────────────────────────────────────────────────── */
-function doorBody() {
-  const out = [];
-  out.push(solid(G.solidOf([[-44, R_DOOR], [-3, R_DOOR], [-3, R_FACE], [0, R_FACE]], F0, P, { steps: 96 }), { tone: "hi" }));
-  /* the step between the door's rim and its face plate carries a row of screws, and each bolt a channel */
-  out.push(D(G.dotsOf(F0, -3, R_DOOR - 2.2, 36, P, { all: true, phase: rad(0) }), { size: 0.45 }));
-  const channels = [];
-  for (let i = 0; i < BOLTS; i++) {
-    const deg = BOLT_AT(i);
-    for (const sign of [-1, 1]) {
-      const [u0, v0] = polyRadial([[R_RING_OUT, sign * 7]], deg)[0];
-      const [u1, v1] = polyRadial([[R_FACE, sign * 7]], deg)[0];
-      channels.push(`M${faceAt(u0, v0).map((n) => Math.round(n * 10) / 10).join(" ")}L${faceAt(u1, v1).map((n) => Math.round(n * 10) / 10).join(" ")}`);
-    }
-  }
-  out.push(L(channels.join(""), { tone: "lo" }));
-  return out.join("");
-}
-
-/* ── Drive ring: a plate on the bearing race, cut with spiral slots ───────── */
-function slotPath() {
-  const half = 3.1;
-  const centre = (t) => {
-    const r = PIN_FROM + PIN_TRAVEL * t;
-    return { r, phi: -RING_SWEEP * t }; // degrees relative to the pin's own angle
-  };
-  const pts = [];
-  const N = 22;
-  const T0 = -0.07;
-  const T1 = 1.07;
-  const slots = [];
-  for (let i = 0; i < BOLTS; i++) {
-    const base = BOLT_AT(i);
-    const line = [];
-    for (let j = 0; j <= N; j++) {
-      const t = T0 + ((T1 - T0) * j) / N;
-      const { r, phi } = centre(t);
-      line.push({ r, a: rad(base + phi) });
-    }
-    const centreXY = line.map(({ r, a }) => [r * Math.cos(a), r * Math.sin(a)]);
-    const normalAt = (j) => {
-      const a = centreXY[Math.max(0, j - 1)];
-      const b = centreXY[Math.min(N, j + 1)];
-      const dx = b[0] - a[0];
-      const dy = b[1] - a[1];
-      const len = Math.hypot(dx, dy);
-      return [-dy / len, dx / len];
-    };
-    const left = centreXY.map((p, j) => [p[0] + normalAt(j)[0] * half, p[1] + normalAt(j)[1] * half]);
-    const right = centreXY.map((p, j) => [p[0] - normalAt(j)[0] * half, p[1] - normalAt(j)[1] * half]).reverse();
-    const capAt = (j, sign) => {
-      const [nx, ny] = normalAt(j);
-      const [tx, ty] = [ny, -nx]; // path direction (right-hand of the left normal)
-      const c = centreXY[j];
-      const out = [];
-      for (let q = 1; q < 7; q++) {
-        const psi = (Math.PI * q) / 7;
-        out.push([c[0] + half * (Math.cos(psi) * nx * sign + Math.sin(psi) * tx * -sign * -1), c[1] + half * (Math.cos(psi) * ny * sign + Math.sin(psi) * ty * -sign * -1)]);
-      }
-      return out;
-    };
-    const ring = [...left, ...capAt(N, 1), ...right, ...capAt(0, -1)];
-    slots.push(ring);
-  }
-  return slots;
-}
-function driveRing() {
-  const out = [];
-  out.push(solid(band(0, RING_S[0], 80, 90, F0), { tone: "mid" })); // bearing race
-  return out.join("");
-}
-function driveRingTop() {
-  const out = [];
-  out.push(solid(band(RING_S[0], RING_S[1], R_RING_IN, R_RING_OUT, F0), { tone: "hi" }));
-  out.push(L(G.circleOf(F0, RING_S[1], R_RING_IN + 3.4, P, 96) + G.circleOf(F0, RING_S[1], R_RING_OUT - 3.4, P, 120), { tone: "faint" }));
-  out.push(L(G.circleOf(F0, RING_S[1], R_RING_OUT, P, 120) + G.circleOf(F0, RING_S[1], R_RING_IN, P, 96), { tone: "mid" }));
-  return out.join("");
-}
-function ringSlots() {
-  const holes = slotPath().map((ring) => `M${ring.map(([u, v]) => faceAt(u, v, RING_S[1]).map((n) => Math.round(n * 10) / 10).join(" ")).join("L")}Z`);
-  const dots = [];
-  for (let i = 0; i < 36; i++) {
-    const [u, v] = polar(97.5, i * 10 + 5);
-    dots.push(faceAt(u, v, RING_S[1]));
-  }
-  return `<g data-vd="rot" data-id="ring" data-s="${RING_S[1]}" transform="${turnMatrix(RING_S[1], RING_SWEEP)}"><path class="vd-slot" d="${holes.join("")}"/>${D(dots, { size: 0.45, tone: "lo" })}</g>`;
-}
-
-/* ── Combination dial ─────────────────────────────────────────────────────── */
-const DIAL_S = 9;
-const KNOB_S = 17;
-const DIAL_R = 66;
-const KNOB_R = 24;
-function dialStatic() {
-  const out = [];
-  out.push(solid(disc(0, 3, 79.6, F0), { tone: "mid" }));
-  /* a stepped bezel: a low outer step carrying the screws and the scale, a taller inner step round the dial */
-  out.push(solid(band(3, 6, 72.6, 78, F0), { tone: "hi" }));
-  out.push(solid(band(3, DIAL_S, DIAL_R + 0.6, 72.6, F0), { tone: "hi" }));
-  const screws = [];
-  for (let i = 0; i < 8; i++) screws.push(faceAt(...polar(75.3, i * 45 + 22.5), 6));
-  out.push(L(G.circleOf(F0, 6, 75.3, P, 60), { tone: "faint" }), D(screws, { size: 0.5 }));
-  out.push(L(G.circleOf(F0, 6, 78, P, 120) + G.circleOf(F0, DIAL_S, 72.6, P, 100), { tone: "mid" }));
-  const ticks = [];
-  for (let i = 0; i < 36; i++) {
-    const a = i * 10;
-    const [u0, v0] = polar(78, a);
-    const [u1, v1] = polar(i % 3 === 0 ? 74.4 : 76, a);
-    ticks.push(`M${faceAt(u0, v0, 6).map((n) => Math.round(n * 10) / 10).join(" ")}L${faceAt(u1, v1, 6).map((n) => Math.round(n * 10) / 10).join(" ")}`);
-  }
-  out.push(L(ticks.join(""), { tone: "lo" }));
-  out.push(solid(disc(3, DIAL_S, DIAL_R, F0), { tone: "hi" }));
-  return out.join("");
-}
-function dialFace() {
-  const minor = [];
-  const mid = [];
-  const major = [];
-  for (let i = 0; i < 100; i++) {
-    const a = 90 - i * 3.6;
-    const len = i % 10 === 0 ? 6 : i % 5 === 0 ? 4.4 : 2.8;
-    const [u0, v0] = polar(DIAL_R - 1.4, a);
-    const [u1, v1] = polar(DIAL_R - 1.4 - len, a);
-    const d = `M${faceAt(u0, v0, DIAL_S).map((n) => Math.round(n * 10) / 10).join(" ")}L${faceAt(u1, v1, DIAL_S).map((n) => Math.round(n * 10) / 10).join(" ")}`;
-    (i % 10 === 0 ? major : i % 5 === 0 ? mid : minor).push(d);
-  }
-  const O = faceAt(0, 0, DIAL_S);
-  const ex = [faceAt(1, 0, DIAL_S)[0] - O[0], faceAt(1, 0, DIAL_S)[1] - O[1]];
-  const ez = [faceAt(0, 1, DIAL_S)[0] - O[0], faceAt(0, 1, DIAL_S)[1] - O[1]];
-  const faceMatrix = (px, py) => `matrix(${ex[0]} ${ex[1]} ${-ez[0]} ${-ez[1]} ${O[0] + px * ex[0] - py * ez[0]} ${O[1] + px * ex[1] - py * ez[1]})`;
-  const numerals = [];
-  for (let i = 0; i < 100; i += 10) {
-    const a = 90 - i * 3.6;
-    const [px, pz] = polar(52, a);
-    numerals.push(`<text class="iso-face-text vd-num" data-tone="hi" transform="${faceMatrix(px, -pz)} rotate(${i * 3.6})" font-size="7.4" text-anchor="middle" dominant-baseline="central">${i}</text>`);
-  }
-  return `<g data-vd="rot" data-id="dial" data-s="${DIAL_S}">${L(minor.join(""), { tone: "lo" })}${L(mid.join(""), { tone: "mid" })}${L(major.join(""), { tone: "hi" })}${L(G.circleOf(F0, DIAL_S, DIAL_R - 1, P, 120) + G.circleOf(F0, DIAL_S, 42, P, 90) + G.circleOf(F0, DIAL_S, 33, P, 72), { tone: "lo" })}${numerals.join("")}</g>`;
-}
-const KNURL = 72;
-function knurlAt(rotDeg) {
-  const V = G.viewOf(P);
-  const lines = [];
-  for (let j = 0; j < KNURL; j++) {
-    const t = rad(rotDeg) + (j / KNURL) * Math.PI * 2;
-    if (Math.cos(t) * V[0] + Math.sin(t) * V[2] < 0.14) continue;
-    const a = at(face(KNOB_R * Math.cos(t), KNOB_R * Math.sin(t), DIAL_S + 0.7));
-    const b = at(face(KNOB_R * Math.cos(t), KNOB_R * Math.sin(t), KNOB_S - 0.7));
-    lines.push(`M${a.map((n) => Math.round(n * 10) / 10).join(" ")}L${b.map((n) => Math.round(n * 10) / 10).join(" ")}`);
-  }
-  return lines.join("");
-}
-function knob() {
-  const out = [];
-  out.push(solid(disc(DIAL_S, KNOB_S, KNOB_R, F0), { tone: "hi", crease: "lo" }));
-  out.push(`<path data-vd="knurl" class="iso-line" data-tone="lo" d="${knurlAt(0)}"/>`);
-  out.push(L(G.circleOf(F0, KNOB_S, KNOB_R - 2.8, P, 64), { tone: "lo" }));
-  const top = [];
-  const O = faceAt(0, 0, KNOB_S);
-  /* the knurl seen head-on is a serrated rim: short ticks hanging from the edge, turning with the knob */
-  const serration = [];
-  for (let a = 0; a < 360; a += 10) {
-    const [u0, v0] = polar(KNOB_R, a);
-    const [u1, v1] = polar(KNOB_R - 2.8, a);
-    serration.push(`M${faceAt(u0, v0, KNOB_S).map((n) => Math.round(n * 10) / 10).join(" ")}L${faceAt(u1, v1, KNOB_S).map((n) => Math.round(n * 10) / 10).join(" ")}`);
-  }
-  top.push(L(serration.join(""), { tone: "lo" }));
-  /* a pointer and a collar on the knob's top; they turn with it */
-  const tip = faceAt(0, KNOB_R - 5, KNOB_S);
-  const tail = faceAt(0, -9, KNOB_S);
-  top.push(L(`M${tail.map((n) => Math.round(n * 10) / 10).join(" ")}L${tip.map((n) => Math.round(n * 10) / 10).join(" ")}`, { tone: "lit" }));
-  top.push(L(G.circleOf(F0, KNOB_S, 6, P, 40), { tone: "mid" }));
-  top.push(D([O], { size: 0.8, tone: "hi" }));
-  out.push(`<g data-vd="rot" data-id="knob" data-s="${KNOB_S}">${top.join("")}</g>`);
-  return out.join("");
-}
-function indexLug() {
-  const tri = [[-3.6, 78.4], [3.6, 78.4], [0, DIAL_R + 1.6]];
-  return solid(prism(tri, 6, DIAL_S + 1.8), { tone: "lit", lit: true, crease: "none" });
 }
 
 /* ── Instruments on the flange: three lamps, a gauge, a nameplate ─────────── */
@@ -523,64 +271,97 @@ function nameplate() {
 
 /* ── Six bars of bullion on the plinth: what the door is holding ─────────────
    Stacked 3-2-1 with their ends to the viewer, so the pyramid reads as six trapezoids. */
-function bullion() {
+const BAR = { bottom: 28, top: 21, height: 12 };
+function bars(rows, CX, Y0, LEN, z0 = 0) {
   const out = [];
-  const CX = 150;
-  const Y0 = 6;
-  const LEN = 62;
-  const BAR = { bottom: 28, top: 21, height: 12 };
-  const rows = [
-    { z: 0, xs: [-31, 0, 31] },
-    { z: BAR.height, xs: [-15.5, 15.5] },
-    { z: BAR.height * 2, xs: [0] },
-  ];
   for (const row of rows) {
     for (const x of row.xs) {
-      const F = G.frameOf([CX + x, Y0, row.z], [0, 1, 0], [1, 0, 0], [0, 0, 1]);
+      const F = G.frameOf([CX + x, Y0, z0 + row.z], [0, 1, 0], [1, 0, 0], [0, 0, 1]);
       const poly = [[-BAR.bottom / 2, 0], [BAR.bottom / 2, 0], [BAR.top / 2, BAR.height], [-BAR.top / 2, BAR.height]];
       out.push(solid(G.prismOf(F, poly, 0, LEN, P), { tone: "hi", crease: "lo" }));
-      out.push(L(k.planOutline({ x: CX + x - 6, y: Y0 + 7, w: 12, d: LEN - 14, r: 2.5 }, row.z + BAR.height, P, 3), { tone: "lo" }));
+      out.push(L(k.planOutline({ x: CX + x - 6, y: Y0 + 7, w: 12, d: LEN - 14, r: 2.5 }, z0 + row.z + BAR.height, P, 3), { tone: "lo" }));
     }
   }
   return out.join("");
 }
+const bullion = () =>
+  bars(
+    [
+      { z: 0, xs: [-31, 0, 31] },
+      { z: BAR.height, xs: [-15.5, 15.5] },
+      { z: BAR.height * 2, xs: [0] },
+    ],
+    150,
+    6,
+    62,
+  );
 
-/* ── Assemble in painter's order ──────────────────────────────────────────── */
+/* ── The vault behind the door: a bored chamber, a back wall and a few bars on a pallet ──
+   Seen only through the open door, so it is drawn dark; the bars are the one bright thing in it. */
+function chamber() {
+  const wall = [];
+  const back = -CHAMBER;
+  wall.push(solid(disc(back, back + 4, R_BORE + 1, F0), { tone: "lo", crease: "none" }));
+  wall.push(L(G.circleOf(F0, back + 4, R_BORE - 34, P, 96) + G.circleOf(F0, back + 4, R_BORE - 84, P, 72), { tone: "faint" }));
+  wall.push(D(G.dotsOf(F0, back + 4, R_BORE - 12, 36, P, { all: true }), { size: 0.5, tone: "lo" }));
+  wall.push(solid(band(back + 4, -50, R_BORE, R_BORE + 3, F0, [-50, R_BORE]), { tone: "mid", crease: "lo" }));
+  const floor = ZC - R_BORE;
+  const pallet = { x: -31, y: back + 12, w: 62, d: 58, r: 2 };
+  const gold = [solid(k.slabOf(pallet, floor, 3.5, P, 3, 0.4), { tone: "mid" })];
+  gold.push(bars([{ z: 0, xs: [-14.5, 14.5] }, { z: BAR.height, xs: [0] }], 0, pallet.y + 2, 54, floor + 3.5));
+  return `<g class="vd-recess">${wall.join("")}</g>${gold.join("")}`;
+}
+
+/* ── Assemble in painter's order ──────────────────────────────────────────────
+   Two trees share the frame. "closed" is the shut door with the hooks VaultDoor drives cheaply (bolts, ring, dial,
+   needle); "swing" is the frame with no door in it, and VaultDoor redraws the door into it at every angle. */
 const units = Array.from({ length: BOLTS }, (_, i) => ({ i, deg: BOLT_AT(i) }));
+const flange = frameFlange();
+const brackets = units.map(({ deg }) => bracket(deg));
+const bracketsAll = brackets.map((b) => b.first + b.second + b.bridge + b.dots).join("");
 
 const boltLayer = units
   .map(({ i, deg }) => {
-    const b = bracket(deg);
-    return `${b.first}<g data-vd="bolt" data-i="${i}" data-deg="${deg}">${bolt(deg)}</g>${b.second}${b.bridge}${b.dots}`;
+    const b = brackets[i];
+    return `${b.first}<g data-vd="bolt" data-i="${i}" data-deg="${deg}">${door.bolt(deg)}</g>${b.second}${b.bridge}${b.dots}`;
   })
   .join("");
-const pinLayer = units.map(({ i, deg }) => `<g data-vd="pin" data-i="${i}" data-deg="${deg}">${pin(deg)}</g>`).join("");
+const pinLayer = units.map(({ i, deg }) => `<g data-vd="pin" data-i="${i}" data-deg="${deg}">${door.pin(deg)}</g>`).join("");
+const ring = door.ringSlots(0);
+const ringLayer = `<g data-vd="rot" data-id="ring" data-s="${RING_S[1]}" transform="${turnMatrix(RING_S[1], RING_SWEEP)}"><path class="vd-slot" d="${ring.holes}"/>${ring.dots}</g>`;
+const dialLayer = door.dialFace(0, `data-vd="rot" data-id="dial" data-s="${DIAL_S}"`);
+const knobLayer = door.knob(0, `data-vd="rot" data-id="knob" data-s="${KNOB_S}"`);
+
+const use = (id) => `<use href="#${id}"/>`;
+const defs = `<defs>
+<g id="vd-flange-lip">${flange.lip}</g><g id="vd-flange">${flange.detail}</g><g id="vd-stiff">${stiffeners()}</g><g id="vd-inst">${lamps()}${gauge()}${nameplate()}</g><g id="vd-brackets">${bracketsAll}</g>
+<g id="vd-lip">${use("vd-flange-lip")}${use("vd-stiff")}${use("vd-brackets")}</g>
+<clipPath id="vd-floor"><path d="${k.planOutline(PLATE, 0, P)}"/></clipPath>
+<clipPath id="vd-ring"><path clip-rule="evenodd" d="${G.circleOf(F0, 0, R_BORE + 16, P, 120)}${G.circleOf(F0, 0, R_BORE, P, 120)}"/></clipPath>
+<clipPath id="vd-hull"><path clip-rule="evenodd" data-vd="hull" d="M0 0H${WIDTH}V${HEIGHT}H0Z"/></clipPath>
+</defs>`;
+
+const frameFront = use("vd-flange-lip") + use("vd-flange") + use("vd-stiff") + use("vd-inst");
+
+const CLOSED = [door.body(), frameFront, door.race(), boltLayer, door.ringTop(), ringLayer, pinLayer, door.dialStatic(), dialLayer, knobLayer, door.indexLug(), door.arms()].join("");
+/* swing: the door goes in between the base frame and its redrawn lip; the arms sit above the lip, always in front of it */
+const SWING = `${frameFront}${use("vd-brackets")}<g data-vd="door"></g><g clip-path="url(#vd-ring)"><g clip-path="url(#vd-hull)">${use("vd-lip")}</g></g><g data-vd="arms"></g>`;
 
 const BODY = [
+  defs,
   plinth(),
+  `<g clip-path="url(#vd-floor)"><path data-vd="shadow" class="vd-shadow" d="" opacity="0"/></g>`,
   pedestal(),
   hinge(),
+  chamber(),
   frameBody(),
-  doorBody(),
-  frameFlange(),
-  stiffeners(),
-  lamps(),
-  gauge(),
-  nameplate(),
-  driveRing(),
-  boltLayer,
-  driveRingTop(),
-  ringSlots(),
-  pinLayer,
-  dialStatic(),
-  dialFace(),
-  knob(),
-  indexLug(),
+  `<g data-vd="closed">${CLOSED}</g>`,
+  `<g data-vd="swing" display="none">${SWING}</g>`,
   bullion(),
 ].join("");
 
 const LABEL =
-  "A front-facing round vault door on a stand. A hundred-division combination dial sits in the centre, ringed by a drive plate cut with twelve spiral slots; each slot holds a pin that carries one of twelve sliding bolts. Dial the combination 24, 61, 08 and the three lamps light, the drive plate turns 28 degrees, and the bolts withdraw from their brackets. Six bars of bullion stand on the plinth in front.";
+  "A front-facing round vault door on a stand. A hundred-division combination dial sits in the centre, ringed by a drive plate cut with twelve spiral slots; each slot holds a pin that carries one of twelve sliding bolts. Dial the combination 24, 61, 08 and the three lamps light, the drive plate turns 28 degrees, and the bolts withdraw from their brackets. Six bars of bullion stand on the plinth in front. Scrolling turns the dial a quarter turn, withdraws the bolts, then swings the door ninety degrees about its left-hand hinge to show the vault behind.";
 
 const svg = k.figureSvg({ width: WIDTH, height: HEIGHT, label: LABEL, body: BODY });
 
@@ -595,6 +376,7 @@ const CSS = `
   --anatomy-weight:.6px;--anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
 }
 .vd .iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.vd .iso-fill{fill-rule:evenodd}
 /* Site rule -- an Anatomy figure floats under the fixed navbar, so it is centred in the band
    below the bar and never taller than that band; it cannot slide under the bar on a short window.
    --iso-nav is the bar (its padding plus the 3.25rem rounded box) and its gap, --iso-gap the air
@@ -607,6 +389,8 @@ const CSS = `
   max-width:calc((max(40rem,88svh) - var(--iso-nav) - var(--iso-gap) - var(--iso-caption)) * var(--iso-aspect));
 }
 @media (min-width:640px){.iso-band{--iso-nav:5.25rem}}
+.vd .vd-recess{--anatomy-paper:#0b2a7d;--anatomy-top:#16419f;--anatomy-shade-0:#061a58;--anatomy-shade-1:#0a2670;--anatomy-shade-2:#10358f;--anatomy-shade-3:#1a49b0}
+.vd .vd-shadow{fill:#061a58;filter:blur(7px)}
 .vd .vd-slot{fill:rgb(10 36 130/.55);stroke:var(--anatomy-mid);stroke-width:.6px;stroke-linejoin:round}
 .vd .vd-num{font-family:var(--anatomy-mono);font-weight:600}
 .vd [data-vd="lamp"] .iso-solid>.iso-fill{fill:#1d46bd}
