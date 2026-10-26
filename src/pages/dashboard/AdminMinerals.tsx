@@ -56,6 +56,7 @@ import {
   Loader2,
   Plus,
   Search,
+  Trash2,
   Truck,
   UserRoundPlus,
 } from "lucide-react";
@@ -1174,6 +1175,10 @@ function MineralDetailDialog({
   const detail = useQuery(api.minerals.detail, { mineralId });
   const updateStatus = useMutation(api.minerals.updateShipmentStatus);
   const createShipment = useMutation(api.minerals.createShipment);
+  const removeMineral = useMutation(api.minerals.remove);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removeReason, setRemoveReason] = useState("");
+  const [removing, setRemoving] = useState(false);
   const [status, setStatus] = useState<ShipmentStatus | "">("");
   const [location, setLocation] = useState("");
   const [note, setNote] = useState("");
@@ -1489,6 +1494,31 @@ function MineralDetailDialog({
             currentAssigneeId={mineral.assignedUserId}
             canManage={canManage}
           />
+
+          {/* The register is append-only, so removal is the last thing on the
+              record and says what it takes with it before it happens. */}
+          {canManage && !activeShipment && (
+            <section className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/[0.03] p-4">
+              <div className="min-w-0">
+                <h3 className="text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-destructive">
+                  Remove record
+                </h3>
+                <p className="mt-1 text-[0.65rem] leading-5 text-muted-foreground">
+                  Takes the mineral, its policy
+                  {shipment ? ", its consignment" : ""} and the member's
+                  notifications with it. The audit trail keeps what was here.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 shrink-0 rounded-[4px] border-destructive/40 bg-transparent px-4 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setConfirmRemove(true)}
+              >
+                <Trash2 className="size-3.5" /> Remove
+              </Button>
+            </section>
+          )}
         </div>
 
         {booking && (
@@ -1522,6 +1552,71 @@ function MineralDetailDialog({
             }}
           />
         )}
+
+        <AlertDialog open={confirmRemove} onOpenChange={setConfirmRemove}>
+          <AlertDialogContent className="rounded-[4px] border-line bg-background">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove {mineral.name}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {mineral.reference} and its policy
+                {shipment ? `, consignment ${shipment.reference}` : ""} are
+                deleted, and {assignee?.email ?? "the member"} stops seeing the
+                record. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-2">
+              <Label className="text-[0.62rem]">Why is it going?</Label>
+              <Textarea
+                value={removeReason}
+                onChange={(event) => setRemoveReason(event.target.value)}
+                placeholder="Recorded in the audit trail, e.g. test entry created in error"
+                aria-label="Reason for removing the record"
+                rows={2}
+                className="rounded-lg bg-card text-xs"
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="rounded-[4px]" disabled={removing}>
+                Keep it
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="rounded-[4px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={removing || removeReason.trim().length < 8}
+                onClick={(event) => {
+                  /* The dialog stays open until the mutation answers, so a
+                     refusal (a consignment in flight, say) is readable here. */
+                  event.preventDefault();
+                  if (removing || removeReason.trim().length < 8) return;
+                  setRemoving(true);
+                  void (async () => {
+                    try {
+                      await removeMineral({
+                        mineralId: mineral._id,
+                        reason: removeReason.trim(),
+                      });
+                      toast.success("Record removed.", {
+                        description: `${mineral.reference} is off the register.`,
+                      });
+                      setConfirmRemove(false);
+                      onOpenChange(false);
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "Could not remove the record.",
+                      );
+                    } finally {
+                      setRemoving(false);
+                    }
+                  })();
+                }}
+              >
+                {removing && <Loader2 className="size-3.5 animate-spin" />}{" "}
+                Remove record
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <div className="flex justify-end">
           <Button

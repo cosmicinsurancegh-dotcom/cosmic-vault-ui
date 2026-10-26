@@ -1641,3 +1641,127 @@ describe("shipment status email", () => {
     expect(email.html).toContain("&lt;script&gt;");
   });
 });
+
+describe("removing a mineral record", () => {
+  /** Seeds a mineral, books a consignment and closes it at the destination. */
+  async function seedClosedRecord() {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+    const booked = await bookShipment(t, admin, created.mineralId);
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.updateShipmentStatus, {
+        shipmentId: booked.shipmentId,
+        status: "delivered",
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    return { t, admin, client, created, booked };
+  }
+
+  it("takes the mineral, policy, closed consignment and notifications with it", async () => {
+    const { t, admin, created } = await seedClosedRecord();
+
+    const result = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.remove, {
+        mineralId: created.mineralId,
+        reason: "Test record created in error.",
+      });
+
+    expect(result.removed).toEqual({
+      policies: 1,
+      shipments: 1,
+      events: 2,
+      requests: 0,
+    });
+
+    const left = await t.run(async (ctx) => ({
+      mineral: await ctx.db.get(created.mineralId),
+      policies: await ctx.db.query("mineralPolicies").collect(),
+      shipments: await ctx.db.query("shipments").collect(),
+      events: await ctx.db.query("shipmentEvents").collect(),
+      notifications: await ctx.db.query("notifications").collect(),
+      audit: await ctx.db.query("auditLogs").collect(),
+    }));
+
+    expect(left.mineral).toBeNull();
+    expect(left.policies).toHaveLength(0);
+    expect(left.shipments).toHaveLength(0);
+    expect(left.events).toHaveLength(0);
+    // The assignment, booking and delivery notices all pointed at this record.
+    expect(left.notifications).toHaveLength(0);
+
+    /* The trail outlives the row, and it carries enough to reconstruct what was
+       deleted without the records themselves. */
+    const entry = left.audit.find((row) => row.action === "mineral.removed");
+    expect(entry).toMatchObject({
+      entityType: "minerals",
+      entityId: created.mineralId,
+      reason: "Test record created in error.",
+      before: {
+        policyNumbers: ["CV-MIN-2026-014"],
+        shipmentReferences: [expect.stringMatching(/^SHP-/)],
+      },
+    });
+  });
+
+  it("refuses while a consignment is still in flight", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+    await bookShipment(t, admin, created.mineralId);
+    await t.finishAllScheduledFunctions(() => {});
+
+    await expect(
+      t.withIdentity({ subject: admin }).mutation(api.minerals.remove, {
+        mineralId: created.mineralId,
+        reason: "Test record created in error.",
+      }),
+    ).rejects.toThrow(/still in flight/i);
+
+    // Nothing was taken, and nothing was written to the trail either.
+    const left = await t.run(async (ctx) => ({
+      mineral: await ctx.db.get(created.mineralId),
+      audit: await ctx.db.query("auditLogs").collect(),
+    }));
+    expect(left.mineral).not.toBeNull();
+    expect(left.audit.some((row) => row.action === "mineral.removed")).toBe(
+      false,
+    );
+  });
+
+  it("is staff-only and needs a reason", async () => {
+    const { t, admin, client, created } = await seedClosedRecord();
+
+    await expect(
+      t.withIdentity({ subject: client }).mutation(api.minerals.remove, {
+        mineralId: created.mineralId,
+        reason: "Not mine to remove.",
+      }),
+    ).rejects.toThrow(/restricted to staff/i);
+
+    await expect(
+      t.withIdentity({ subject: admin }).mutation(api.minerals.remove, {
+        mineralId: created.mineralId,
+        reason: "   ",
+      }),
+    ).rejects.toThrow(/reason/i);
+
+    const left = await t.run(
+      async (ctx) => await ctx.db.get(created.mineralId),
+    );
+    expect(left).not.toBeNull();
+  });
+});
