@@ -229,6 +229,12 @@ records `shipment.email_resent` in the audit log.
   five-stage journey, which still distinguishes completed, current, skipped and
   expected stages. The footer is the dashboard's dark navy panel. Every value is
   escaped and only http(s) links are rendered.
+- Every colour in the emails - both shipment templates and the provider test
+  message - comes from `src/convex/lib/emailPalette.ts`, which restates the
+  `src/index.css` tokens in hex (email clients cannot read oklch) and mixes the
+  tints from them. `tests/emailPalette.test.ts` converts the stylesheet's tokens
+  and fails if the two drift, and refuses a literal hex in either template, so
+  the emails follow the palette instead of forking it.
 - Delivery is gated on `vault.ship` (`shipmentEmails.sendGate`), rate-limited per
   operator, and the action never trusts a browser-supplied URL: links come from
   `SITE_URL`, only http(s) is allowed, and every interpolated value is escaped.

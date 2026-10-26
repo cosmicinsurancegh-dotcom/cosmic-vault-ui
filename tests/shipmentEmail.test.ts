@@ -4,6 +4,7 @@ import {
   SHIPMENT_EMAIL_STATUSES,
 } from "../src/convex/vault/shipmentEmail";
 import { renderShipmentStatusEmail } from "../src/convex/lib/shipmentEmail";
+import { EMAIL_COLOURS } from "../src/convex/lib/emailPalette";
 import { staticMapUrl } from "../src/convex/lib/staticMap";
 import { DEMO_MINERALS } from "../src/lib/vault/demoData";
 import {
@@ -192,10 +193,10 @@ describe("shipment update email", () => {
     const args = shipmentEmailArgs(mineral, "in_transit", "")!;
     const email = previewShipmentEmail(args, { appOrigin: ORIGIN });
 
-    // Electric blue primary, porcelain canvas, 4px corners - the dashboard
-    // tokens - and none of the old forest-green reference palette.
-    expect(email.html).toContain("#1D74F5");
-    expect(email.html).toContain("#F2F6FC");
+    // The dashboard's own tokens - electric blue, ice-tinted canvas, 4px
+    // corners - and none of the old forest-green reference palette.
+    expect(email.html).toContain(EMAIL_COLOURS.electric);
+    expect(email.html).toContain(EMAIL_COLOURS.canvas);
     expect(email.html).toContain("border-radius:4px");
     expect(email.html).not.toContain("#0F3729");
     expect(email.html).not.toContain("#F5C93B");
@@ -363,6 +364,30 @@ describe("shipment update email", () => {
     });
     expect(convexMapped.html).toContain("api.mapbox.com");
     expect(convexMapped.html).not.toContain(">Origin<");
+  });
+
+  it("stops quoting an estimate once the consignment has arrived", () => {
+    const delivered = previewShipmentEmail(
+      shipmentEmailArgs(demoMineral("shipped"), "shipped", "")!,
+      { appOrigin: ORIGIN },
+    );
+
+    // The chip says Delivered; the estimate is no longer a fact about this
+    // consignment, so it does not sit beside the chip as its arrival date.
+    expect(delivered.html).toContain("Delivered");
+    expect(delivered.html).not.toContain("ETA &nbsp;&middot;");
+    expect(delivered.html).not.toContain("Estimated delivery");
+    expect(delivered.text).not.toContain("Estimated delivery");
+    expect(delivered.preheader).not.toContain("Estimated delivery");
+
+    // A consignment still on its way keeps the estimate everywhere.
+    const ahead = previewShipmentEmail(
+      shipmentEmailArgs(demoMineral("in_transit"), "in_transit", "")!,
+      { appOrigin: ORIGIN },
+    );
+    expect(ahead.html).toContain("ETA &nbsp;&middot;&nbsp;");
+    expect(ahead.text).toContain("Estimated delivery: ");
+    expect(ahead.preheader).toContain("Estimated delivery ");
   });
 
   it("returns nothing for a mineral that is still in the vault", () => {

@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { action, internalAction } from "./_generated/server";
 import { deliveryFailure } from "./lib/delivery";
+import { EMAIL_COLOURS } from "./lib/emailPalette";
 
 /**
  * Transactional email adapter. Delivery is attempted through the platform
@@ -46,7 +47,7 @@ export const deliver = internalAction({
         text: args.text,
         html:
           args.html ??
-          `<div style="font-family:ui-sans-serif,system-ui,sans-serif;line-height:1.6;color:#0d1730">${args.text
+          `<div style="font-family:ui-sans-serif,system-ui,sans-serif;line-height:1.6;color:${EMAIL_COLOURS.ink}">${args.text
             .split("\n\n")
             .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br/>")}</p>`)
             .join("")}</div>`,
@@ -186,25 +187,25 @@ export const sendTest = action({
     ]
       .map(
         ([label, value]) =>
-          `<tr><td style="padding:9px 0;border-top:1px solid #e4e9f3;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#5b6478;">${escapeHtml(
+          `<tr><td style="padding:9px 0;border-top:1px solid ${EMAIL_COLOURS.line};font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:${EMAIL_COLOURS.muted};">${escapeHtml(
             label,
-          )}</td><td align="right" style="padding:9px 0;border-top:1px solid #e4e9f3;font-size:12px;font-weight:600;color:#0f172a;">${escapeHtml(
+          )}</td><td align="right" style="padding:9px 0;border-top:1px solid ${EMAIL_COLOURS.line};font-size:12px;font-weight:600;color:${EMAIL_COLOURS.ink};">${escapeHtml(
             value,
           )}</td></tr>`,
       )
       .join("");
 
-    const html = `<div style="margin:0;padding:24px 12px;background-color:#eef1f7;">
-  <div style="max-width:560px;margin:0 auto;background-color:#ffffff;border:1px solid #e4e9f3;border-radius:4px;overflow:hidden;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-    <div style="background-color:#071227;padding:16px 24px;font-size:10px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;color:#ffffff;">${escapeHtml(
+    const html = `<div style="margin:0;padding:24px 12px;background-color:${EMAIL_COLOURS.canvas};">
+  <div style="max-width:560px;margin:0 auto;background-color:${EMAIL_COLOURS.card};border:1px solid ${EMAIL_COLOURS.line};border-radius:4px;overflow:hidden;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+    <div style="background-color:${EMAIL_COLOURS.navy};padding:16px 24px;font-size:10px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;color:${EMAIL_COLOURS.white};">${escapeHtml(
       company,
     )}</div>
     <div style="padding:24px;">
-      <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#2f6bf0;">Test message</p>
-      <h1 style="margin:10px 0 0;font-size:22px;line-height:28px;font-weight:600;color:#0f172a;">Email delivery is working</h1>
-      <p style="margin:12px 0 0;font-size:13px;line-height:21px;color:#5b6478;">This is the message every notification and consignment email is sent from. It landed in an inbox, so the delivery path from this deployment is sound.</p>
+      <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${EMAIL_COLOURS.electricDeep};">Test message</p>
+      <h1 style="margin:10px 0 0;font-size:22px;line-height:28px;font-weight:600;color:${EMAIL_COLOURS.ink};">Email delivery is working</h1>
+      <p style="margin:12px 0 0;font-size:13px;line-height:21px;color:${EMAIL_COLOURS.muted};">This is the message every notification and consignment email is sent from. It landed in an inbox, so the delivery path from this deployment is sound.</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">${rows}</table>
-      <p style="margin:16px 0 0;font-size:11px;line-height:18px;color:#8b94a8;">If it arrived in spam, that is what your customers are seeing: the sender address is not authenticated for the domain the gateway sends from.</p>
+      <p style="margin:16px 0 0;font-size:11px;line-height:18px;color:${EMAIL_COLOURS.faint};">If it arrived in spam, that is what your customers are seeing: the sender address is not authenticated for the domain the gateway sends from.</p>
     </div>
   </div>
 </div>`;

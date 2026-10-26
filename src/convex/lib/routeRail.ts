@@ -1,14 +1,15 @@
 /**
- * The shipment route rail: origin pin, the carrier's mode at the live
- * position and the destination pin, on one dashed track with the passed span
- * solid and a diamond at each stage boundary.
+ * The shipment route rail and the stage ledger it sits with: the rail puts
+ * origin, live position and destination on one dashed track with the passed
+ * span solid and a diamond at each stage boundary; the ledger lists the stages
+ * themselves, one per row, joined by the same solid-or-dashed hairline.
  *
  * Both shipment emails - `lib/shipmentEmail` (the Convex-native one) and
- * `vault/shipmentEmail` (the dashboard design) - draw this same illustration,
- * so it lives here once. Each template passes its own palette, font stack and
+ * `vault/shipmentEmail` (the dashboard design) - draw both illustrations from
+ * here, so they live once. Each template passes its own palette, font stack and
  * progress, because the two carry different status vocabularies; the drawing
- * itself - geometry, waypoints, station labels and marker assets - is shared,
- * so the two emails cannot drift apart.
+ * itself - geometry, waypoints, station labels, stage rows and marker assets -
+ * is shared, so the two emails cannot drift apart.
  *
  * Email-safe by construction: tables and inline styles only, no SVG, and the
  * pins are PNGs served from the app origin. Without an origin the markers fall
@@ -34,6 +35,8 @@ export type RouteRailTone = {
   /** The dashed track ahead. */
   track: string;
   ink: string;
+  /** Secondary type: the stamp on a stage already reached. */
+  muted: string;
   faint: string;
   white: string;
   /** The destination disc before delivery: surface and hairline border. */
@@ -116,7 +119,9 @@ function railMarker({
   icon?: string;
   fontStack: string;
 }) {
-  return `<table role="presentation" width="30" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
+  // Separate borders, not collapsed: a collapsed cell drops its radius, and the
+  // disc would arrive as a square.
+  return `<table role="presentation" width="30" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;mso-table-lspace:0;mso-table-rspace:0;">
                   <tr>
                     <td width="30" height="30" align="center" valign="middle" style="width:30px;height:30px;border-radius:15px;background-color:${background};border:${border};text-align:center;">${
                       icon
@@ -253,4 +258,164 @@ export function renderRouteRail(input: RouteRailInput) {
         </td>
       </tr>
     </table>`;
+}
+
+export type LedgerStageState = "complete" | "active" | "future" | "skipped";
+
+export type LedgerStage = {
+  label: string;
+  state: LedgerStageState;
+  /** The date, or the state word ("To come"), shown at the right of the row. */
+  stamp: string;
+  /** The active stage is a hold or a delay rather than a move forward. */
+  attention?: boolean;
+  /** The active stage is the last one: the consignment has arrived. */
+  delivered?: boolean;
+};
+
+type LedgerMarker = {
+  background: string;
+  border: string;
+  colour: string;
+  glyph: string;
+  size: number;
+  /** The glyph sits inside the ring, so a 2px ring pulls it in by two. */
+  inset: number;
+};
+
+function ledgerMarker(stage: LedgerStage, tone: RouteRailTone): LedgerMarker {
+  if (stage.state === "complete") {
+    return {
+      background: tone.accent,
+      border: `1px solid ${tone.accent}`,
+      colour: tone.white,
+      glyph: "&#10003;",
+      size: 11,
+      inset: 20,
+    };
+  }
+  if (stage.state === "active") {
+    if (stage.delivered) {
+      return {
+        background: tone.emerald,
+        border: `1px solid ${tone.emerald}`,
+        colour: tone.white,
+        glyph: "&#10003;",
+        size: 11,
+        inset: 20,
+      };
+    }
+    const accent = stage.attention ? tone.attention : tone.accent;
+    return {
+      background: tone.surface,
+      border: `2px solid ${accent}`,
+      colour: accent,
+      glyph: stage.attention ? "!" : "&#8226;",
+      size: 13,
+      inset: 18,
+    };
+  }
+  if (stage.state === "skipped") {
+    return {
+      background: tone.surface,
+      border: `1px dashed ${tone.track}`,
+      colour: tone.faint,
+      glyph: "&#8211;",
+      size: 10,
+      inset: 20,
+    };
+  }
+  return {
+    background: tone.surface,
+    border: `1px solid ${tone.track}`,
+    colour: tone.track,
+    glyph: "&#183;",
+    size: 10,
+    inset: 20,
+  };
+}
+
+/**
+ * The stages, one per row: marker, name and stamp, joined by a hairline that is
+ * solid over ground already covered and dashed ahead. It is deliberately a list
+ * rather than a second route drawing - a rail above and a rail below would echo
+ * each other, and a row has space for "Skipped" or "Expected" beside the name.
+ */
+export function renderStageLedger({
+  stages,
+  tone,
+  fontStack,
+}: {
+  stages: LedgerStage[];
+  tone: RouteRailTone;
+  fontStack: string;
+}): string {
+  const lastIndex = stages.length - 1;
+  const reached = (stage: LedgerStage | undefined) =>
+    Boolean(stage) &&
+    (stage!.state === "complete" || stage!.state === "active");
+
+  const labelColour = (stage: LedgerStage) => {
+    if (stage.state === "future") return tone.faint;
+    if (stage.state === "active" && stage.attention) return tone.attention;
+    if (stage.state === "active" && stage.delivered) return tone.emerald;
+    return tone.ink;
+  };
+
+  const rows = stages
+    .map((stage, index) => {
+      const marker = ledgerMarker(stage, tone);
+      const connector =
+        index < lastIndex
+          ? `
+                <tr>
+                  <td width="22" align="center" valign="top" style="width:22px;padding:0;">
+                    <table role="presentation" width="2" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">
+                      <tr>
+                        <td height="10" style="height:10px;width:0;font-size:0;line-height:0;border-left:${
+                          reached(stage) && reached(stages[index + 1])
+                            ? `2px solid ${tone.accent}`
+                            : `2px dashed ${tone.track}`
+                        };">&nbsp;</td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td colspan="2" style="padding:0;"></td>
+                </tr>`
+          : "";
+
+      return `
+                <tr>
+                  <td width="22" valign="middle" style="width:22px;padding:0;">
+                    <table role="presentation" width="22" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">
+                      <tr>
+                        <td width="22" height="22" align="center" valign="middle" style="width:22px;height:22px;border-radius:11px;background-color:${
+                          marker.background
+                        };border:${marker.border};text-align:center;font-family:${fontStack};font-size:${
+                          marker.size
+                        }px;line-height:${marker.inset}px;font-weight:700;color:${
+                          marker.colour
+                        };">${marker.glyph}</td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td valign="middle" style="padding:0 10px 0 12px;font-family:${fontStack};font-size:11px;line-height:16px;font-weight:${
+                    reached(stage) ? "700" : "500"
+                  };letter-spacing:-0.01em;color:${labelColour(
+                    stage,
+                  )};"><span class="cv-step-title">${escapeHtml(
+                    stage.label,
+                  )}</span></td>
+                  <td valign="middle" align="right" style="font-family:${fontStack};font-size:10px;line-height:15px;color:${
+                    reached(stage) ? tone.muted : tone.faint
+                  };font-variant-numeric:tabular-nums;"><span class="cv-step-copy">${escapeHtml(
+                    stage.stamp,
+                  )}</span></td>
+                </tr>${connector}`;
+    })
+    .join("");
+
+  return `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">${rows}
+        </table>`;
 }
