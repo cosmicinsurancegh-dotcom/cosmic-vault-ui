@@ -31,6 +31,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
+import { useIdleSignOut } from "@/hooks/use-idle-sign-out";
+import { IDLE_SIGN_OUT_MS } from "@/lib/idleSignOut";
 import { useVaultActor } from "@/lib/vault/useVault";
 import { api } from "@/convex/_generated/api";
 import {
@@ -80,6 +82,7 @@ import {
   Wallet,
 } from "lucide-react";
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -821,6 +824,21 @@ export default function DashboardLayout() {
     toast("Signed out.");
     navigate("/");
   };
+
+  /* An unattended screen should not keep a vault open. When the deadline
+     passes, the session is closed here and `RequireAuth` hands the visitor to
+     the sign-in page with the current page kept as `returnTo`. */
+  const handleIdleSignOut = useCallback(() => {
+    void signOut().then(() =>
+      toast(
+        `Signed out after ${Math.round(
+          IDLE_SIGN_OUT_MS / 60_000,
+        )} minutes of inactivity.`,
+      ),
+    );
+  }, [signOut]);
+
+  useIdleSignOut(handleIdleSignOut);
 
   const claimAdmin = async () => {
     try {

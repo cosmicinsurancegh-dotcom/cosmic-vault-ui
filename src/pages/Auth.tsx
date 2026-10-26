@@ -22,7 +22,7 @@ import {
   Mail,
   ShieldCheck,
 } from "lucide-react";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { cn } from "@/lib/utils";
 
@@ -293,42 +293,48 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     }
   };
 
-  const handleVerifySubmit = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
-    if (!step) return;
+  const verifyingRef = useRef(false);
+
+  /**
+   * A completed code is the whole answer, so one routine serves typing, a
+   * pasted code and the submit button. Overlapping calls are ignored: the
+   * last digit can land while an earlier attempt is still in flight.
+   */
+  const submitVerification = async (code: string) => {
+    if (!step || code.length !== 6 || verifyingRef.current) return;
+    if (step.intent === "password-reset") {
+      if (newPassword.length < 8) {
+        setError("Use at least 8 characters for your new password.");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setError("Those passwords don't match.");
+        return;
+      }
+    }
+
+    verifyingRef.current = true;
     setIsLoading(true);
     setError(null);
     try {
       if (step.intent === "email-code") {
         await withSignInTimeout(
-          signIn("email-otp", { email: step.email, code: otp }),
+          signIn("email-otp", { email: step.email, code }),
         );
       } else if (step.intent === "password-signup") {
         await withSignInTimeout(
           signIn("password", {
             email: step.email,
             password: step.password ?? "",
-            code: otp,
+            code,
             flow: "signUp",
           }),
         );
       } else {
-        if (newPassword.length < 8) {
-          setError("Use at least 8 characters for your new password.");
-          setIsLoading(false);
-          return;
-        }
-        if (newPassword !== confirmPassword) {
-          setError("Those passwords don't match.");
-          setIsLoading(false);
-          return;
-        }
         await withSignInTimeout(
           signIn("password", {
             email: step.email,
-            code: otp,
+            code,
             newPassword,
             flow: "reset-verification",
           }),
@@ -350,10 +356,35 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             : "That code wasn't accepted. Check it and try again.",
         ),
       );
+      // A rejected code is spent: start the next attempt from an empty field.
       setOtp("");
     } finally {
+      verifyingRef.current = false;
       setIsLoading(false);
     }
+  };
+
+  /**
+   * The sixth digit signs the visitor in - no Enter, no button press - and a
+   * fresh attempt drops the previous failure message. A password reset also
+   * needs its new password, so the code alone waits for the button instead of
+   * flagging the empty password fields.
+   */
+  const handleOtpChange = (value: string) => {
+    setOtp(value);
+    if (error) setError(null);
+
+    const resetReady =
+      step?.intent !== "password-reset" ||
+      (newPassword.length >= 8 && newPassword === confirmPassword);
+    if (value.length === 6 && resetReady) {
+      void submitVerification(value);
+    }
+  };
+
+  const handleVerifySubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void submitVerification(otp);
   };
 
   return (
@@ -789,22 +820,10 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     <div className="flex justify-center sm:justify-start">
                       <InputOTP
                         value={otp}
-                        onChange={setOtp}
+                        onChange={handleOtpChange}
                         maxLength={6}
                         disabled={isLoading}
                         containerClassName="gap-2"
-                        onKeyDown={(e) => {
-                          if (
-                            e.key === "Enter" &&
-                            otp.length === 6 &&
-                            !isLoading
-                          ) {
-                            const form = (e.target as HTMLElement).closest(
-                              "form",
-                            );
-                            if (form) form.requestSubmit();
-                          }
-                        }}
                       >
                         <InputOTPGroup className="gap-2">
                           {Array.from({ length: 6 }).map((_, index) => (

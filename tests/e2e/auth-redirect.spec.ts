@@ -14,11 +14,15 @@ async function startEmailSignIn(page: Page, email = "ada@example.com") {
   );
 }
 
+/**
+ * Types the six digits and stops there: a completed code submits itself, with
+ * no Enter and no button press. The destination (or the error) is asserted by
+ * the caller.
+ */
 async function enterCode(page: Page, code: string) {
   const otp = page.locator("input[data-input-otp]");
   await otp.click();
   await otp.pressSequentially(code);
-  await page.getByRole("button", { name: /verify & enter the vault/i }).click();
 }
 
 async function choosePasswordMethod(page: Page) {
@@ -186,6 +190,16 @@ test.describe("sign-in redirect flow", () => {
     await expect.poll(() => pathname(page)).toBe("/auth");
   });
 
+  test("the sixth digit signs in without Enter or a button press", async ({
+    page,
+  }) => {
+    await page.goto("/auth?returnTo=%2Fdashboard%2Fdocuments");
+    await startEmailSignIn(page);
+    await enterCode(page, VALID_CODE);
+
+    await expect.poll(() => pathname(page)).toBe("/dashboard/documents");
+  });
+
   test("a wrong code keeps the visitor on /auth with returnTo intact", async ({
     page,
   }) => {
@@ -203,6 +217,24 @@ test.describe("sign-in redirect flow", () => {
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
       /check your inbox/i,
     );
+  });
+
+  test("a rejected code clears the field so the next code signs in", async ({
+    page,
+  }) => {
+    await page.goto("/auth?returnTo=%2Fdashboard");
+    await startEmailSignIn(page);
+    await enterCode(page, "000000");
+
+    const otp = page.locator("input[data-input-otp]");
+    await expect(
+      page.getByText(/verification code you entered is incorrect/i),
+    ).toBeVisible();
+    await expect(otp).toHaveValue("");
+
+    // Retyping is all it takes: the corrected code submits itself.
+    await enterCode(page, VALID_CODE);
+    await expect.poll(() => pathname(page)).toBe("/dashboard");
   });
 
   for (const returnTo of ["//evil.example/steal", "https://evil.example"]) {
