@@ -237,8 +237,9 @@ Three things decide whether this does what you want:
   needed again, that is what `bypass_actors` is for - one entry restores it for
   that actor alone, at the cost of the check no longer being absolute for them.
   `.githooks/pre-push` warns before such a push leaves the machine: it names the
-  protected branch, the commit at its head and the `GH013` refusal to expect. It
-  warns rather than blocks because the outcome is not locally knowable: the check
+  protected branch, the commit at its head and the `GH013` refusal to expect.
+  This notice stays a warning - unlike the author check in the same hook, which
+  does refuse the push - because the outcome is not locally knowable: the check
   rule on its own accepts a push whose commits already passed the check on
   another ref, and the `pull_request` rule alongside it is what requires the
   branch to move through a merge.
@@ -249,7 +250,8 @@ Three things decide whether this does what you want:
   on `pull_request`: on a branch in this repository the push already reports it,
   but a pull request from a fork only reports through that trigger.
 - Who the merge commit ends up authored by decides whether Vercel will build it,
-  because that is the only author its Hobby project accepts (see above), and
+  because that is the only author its Hobby project accepts (see above), and the
+  hook cannot check it (see [Which commits Vercel will build](#which-commits-vercel-will-build)).
   GitHub does not hand the authorship to whoever clicks merge - reports differ on
   whether a squash merge carries the pull request's author or the merger's. Both
   merges recorded here had the same account as author and merger, and came out
@@ -301,14 +303,22 @@ member, so a commit authored by anyone else is refused before the build starts:
 > Git author `<login>` must have access to the project on Vercel to create
 > deployments.
 
-The push itself still succeeds and only the deployment is blocked, which is easy
-to miss. `.githooks/pre-push` warns about it before the push lands, listing each
-commit whose author would block the build. `bun install` installs the hook by
-pointing `core.hooksPath` at `.githooks`; if a fresh clone does not fire it, run
-`git config core.hooksPath .githooks` once. This checkout commits as that
-account (`user.email` is the owner's GitHub noreply address). To accept a
-different author, `git config --local --add vercel.projectOwnerEmail <email>`;
-`git push --no-verify` skips the warning.
+The push itself still succeeds and only the deployment is blocked, which is what
+makes it easy to miss - so a commit that would not build is not pushable from
+here. `.githooks/pre-push` reads the author of every commit a push would send and
+**refuses the push** (non-zero exit) when any of them is an address other than
+the owner's, naming each one. `bun install` installs the hook by pointing
+`core.hooksPath` at `.githooks`; if a fresh clone does not fire it, run
+`git config core.hooksPath .githooks` once. This checkout commits as that account
+(`user.email` is the owner's GitHub noreply address, whose numeric id is the
+account's). The check tests that one field and nothing else, so it is not a
+judgement about the change: to let another author through, add the address to the
+list it tests (`git config --local --add vercel.projectOwnerEmail <email>`), and
+`git push --no-verify` skips it entirely - which the first push of an existing
+history to a new remote needs, since every commit in it is new there. The one
+commit the hook cannot see is a pull request's own merge commit, which GitHub
+authors server-side with no client hook in the path; that is the case the bullet
+above about the merge author covers.
 
 The dashboard checks the deployment on load, independently of the Convex
 client: it fetches the public `setup:health` over the Convex HTTP API and, when
