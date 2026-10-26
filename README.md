@@ -62,6 +62,17 @@ that package where npm used to nest it, and without the pin Vitest's nested
 - `bun run test` also runs `tests/security.test.ts`, which covers server-side
   authorisation, the public lead form's validation and rate limits, the
   founding-admin check, and cross-member transaction references.
+- `bun run test` also runs `tests/singleSignInPage.test.ts`, a structural guard
+  over `src/main.tsx` and the sign-in call sites. It fails if a second sign-in
+  screen, an extra auth address, an in-app sign-in link that points somewhere
+  other than `/auth`, `/login` or `/signup`, or a gate screen in `RequireAuth`
+  is ever reintroduced; adding an auth address is then a deliberate edit to
+  that test.
+- GitHub Actions runs that suite on every push
+  ([`unit-tests.yml`](.github/workflows/unit-tests.yml)). It needs no secrets or
+  deployment, so a broken guard fails the commit's check rather than waiting to
+  be noticed locally. Making the check *required* before a merge is a branch
+  protection setting in the repository, not something the workflow can declare.
 - `bun run test:load` / `bun run test:load:abuse` - k6 load and abuse profiles.
   They are opt-in, require `CONVEX_URL`, and must be pointed at staging; see
   [`loadtest/README.md`](loadtest/README.md).
@@ -231,31 +242,32 @@ const { isLoading, isAuthenticated, user, signIn, signOut } = useAuth();
 
 ## Protected Routes
 
-The starter `/dashboard` route is protected with `RequireAuth`. Extend that page
-for the product's authenticated experience, and reuse `RequireAuth` when adding
-another protected route - do NOT hand-roll a redirect to `/auth`, since landing
-on a bare sign-in form with no explanation of what was blocked is confusing.
+`/dashboard` is protected with `RequireAuth`. Extend that page for the product's
+authenticated experience, and reuse `RequireAuth` when adding another protected
+route - do NOT hand-roll a redirect to `/auth`.
 
-`RequireAuth` states the block on the page the visitor asked for and sends them
-to `/auth?returnTo=<current route>` when they choose to sign in, so they come
-back to it. Pass `title` and `description` to say what the page is:
+There is exactly one sign-in page: `/auth`. A signed-out visitor who opens a
+protected route is sent there with `returnTo=<current route>`, and lands back on
+the page they asked for once they are signed in. No second gate screen is
+rendered on the way through, so a link from an email behaves the same as the
+navbar's sign-in link.
 
 ```tsx
 <Route
   path="/dashboard"
   element={
-    <RequireAuth
-      title="Sign in to view your dashboard"
-      description="Your projects and settings live here."
-    >
+    <RequireAuth>
       <Dashboard />
     </RequireAuth>
   }
 />
 ```
 
-Pass `redirectImmediately` for a route where bouncing straight to `/auth` really
-is better.
+`/login` and `/signup` are addresses for that same page, not separate screens:
+both redirect to `/auth`, and `/signup` selects the create-account tab. The tab
+(`mode=signin|signup`) and the sign-in method (`method=code|password`) both live
+in the URL, so a reload, a bookmark or a shared link opens the same state, with
+`returnTo` carried through.
 
 ## Auth Page
 

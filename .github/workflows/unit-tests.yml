@@ -1,0 +1,38 @@
+name: Unit tests
+
+# Every push runs the Vitest suite. It takes seconds, and it is what keeps the
+# single-sign-in guard honest: tests/singleSignInPage.test.ts fails if a second
+# sign-in screen, an extra auth address, or an in-app sign-in link pointing
+# anywhere other than /auth, /login or /signup is introduced. Branches behind a
+# pull request are covered too, because their pushes run here as well.
+on:
+  push:
+
+permissions:
+  contents: read
+
+# A newer push to the same ref supersedes the run it replaced.
+concurrency:
+  group: unit-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: Vitest unit suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # No version input: setup-bun reads `packageManager` from package.json,
+      # so CI installs with the same Bun that wrote `bun.lock`.
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # No deployment, credentials or secrets: the Convex functions run against
+      # the in-memory test harness, and every test that needs an environment
+      # variable sets its own.
+      - name: Run the unit suite
+        run: bun run test

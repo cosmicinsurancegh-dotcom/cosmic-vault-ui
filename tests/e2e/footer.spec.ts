@@ -66,9 +66,11 @@ test.describe("footer", () => {
         await expect.poll(() => new URL(page.url()).pathname).toBe("/");
         expect(new URL(page.url()).hash).toBe(`#${href.split("#")[1]}`);
       } else if (href.startsWith("/dashboard")) {
-        // Member routes render the application shell without this footer.
+        // A signed-out visitor is handed to the one sign-in page with the
+        // member destination kept for after sign-in.
         await link.click();
-        await expect.poll(() => new URL(page.url()).pathname).toBe(href);
+        await expect.poll(() => new URL(page.url()).pathname).toBe("/auth");
+        expect(new URL(page.url()).searchParams.get("returnTo")).toBe(href);
         await page.goto("/");
       } else {
         await link.click();

@@ -38,7 +38,6 @@ const CONSENT_RECORD = {
 const EXPECTED_CONSOLE_ERRORS = [
   /OTP verification error/i,
   /Email sign-in error/i,
-  /Guest login error/i,
   /Password sign-in error/i,
   /Password verification error/i,
   /Password reset error/i,

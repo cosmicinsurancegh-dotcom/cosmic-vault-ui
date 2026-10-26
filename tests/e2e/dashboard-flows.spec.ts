@@ -51,9 +51,7 @@ test.describe("customer dashboard", () => {
   test("sidebar navigation moves between screens without a reload", async ({
     page,
   }) => {
-    await page.goto("/auth");
-    await page.getByRole("button", { name: /continue as guest/i }).click();
-    await expect.poll(() => new URL(page.url()).pathname).toBe("/dashboard");
+    await startSignedIn(page);
 
     await page.getByRole("link", { name: "Policies" }).first().click();
     await expect

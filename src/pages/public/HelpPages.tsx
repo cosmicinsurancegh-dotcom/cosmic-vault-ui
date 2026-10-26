@@ -41,7 +41,7 @@ const CATEGORY_SUMMARY: Record<FaqCategory, string> = {
   "Policies and coverage": "Schedules, wording, excesses, exclusions and conditions.",
   "Payments and billing": "Premiums, renewals, refunds and what a failed payment means.",
   Claims: "Reporting an incident, review, decisions, and disputing an outcome.",
-  "Accounts and security": "Signing in, guest sessions, data access and privacy requests.",
+  "Accounts and security": "Signing in, data access and privacy requests.",
   "Renewals and changes": "Renewal notices, endorsements, cancellations and changes of circumstance.",
 };
 

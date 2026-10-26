@@ -138,12 +138,6 @@ export const FAQS: Faq[] = [
   },
   {
     category: "Accounts and security",
-    question: "What is a guest session?",
-    answer:
-      "A guest session lets you look around the product without creating an account. It is temporary: work done in a guest session is not permanently saved against an identity. Sign in with your email when you want quotations and applications to stay on your record.",
-  },
-  {
-    category: "Accounts and security",
     question: "Who can see my records?",
     answer:
       "You, and only the people who need to act on them: authorised staff whose role includes the relevant permission, and an assigned broker acting for you. Access is enforced on the server for each record, not just hidden in the menu.",

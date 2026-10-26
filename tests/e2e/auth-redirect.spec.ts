@@ -61,11 +61,75 @@ test.describe("sign-in redirect flow", () => {
     await expect.poll(() => pathname(page)).toBe("/auth");
     expect(new URL(page.url()).searchParams.get("returnTo")).toBe("/dashboard");
 
-    await page.getByRole("button", { name: /continue as guest/i }).click();
+    await startEmailSignIn(page);
+    await enterCode(page, VALID_CODE);
+
     await expect.poll(() => pathname(page)).toBe("/dashboard");
     await expect(
       page.getByRole("button", { name: /sign out/i }).first(),
     ).toBeVisible();
+  });
+
+  test("/login and /signup open the same sign-in page", async ({ page }) => {
+    await page.goto("/login?returnTo=%2Fdashboard%2Fpolicies");
+
+    await expect.poll(() => pathname(page)).toBe("/auth");
+    let url = new URL(page.url());
+    expect(url.searchParams.get("returnTo")).toBe("/dashboard/policies");
+    expect(url.searchParams.get("mode")).toBe("signin");
+    await expect(
+      page.getByRole("button", { name: "Sign in", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    // The guest entry is gone from the one sign-in page.
+    await expect(
+      page.getByRole("button", { name: /continue as guest/i }),
+    ).toHaveCount(0);
+
+    await page.goto("/signup?returnTo=%2Fdashboard");
+
+    await expect.poll(() => pathname(page)).toBe("/auth");
+    url = new URL(page.url());
+    expect(url.searchParams.get("returnTo")).toBe("/dashboard");
+    expect(url.searchParams.get("mode")).toBe("signup");
+    await expect(
+      page.getByRole("button", { name: "Create account", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      /create your/i,
+    );
+  });
+
+  test("the chosen sign-in method survives a reload", async ({ page }) => {
+    await page.goto("/auth?returnTo=%2Fdashboard");
+    await choosePasswordMethod(page);
+
+    // The address is updated from an effect of the click, so wait for it.
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("method"))
+      .toBe("password");
+    expect(new URL(page.url()).searchParams.get("returnTo")).toBe("/dashboard");
+    await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+
+    await page.reload();
+    await expect(
+      page.getByRole("button", { name: "Password", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+    expect(new URL(page.url()).searchParams.get("method")).toBe("password");
+    expect(new URL(page.url()).searchParams.get("returnTo")).toBe("/dashboard");
+
+    // Switching back is remembered on the next reload too.
+    await page.getByRole("button", { name: "Email code", exact: true }).click();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("method"))
+      .toBe("code");
+
+    await page.reload();
+    await expect(
+      page.getByRole("button", { name: "Email code", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByLabel("Password", { exact: true })).toHaveCount(0);
   });
 
   test("the password method signs in with the account password", async ({
@@ -146,7 +210,8 @@ test.describe("sign-in redirect flow", () => {
       page,
     }) => {
       await page.goto(`/auth?returnTo=${encodeURIComponent(returnTo)}`);
-      await page.getByRole("button", { name: /continue as guest/i }).click();
+      await startEmailSignIn(page);
+      await enterCode(page, VALID_CODE);
 
       await expect.poll(() => pathname(page)).toBe("/dashboard");
       expect(new URL(page.url()).hostname).toBe("127.0.0.1");
@@ -164,21 +229,35 @@ test.describe("sign-in redirect flow", () => {
     await expect(page.getByLabel("Email address")).toHaveCount(0);
   });
 
-  test("the dashboard gate explains the block and keeps the destination", async ({
+  test("a protected dashboard link opens the one sign-in page", async ({
     page,
   }) => {
     await page.goto("/dashboard");
 
-    await expect(
-      page.getByText(/sign in to your insurance workspace/i),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "Sign in", exact: true }).click();
-
     await expect.poll(() => pathname(page)).toBe("/auth");
     expect(new URL(page.url()).searchParams.get("returnTo")).toBe("/dashboard");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      /enter the/i,
+    );
+  });
 
-    await page.getByRole("button", { name: /continue as guest/i }).click();
-    await expect.poll(() => pathname(page)).toBe("/dashboard");
+  test("a mineral update link returns the reader to their minerals after signing in", async ({
+    page,
+  }) => {
+    // Shipment emails link to /dashboard/minerals (see convex/lib/shipmentEmail.ts).
+    // Signing in from that link must land back on the minerals page, not the
+    // dashboard root.
+    await page.goto("/dashboard/minerals");
+
+    await expect.poll(() => pathname(page)).toBe("/auth");
+    expect(new URL(page.url()).searchParams.get("returnTo")).toBe(
+      "/dashboard/minerals",
+    );
+
+    await startEmailSignIn(page);
+    await enterCode(page, VALID_CODE);
+
+    await expect.poll(() => pathname(page)).toBe("/dashboard/minerals");
     await expect(
       page.getByRole("button", { name: /sign out/i }).first(),
     ).toBeVisible();

@@ -132,11 +132,18 @@ test.describe("mega-menu", () => {
           ).toBe(SIGN_IN_HANDOFF[destination]);
           await page.goto("/");
         } else if (destination.startsWith(MEMBER_PREFIX)) {
+          // A signed-out visitor is handed to the one sign-in page with the
+          // member destination kept for after sign-in, exactly like the
+          // navbar's own sign-in link.
           await expect
             .poll(() => new URL(page.url()).pathname, {
-              message: `${label} should open the member application`,
+              message: `${label} should open the sign-in hand-off`,
             })
-            .toBe(destination);
+            .toBe("/auth");
+          expect(
+            new URL(page.url()).searchParams.get("returnTo"),
+            `${label} should keep its destination for after sign-in`,
+          ).toBe(destination);
           // The application shell has no public navigation to continue from.
           await page.goto("/");
         } else {

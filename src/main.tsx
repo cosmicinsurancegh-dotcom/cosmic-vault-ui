@@ -13,7 +13,13 @@ import { ConvexReactClient } from "convex/react";
 import { ThemeProvider } from "next-themes";
 import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router";
 import "./index.css";
 
 // Lazy load route components for better code splitting
@@ -114,6 +120,18 @@ const RequireVaultOperations = lazy(() =>
     default: module.RequireVaultOperations,
   })),
 );
+
+/**
+ * `/login` and `/signup` are addresses for the one sign-in page, not pages of
+ * their own. Each keeps the incoming `returnTo` and selects its tab on `/auth`,
+ * so no second sign-in screen exists to fall out of step with this one.
+ */
+function AuthAlias({ mode }: { mode: "signin" | "signup" }) {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  params.set("mode", mode);
+  return <Navigate to={`/auth?${params.toString()}`} replace />;
+}
 
 function StaffOnly({ children }: { children: React.ReactNode }) {
   return <RequireRole roles={["admin", "super_admin"]}>{children}</RequireRole>;
@@ -277,29 +295,16 @@ createRoot(document.getElementById("root")!).render(
                   />
                   <Route
                     path="/login"
-                    element={
-                      <AuthPage
-                        redirectAfterAuth="/dashboard"
-                        defaultMode="signin"
-                      />
-                    }
+                    element={<AuthAlias mode="signin" />}
                   />
                   <Route
                     path="/signup"
-                    element={
-                      <AuthPage
-                        redirectAfterAuth="/dashboard"
-                        defaultMode="signup"
-                      />
-                    }
+                    element={<AuthAlias mode="signup" />}
                   />
                   <Route
                     path="/dashboard"
                     element={
-                      <RequireAuth
-                        title="Sign in to your insurance workspace"
-                        description="Your policies, quotations, applications, claims, and documents live here."
-                      >
+                      <RequireAuth>
                         <DashboardLayout />
                       </RequireAuth>
                     }

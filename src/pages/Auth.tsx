@@ -21,7 +21,6 @@ import {
   Loader2,
   Mail,
   ShieldCheck,
-  UserX,
 } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
@@ -29,7 +28,6 @@ import { cn } from "@/lib/utils";
 
 interface AuthProps {
   redirectAfterAuth?: string;
-  defaultMode?: "signin" | "signup";
 }
 
 type AuthMethod = "code" | "password";
@@ -96,10 +94,10 @@ function resolveRedirectAfterAuth(
   return fallback;
 }
 
-function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
+function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const redirect = resolveRedirectAfterAuth(
     searchParams.get("returnTo"),
     redirectAfterAuth,
@@ -107,7 +105,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
   const [mode, setMode] = useState<"signin" | "signup">(() => {
     const requested = searchParams.get("mode");
     if (requested === "signup" || requested === "signin") return requested;
-    return defaultMode ?? "signin";
+    return "signin";
   });
   const isSignup = mode === "signup";
   const [method, setMethod] = useState<AuthMethod>(() =>
@@ -137,13 +135,27 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
     setNewPassword("");
   };
 
+  /**
+   * The tab and the method are both part of the address, so `/auth?mode=signup`
+   * and `/auth?method=password` (and the `/signup` alias) keep showing the state
+   * the visitor chose across a reload, a bookmark or a shared link. Every other
+   * param, `returnTo` included, is carried through untouched.
+   */
+  const rememberInUrl = (key: "mode" | "method", value: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set(key, value);
+    setSearchParams(params, { replace: true });
+  };
+
   const selectMethod = (next: AuthMethod) => {
     setMethod(next);
+    rememberInUrl("method", next);
     resetToEntry();
   };
 
   const selectMode = (next: "signin" | "signup") => {
     setMode(next);
+    rememberInUrl("mode", next);
     resetToEntry();
   };
 
@@ -344,27 +356,6 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
     }
   };
 
-  const handleGuestLogin = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await withSignInTimeout(signIn("anonymous"));
-      navigate(redirect);
-    } catch (error) {
-      console.error("Guest login error:", error);
-      setError(
-        signInFailureMessage(
-          error,
-          `Failed to sign in as guest: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
-        ),
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <main className="min-h-screen bg-background lg:grid lg:grid-cols-[0.92fr_1.08fr]">
       {/* Narrative panel */}
@@ -444,7 +435,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
               onClick={() => navigate("/")}
               className="group inline-flex items-center gap-2 text-xs font-medium text-muted-foreground transition-colors hover:text-ink"
             >
-              <span className="grid size-7 place-items-center rounded-[4px] border border-line transition-colors group-hover:border-ink/30">
+              <span className="grid size-9 place-items-center rounded-[4px] border border-line transition-colors group-hover:border-ink/30">
                 <ArrowLeft className="size-3.5" />
               </span>
               Back to home
@@ -706,33 +697,6 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
                       )}
                     </Button>
                   </form>
-
-                  <div className="my-6 flex items-center gap-3">
-                    <span className="h-px flex-1 bg-line" />
-                    <span className="text-[0.62rem] uppercase tracking-[0.2em] text-muted-foreground">
-                      or
-                    </span>
-                    <span className="h-px flex-1 bg-line" />
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-12 w-full rounded-[4px] bg-card"
-                    onClick={handleGuestLogin}
-                    disabled={isLoading}
-                  >
-                    <UserX className="size-4" />
-                    Continue as guest
-                  </Button>
-
-                  <p className="mt-5 flex items-start gap-2 text-[0.7rem] leading-5 text-muted-foreground">
-                    <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-electric" />
-                    Guest sessions are temporary: they let you explore the
-                    vault, but nothing done as a guest is permanently saved.
-                    Sign in with your email whenever you want your quotes and
-                    applications to stay on a record.
-                  </p>
                 </motion.div>
               ) : (
                 <motion.div
@@ -904,8 +868,7 @@ function Auth({ redirectAfterAuth, defaultMode }: AuthProps = {}) {
 
         <div className="flex flex-col items-center gap-2 text-center">
           <p className="text-[0.68rem] text-muted-foreground">
-            Sign in with a one-time email code or a password you set. Guest
-            sessions stay temporary.
+            Sign in with a one-time email code or a password you set.
           </p>
           <p className="text-[0.62rem] text-muted-foreground/70">
             By continuing you agree to our{" "}
