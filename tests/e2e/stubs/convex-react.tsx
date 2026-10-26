@@ -85,10 +85,27 @@ export function useMutation(reference?: E2ERef) {
   }, [reference]);
 }
 
-const noop = async () => undefined;
-
-export function useAction() {
-  return useMemo(() => noop, []);
+/**
+ * Records the call and answers with the spec's fixture result for that action
+ * (`"email.sendTest": { ... }`), or `undefined` - which is what a real action
+ * that returns nothing reports. The action's own behaviour is covered by
+ * convex-test; a spec only needs the answer the screen shows back.
+ */
+export function useAction(reference?: E2ERef) {
+  return useMemo(() => {
+    return async (args?: unknown) => {
+      if (typeof window === "undefined" || !reference) return undefined;
+      (window.__E2E_ACTIONS__ ??= []).push({
+        ref: reference.__e2eQuery,
+        args,
+      });
+      const fixtures = window.__E2E_FIXTURES__ ?? null;
+      if (fixtures && reference.__e2eQuery in fixtures) {
+        return fixtures[reference.__e2eQuery];
+      }
+      return undefined;
+    };
+  }, [reference]);
 }
 
 export function useConvex() {

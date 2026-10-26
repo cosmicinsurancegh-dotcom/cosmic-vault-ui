@@ -39,7 +39,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import { STAFF_PERMISSIONS, can } from "@/lib/permissions";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import {
   ArrowRightLeft,
   Gem,
@@ -125,6 +125,7 @@ export function AdminCustomersPage() {
             <option value="all">All account states</option>
             <option value="active">Active</option>
             <option value="suspended">Suspended</option>
+            <option value="closed">Closed (deleted)</option>
           </select>
           <select
             aria-label="Country"
@@ -256,7 +257,17 @@ function CustomerDialog({
   const update = useMutation(api.customers.updateStaff);
   const suspension = useMutation(api.customers.setSuspension);
   const assignBroker = useMutation(api.customers.assignBroker);
+  const changeEmail = useMutation(api.accountSecurity.staffChangeEmail);
+  const setPassword = useAction(api.accountSecurity.staffSetPassword);
+  const closeAccount = useMutation(api.customers.closeAccount);
   const [editing, setEditing] = useState(false);
+  /* Null until the staff member types: the field otherwise follows the record,
+     so it shows the address as soon as the query answers. */
+  const [emailDraft, setEmailDraft] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [credentialPending, setCredentialPending] = useState(false);
+  const [closeReason, setCloseReason] = useState("");
+  const [confirmClose, setConfirmClose] = useState(false);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("");
@@ -265,6 +276,9 @@ function CustomerDialog({
   const [reason, setReason] = useState("");
   const [brokerId, setBrokerId] = useState("");
   const [pending, setPending] = useState(false);
+
+  const currentEmail = detail?.user?.email ?? "";
+  const email = emailDraft ?? currentEmail;
 
   if (detail === undefined) {
     return (
@@ -499,6 +513,184 @@ function CustomerDialog({
               )}
             </section>
           )}
+
+          {canManage && (
+            <section className="rounded-xl border border-line p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Sign-in credentials
+              </h3>
+
+              {user?.status === "closed" ? (
+                <p className="mt-2 text-[0.62rem] leading-5 text-muted-foreground">
+                  This account was deleted. Its sign-in details were removed when it closed,
+                  and the record is kept only for the policies and payments attached to it.
+                </p>
+              ) : (
+                <div className="mt-3 space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cust-email">Sign-in email</Label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Input
+                        id="cust-email"
+                        type="email"
+                        value={email}
+                        onChange={(event) => setEmailDraft(event.target.value)}
+                        className="h-9 rounded-lg bg-card text-xs"
+                      />
+                      <Button
+                        size="sm"
+                        className="h-9 shrink-0 rounded-[4px]"
+                        disabled={
+                          credentialPending ||
+                          !email.trim() ||
+                          email.trim().toLowerCase() === currentEmail.toLowerCase()
+                        }
+                        onClick={async () => {
+                          setCredentialPending(true);
+                          try {
+                            await changeEmail({ userId, email });
+                            toast.success("Sign-in email updated.", {
+                              description: "The customer is told at the new address.",
+                            });
+                          } catch (error) {
+                            toast.error(
+                              error instanceof Error
+                                ? error.message
+                                : "Could not change the email.",
+                            );
+                          } finally {
+                            setCredentialPending(false);
+                          }
+                        }}
+                      >
+                        Change email
+                      </Button>
+                    </div>
+                    <p className="text-[0.62rem] text-muted-foreground">
+                      Their next sign-in code goes to this address. The change is recorded on the
+                      audit trail.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cust-password">New password</Label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Input
+                        id="cust-password"
+                        type="password"
+                        value={newPassword}
+                        onChange={(event) => setNewPassword(event.target.value)}
+                        placeholder="At least 8 characters"
+                        className="h-9 rounded-lg bg-card text-xs"
+                        autoComplete="new-password"
+                      />
+                      <Button
+                        size="sm"
+                        className="h-9 shrink-0 rounded-[4px]"
+                        disabled={credentialPending || newPassword.length < 8}
+                        onClick={async () => {
+                          setCredentialPending(true);
+                          try {
+                            await setPassword({ userId, password: newPassword });
+                            setNewPassword("");
+                            toast.success("Password set.", {
+                              description:
+                                "Give it to the customer over a channel you trust - then ask them to change it.",
+                            });
+                          } catch (error) {
+                            toast.error(
+                              error instanceof Error
+                                ? error.message
+                                : "Could not set the password.",
+                            );
+                          } finally {
+                            setCredentialPending(false);
+                          }
+                        }}
+                      >
+                        Set password
+                      </Button>
+                    </div>
+                    <p className="text-[0.62rem] text-muted-foreground">
+                      For a customer who has lost access. Their email code keeps working, and they
+                      are told the password was reset.
+                    </p>
+                  </div>
+
+                  <div className="border-t border-line pt-3">
+                    <p className="text-xs font-medium text-ink">Delete this account</p>
+                    <p className="mt-1 text-[0.62rem] leading-5 text-muted-foreground">
+                      Removes the sign-in, sessions and personal details. Policies, claims and
+                      payments stay on record - anonymised - for the legal period. Super admin
+                      accounts are never deletable.
+                    </p>
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                      <Input
+                        value={closeReason}
+                        onChange={(event) => setCloseReason(event.target.value)}
+                        placeholder="Reason (recorded on the audit trail)"
+                        className="h-9 rounded-lg bg-card text-xs"
+                      />
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="h-9 shrink-0 rounded-[4px]"
+                        disabled={closeReason.trim().length < 3}
+                        onClick={() => setConfirmClose(true)}
+                      >
+                        Delete account
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          <AlertDialog open={confirmClose} onOpenChange={setConfirmClose}>
+            <AlertDialogContent className="rounded-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this customer's account?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {profile?.fullName ?? user?.name ?? "This customer"} loses access immediately,
+                  and their personal details are removed from the record. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-[4px]">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="rounded-[4px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={pending}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void (async () => {
+                      setPending(true);
+                      try {
+                        await closeAccount({ userId, reason: closeReason });
+                        setConfirmClose(false);
+                        setCloseReason("");
+                        toast.success("Account deleted.", {
+                          description:
+                            "Sign-in and personal details were removed; policies and payments are retained.",
+                        });
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Could not delete the account.",
+                        );
+                      } finally {
+                        setPending(false);
+                      }
+                    })();
+                  }}
+                >
+                  {pending && <Loader2 className="size-3.5 animate-spin" />}
+                  Delete account
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           <CustomerMineralsSection
             userId={userId}

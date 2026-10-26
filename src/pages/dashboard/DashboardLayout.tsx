@@ -317,6 +317,11 @@ function adminNav(
       Icon: Settings2,
     });
   }
+  account.push({
+    to: "/dashboard/profile",
+    label: "Profile",
+    Icon: UserRound,
+  });
 
   return [
     {

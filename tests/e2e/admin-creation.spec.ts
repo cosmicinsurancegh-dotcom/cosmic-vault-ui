@@ -194,4 +194,80 @@ test.describe("admin creation flows", () => {
     await page.goto("/dashboard/admin/settings");
     await expect(page.getByText("Create a staff account")).toHaveCount(0);
   });
+
+  /**
+   * A stored "sent" row cannot show whether mail reaches an inbox, so Settings
+   * carries a test send. The console names the recipient it will use before the
+   * click, asks the action for nothing (the server resolves the address from the
+   * session), and shows what the gateway said back.
+   */
+  test("the test email goes to the staff member who asked for it", async ({
+    page,
+  }) => {
+    await startAs(page, { role: "super_admin", permissions: [] });
+
+    // The action's own behaviour is covered by convex-test; here the console
+    // only needs the answer it reports back.
+    await page.addInitScript(() => {
+      window.__E2E_FIXTURES__ = {
+        ...(window.__E2E_FIXTURES__ ?? {}),
+        "email.sendTest": {
+          status: "sent",
+          error: null,
+          to: "staff@example.com",
+          from: "Cosmic Vault Insurance <mail@cosmicvault.co>",
+        },
+        // What the audit trail already holds: the panel reads the same rows.
+        "settings.testEmailChecks": [
+          {
+            _id: "check-2",
+            at: Date.UTC(2026, 9, 24, 9, 12),
+            actorName: "Vault Staff",
+            to: "staff@example.com",
+            from: "Cosmic Vault Insurance <noreply@freebuff.com>",
+            status: "failed",
+            error: "Sender domain is not verified for this project.",
+          },
+          {
+            _id: "check-1",
+            at: Date.UTC(2026, 9, 23, 16, 40),
+            actorName: "Noor Admin",
+            to: "noor@example.com",
+            from: "Cosmic Vault Insurance <mail@cosmicvault.co>",
+            status: "sent",
+            error: null,
+          },
+        ],
+      };
+    });
+    await page.goto("/dashboard/admin/settings");
+
+    await expect(
+      page.getByText("Send a test to staff@example.com", { exact: false }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Send test email" }).click();
+
+    await expect(
+      page.getByText("Test email sent to staff@example.com.", { exact: false }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("From Cosmic Vault Insurance <mail@cosmicvault.co>", {
+        exact: false,
+      }),
+    ).toBeVisible();
+
+    const actions = await page.evaluate(() => window.__E2E_ACTIONS__ ?? []);
+    expect(actions).toContainEqual({ ref: "email.sendTest", args: {} });
+
+    // The panel lists who checked, when, and the outcome - including the
+    // provider's own reason for a message it refused.
+    const checks = page.getByRole("list").filter({ hasText: "Vault Staff" });
+    await expect(checks.getByText("Vault Staff")).toBeVisible();
+    await expect(checks.getByText("to staff@example.com")).toBeVisible();
+    await expect(checks.getByText(/^failed$/i)).toBeVisible();
+    await expect(
+      checks.getByText("Sender domain is not verified for this project."),
+    ).toBeVisible();
+    await expect(checks.getByText("to noor@example.com")).toBeVisible();
+  });
 });

@@ -51,6 +51,7 @@ export type Viewer = {
   role: NormalizedRole;
   permissions: string[];
   suspended: boolean;
+  closed: boolean;
 };
 
 export function normalizeRole(role?: string | null): NormalizedRole {
@@ -60,14 +61,12 @@ export function normalizeRole(role?: string | null): NormalizedRole {
   return "customer";
 }
 
-export async function getViewer(
-  ctx: QueryCtx | MutationCtx,
-): Promise<Viewer | null> {
-  const userId = await getAuthUserId(ctx);
-  if (userId === null) return null;
-  const user = await ctx.db.get(userId);
-  if (!user) return null;
-
+/**
+ * The viewer a user record maps to. Shared by the session lookup and by
+ * internal work that has to act - and audit - as an account it was handed
+ * rather than one it can read from a session, such as a delivery action.
+ */
+export function viewerForUser(user: Doc<"users">): Viewer {
   const role = normalizeRole(user.role);
   const permissions =
     role === "super_admin"
@@ -83,7 +82,19 @@ export async function getViewer(
     role,
     permissions,
     suspended: user.status === "suspended",
+    closed: user.status === "closed",
   };
+}
+
+export async function getViewer(
+  ctx: QueryCtx | MutationCtx,
+): Promise<Viewer | null> {
+  const userId = await getAuthUserId(ctx);
+  if (userId === null) return null;
+  const user = await ctx.db.get(userId);
+  if (!user) return null;
+
+  return viewerForUser(user);
 }
 
 export async function requireViewer(
@@ -93,6 +104,11 @@ export async function requireViewer(
   const viewer = await getViewer(ctx);
   if (!viewer) {
     throw new Error(options.message ?? "Please sign in to continue.");
+  }
+  if (viewer.closed) {
+    throw new Error(
+      "This account has been closed. Sign up again if you need a new one.",
+    );
   }
   if (viewer.suspended && !options.allowSuspended) {
     throw new Error(

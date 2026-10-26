@@ -64,6 +64,8 @@ Granular staff permissions (`src/convex/lib/authz.ts`):
 - Customer rows are filtered by `viewer.user._id`.
 - Broker rows are filtered by active `brokerAssignments` and `policy.brokerUserId`.
 - Suspended accounts are rejected by `requireViewer` (read of own data still allowed).
+- Closed (deleted) accounts are rejected the same way; their credentials and
+  sessions are gone, so nothing can sign in as them.
 
 **Founding super admin:** `setup.bootstrap` promotes the first signed-in user to
 super admin only while no super admin exists. The dashboard shows a one-time
@@ -162,6 +164,30 @@ sign-in with an emailed code, writes an audit entry and queues a welcome email.
 An email that already has an account is refused - the directory, broker console
 and settings panel keep their existing promote/add path for those.
 
+**Account editing** - every role has a profile page (`/dashboard/profile`) that
+edits the account itself: `accountSecurity.updateName`, `changeEmail`,
+`setPassword` and `closeAccount`. An address belongs to one account, so an email
+change is refused if another account (or a stale credential row) already holds
+it, and `lib/account.applyEmailChange` moves the `authAccounts` rows with the
+address - otherwise the next sign-in with the new address would look like a new
+person and the policies would stay behind on the old identity. The customer
+profile and brokerage record that copy the address are updated in the same
+mutation, and the change is audited. Staff can do the same for a customer from
+the customer record (`accountSecurity.staffChangeEmail`, and
+`staffSetPassword` for someone locked out), both gated on `customers.manage`,
+refused against staff and super admin accounts, and audited against the staff
+member with the customer told by notification.
+
+**Deleting an account** - `lib/account.closeAccountRecord` destroys every
+credential, session and refresh token, anonymises the name, address, phone and
+profile (keeping the reference), revokes broker assignments and marks the user
+`status: "closed"` with `closedAt`. Policies, claims, payments and quotes stay
+attached to that anonymised record for the legal retention period. The holder
+can do this from their own dashboard (`accountSecurity.closeAccount`) and staff
+from the customer record (`customers.closeAccount`, `customers.manage`, reason
+required). A super admin is never deletable - by itself or by staff - because a
+deployment that loses its last one can no longer grant access.
+
 **Brokers** - broker accounts are created/updated by staff; assignments are
 explicit (`customers.assignBroker`) and revocable. Brokers see only assigned
 customers, their policies and their own activity report.
@@ -216,7 +242,13 @@ records `shipment.email_resent` in the audit log.
 **Audit** - `lib/audit.writeAudit` records actor, role, action, entity, before/after
 values, reason and timestamp for application decisions, policy issuance and
 status changes, claim decisions and settlements, refunds, product changes,
-broker assignments, staff/permission changes and settings updates.
+broker assignments, staff/permission changes, settings updates, email test
+sends (`settings.email_test`, recorded with the recipient, sender and the
+provider's answer so a delivery check is attributable; `settings.testEmailChecks`
+reads the last five back into the sender panel, so staff see who last verified
+delivery, when and with what outcome without opening the audit screen), and account changes
+(`account.email_changed`, `account.email_changed_by_staff`,
+`account.name_changed`, `account.password_reset_by_staff`, `account.closed`).
 
 **Cron** - `crons.ts` schedules maintenance: expiry/renewal reminders, overdue
 premium marking and stale draft cleanup (`maintenance.ts`).

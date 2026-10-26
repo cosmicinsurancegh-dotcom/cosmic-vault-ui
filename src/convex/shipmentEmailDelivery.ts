@@ -3,6 +3,7 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { action } from "./_generated/server";
+import { deliveryFailure } from "./lib/delivery";
 
 /**
  * Shipment progress email: delivery side.
@@ -10,6 +11,8 @@ import { action } from "./_generated/server";
  * Runs in the Convex Node runtime so the provider credential stays on the
  * server. The action is idempotent enough for a manual retry: every attempt is
  * a new row, and `shipmentEmails.lastForTracking` shows the most recent result.
+ * As in `email.deliver`, a 2xx whose body reports the message as failed is
+ * recorded as a failure so the row is never marked delivered by mistake.
  */
 
 const shipmentStatusValidator = v.union(
@@ -87,14 +90,14 @@ export const sendUpdate = action({
         html: queued.html,
       });
 
-      if (!result.success) {
-        const error = result.error ?? "Provider rejected the message.";
+      const failure = deliveryFailure(result);
+      if (failure) {
         await ctx.runMutation(internal.shipmentEmails.recordResult, {
           emailId: queued.emailId,
           deliveryStatus: "failed",
-          error,
+          error: failure,
         });
-        return { deliveryStatus: "failed", error };
+        return { deliveryStatus: "failed", error: failure };
       }
 
       await ctx.runMutation(internal.shipmentEmails.recordResult, {

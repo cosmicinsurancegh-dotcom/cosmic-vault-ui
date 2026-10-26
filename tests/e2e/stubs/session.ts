@@ -41,6 +41,12 @@ declare global {
      * uses this to prove the screen sent the right request.
      */
     __E2E_MUTATIONS__?: { ref: string; args: unknown }[];
+    /**
+     * Every action the app has called since the page loaded. Actions are
+     * otherwise no-ops unless the spec supplies a fixture result for one, so a
+     * spec uses this to prove the screen asked for the right thing.
+     */
+    __E2E_ACTIONS__?: { ref: string; args: unknown }[];
   }
 }
 

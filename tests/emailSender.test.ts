@@ -243,3 +243,208 @@ describe("delivery request sender", () => {
     );
   });
 });
+
+/**
+ * The test message staff send themselves from Settings. It exists because a
+ * stored "sent" row cannot show whether mail reaches an inbox: the console asks
+ * the gateway, mails the signed-in staff member with the saved sender, and shows
+ * what came back.
+ */
+describe("settings test email", () => {
+  const originalKey = process.env.VLY_INTEGRATION_KEY;
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    if (originalKey === undefined) delete process.env.VLY_INTEGRATION_KEY;
+    else process.env.VLY_INTEGRATION_KEY = originalKey;
+  });
+
+  /** The audit entries written for test sends, newest last. */
+  async function testSends(t: Test) {
+    return await t.run((ctx) =>
+      ctx.db
+        .query("auditLogs")
+        .withIndex("by_action", (q) => q.eq("action", "settings.email_test"))
+        .collect(),
+    );
+  }
+
+  /** Records what the gateway was asked to send, and answers with `body`. */
+  function gatewayAnswers(body: Record<string, unknown>) {
+    const posted: Array<Record<string, unknown>> = [];
+    process.env.VLY_INTEGRATION_KEY = "test-key";
+    vi.stubGlobal("fetch", async (_url: unknown, init: unknown) => {
+      posted.push(JSON.parse((init as { body: string }).body));
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    return posted;
+  }
+
+  it("mails the signed-in staff member with the saved sender", async () => {
+    const t = test();
+    const admin = await seedSettingsAdmin(t);
+    await t.withIdentity({ subject: admin }).mutation(api.settings.update, {
+      ...SETTINGS_ARGS,
+      emailFromAddress: "mail@cosmicvault.co",
+    });
+    const posted = gatewayAnswers({ id: "msg-1", status: "sent" });
+
+    const result = await t
+      .withIdentity({ subject: admin })
+      .action(api.email.sendTest, {});
+
+    expect(result).toEqual({
+      status: "sent",
+      error: null,
+      to: "super@cosmicvault.test",
+      from: "Cosmic Vault Insurance <mail@cosmicvault.co>",
+    });
+    // The recipient is the caller's own address, taken from the session.
+    expect(posted[0]).toMatchObject({
+      to: ["super@cosmicvault.test"],
+      from: "Cosmic Vault Insurance <mail@cosmicvault.co>",
+    });
+
+    // The trail records who checked delivery, from which address, and that the
+    // provider took it - not just that some test ran.
+    const audit = await testSends(t);
+    expect(audit).toHaveLength(1);
+    expect(audit[0]).toMatchObject({
+      actorId: admin,
+      actorRole: "super_admin",
+      entityType: "settings",
+      entityId: "email",
+      after: {
+        to: "super@cosmicvault.test",
+        from: "Cosmic Vault Insurance <mail@cosmicvault.co>",
+        status: "sent",
+      },
+    });
+    expect(audit[0]?.reason).toBeUndefined();
+  });
+
+  it("reports a message the gateway calls failed", async () => {
+    const t = test();
+    const admin = await seedSettingsAdmin(t);
+    gatewayAnswers({
+      status: "failed",
+      error: "Sender domain is not verified for this project.",
+    });
+
+    const result = await t
+      .withIdentity({ subject: admin })
+      .action(api.email.sendTest, {});
+
+    expect(result).toMatchObject({
+      status: "failed",
+      error: "Sender domain is not verified for this project.",
+      to: "super@cosmicvault.test",
+    });
+
+    const audit = await testSends(t);
+    expect(audit).toHaveLength(1);
+    expect(audit[0]).toMatchObject({
+      actorId: admin,
+      after: { status: "failed" },
+      reason: "Sender domain is not verified for this project.",
+    });
+  });
+
+  it("audits an attempt no provider was available for", async () => {
+    const t = test();
+    const admin = await seedSettingsAdmin(t);
+    // No key on the deployment: the send is skipped, and that is still an
+    // attempt somebody made and should be able to see later.
+    vi.stubEnv("VLY_INTEGRATION_KEY", "");
+
+    const result = await t
+      .withIdentity({ subject: admin })
+      .action(api.email.sendTest, {});
+
+    expect(result).toMatchObject({ status: "skipped" });
+    const audit = await testSends(t);
+    expect(audit).toHaveLength(1);
+    expect(audit[0]).toMatchObject({
+      actorId: admin,
+      after: { status: "skipped", to: "super@cosmicvault.test" },
+      reason: "Email provider not configured (VLY_INTEGRATION_KEY missing).",
+    });
+  });
+
+  it("lists the last checks with who made them and what came back", async () => {
+    const t = test();
+    const admin = await seedSettingsAdmin(t);
+    gatewayAnswers({ status: "sent" });
+    await t.withIdentity({ subject: admin }).action(api.email.sendTest, {});
+
+    vi.unstubAllGlobals();
+    gatewayAnswers({
+      status: "failed",
+      error: "Sender domain is not verified for this project.",
+    });
+    await t.withIdentity({ subject: admin }).action(api.email.sendTest, {});
+
+    const checks = await t
+      .withIdentity({ subject: admin })
+      .query(api.settings.testEmailChecks, {});
+
+    expect(checks).toHaveLength(2);
+    // Newest first, so the panel reads as a log.
+    expect(checks[0]).toMatchObject({
+      actorName: "Sam Super",
+      status: "failed",
+      error: "Sender domain is not verified for this project.",
+      to: "super@cosmicvault.test",
+    });
+    expect(checks[1]).toMatchObject({ actorName: "Sam Super", status: "sent" });
+    expect(checks[1]?.error).toBeNull();
+
+    const latest = await t
+      .withIdentity({ subject: admin })
+      .query(api.settings.testEmailChecks, { limit: 1 });
+    expect(latest).toHaveLength(1);
+    expect(latest[0]?._id).toBe(checks[0]?._id);
+  });
+
+  it("keeps the checks away from accounts without settings access", async () => {
+    const t = test();
+    await seedSettingsAdmin(t);
+    const customer = await t.run(
+      async (ctx) =>
+        await ctx.db.insert("users", {
+          name: "Casey Client",
+          email: "client@cosmicvault.test",
+          role: "customer",
+          status: "active",
+        }),
+    );
+
+    await expect(
+      t
+        .withIdentity({ subject: customer })
+        .query(api.settings.testEmailChecks, {}),
+    ).rejects.toThrow(/restricted to staff|permission/i);
+  });
+
+  it("cannot be used by accounts that cannot manage settings", async () => {
+    const t = test();
+    const customer = await t.run((ctx) =>
+      ctx.db.insert("users", {
+        name: "Casey Client",
+        email: "client@cosmicvault.test",
+        role: "customer",
+        status: "active",
+      }),
+    );
+    const posted = gatewayAnswers({ status: "sent" });
+
+    await expect(
+      t.withIdentity({ subject: customer }).action(api.email.sendTest, {}),
+    ).rejects.toThrow(/restricted to staff|permission/i);
+    expect(posted).toHaveLength(0);
+  });
+});

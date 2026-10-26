@@ -1,6 +1,16 @@
 import { v } from "convex/values";
-import { internalQuery, mutation, query } from "./_generated/server";
-import { PERMISSIONS, requirePermission, requireViewer } from "./lib/authz";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from "./_generated/server";
+import {
+  PERMISSIONS,
+  requirePermission,
+  requireViewer,
+  viewerForUser,
+} from "./lib/authz";
 import { writeAudit } from "./lib/audit";
 import { cleanText, isValidEmail, requiredText } from "./lib/refs";
 import { DEFAULT_TEMPLATES, ensureSettings, getSettings } from "./lib/settings";
@@ -145,6 +155,115 @@ export const update = mutation({
         claimSlaDays: args.claimSlaDays,
         allowedCurrencies: args.allowedCurrencies,
       },
+    });
+    return true;
+  },
+});
+
+/**
+ * Who a test message from Settings goes to, and the sender it is stamped with.
+ *
+ * The recipient is the signed-in staff member's own address, resolved here
+ * rather than accepted from the browser, so the test-send action cannot be used
+ * to mail anyone else.
+ */
+export const testEmailTarget = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const viewer = await requirePermission(ctx, PERMISSIONS.SETTINGS_MANAGE);
+    const settings = await getSettings(ctx);
+    return {
+      actorId: viewer.user._id,
+      to: viewer.user.email ?? "",
+      emailFromAddress: settings.emailFromAddress,
+      companyName: settings.companyName,
+      supportEmail: settings.supportEmail,
+    };
+  },
+});
+
+/**
+ * The last few delivery checks, for the panel that offered them.
+ *
+ * Read straight off the audit trail the sends write, so the list cannot drift
+ * from the record staff would otherwise open Audit & security to read. Names
+ * come from the actor row, which is what makes a check attributable at a
+ * glance - "who last confirmed the inbox works" is the question.
+ */
+export const testEmailChecks = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, PERMISSIONS.SETTINGS_MANAGE);
+    const limit = Math.min(10, Math.max(1, args.limit ?? 5));
+    const rows = await ctx.db
+      .query("auditLogs")
+      .withIndex("by_action", (q) => q.eq("action", "settings.email_test"))
+      .order("desc")
+      .take(limit);
+
+    const actors = await Promise.all(rows.map((row) => ctx.db.get(row.actorId)));
+    const names = new Map(
+      actors.filter(Boolean).map((actor) => [
+        actor!._id,
+        actor!.name ?? actor!.email ?? "Staff",
+      ]),
+    );
+
+    return rows.map((row) => {
+      const after = (row.after ?? {}) as {
+        to?: unknown;
+        from?: unknown;
+        status?: unknown;
+      };
+      const status =
+        after.status === "sent" ||
+        after.status === "failed" ||
+        after.status === "skipped"
+          ? after.status
+          : "sent";
+      return {
+        _id: row._id,
+        at: row.at,
+        actorName: names.get(row.actorId) ?? "Staff",
+        to: typeof after.to === "string" ? after.to : "",
+        from: typeof after.from === "string" ? after.from : "",
+        status,
+        error: row.reason ?? null,
+      } as const;
+    });
+  },
+});
+
+/**
+ * Records a test send on the audit trail: who verified delivery, when, from
+ * which address, and what the gateway said about the message.
+ *
+ * A delivery action runs without a session, so the actor is passed in and
+ * resolved here - `writeAudit` then stores the same actor and role every other
+ * audited action carries.
+ */
+export const recordTestEmail = internalMutation({
+  args: {
+    actorId: v.id("users"),
+    to: v.string(),
+    from: v.string(),
+    status: v.union(
+      v.literal("sent"),
+      v.literal("failed"),
+      v.literal("skipped"),
+    ),
+    error: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const actor = await ctx.db.get(args.actorId);
+    if (!actor) return null;
+
+    await writeAudit(ctx, viewerForUser(actor), {
+      action: "settings.email_test",
+      entityType: "settings",
+      entityId: "email",
+      after: { to: args.to, from: args.from, status: args.status },
+      reason: args.error,
     });
     return true;
   },

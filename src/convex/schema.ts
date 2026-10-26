@@ -24,9 +24,13 @@ export const roleValidator = v.union(
 );
 export type Role = Infer<typeof roleValidator>;
 
+// "closed" is an account the holder (or staff) has deleted: the credentials are
+// gone and the personal details are anonymised, while policies, claims and
+// payments stay behind for the legal retention period.
 export const accountStatusValidator = v.union(
   v.literal("active"),
   v.literal("suspended"),
+  v.literal("closed"),
 );
 
 export const verificationValidator = v.union(
@@ -192,6 +196,8 @@ const schema = defineSchema(
       status: v.optional(accountStatusValidator),
       suspendedReason: v.optional(v.string()),
       lastRoleChangeAt: v.optional(v.number()),
+      /** When the holder deleted the account; the record itself is kept. */
+      closedAt: v.optional(v.number()),
       ...demoFields,
     })
       .index("email", ["email"]) // index for the email. do not remove or modify

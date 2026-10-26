@@ -113,6 +113,10 @@ export default function AdminSettingsPage() {
     api.notifications.deliveryIssues,
     allowed ? {} : "skip",
   );
+  const checks = useQuery(
+    api.settings.testEmailChecks,
+    allowed ? { limit: 5 } : "skip",
+  );
   const update = useMutation(api.settings.update);
   const resetTemplates = useMutation(api.settings.resetTemplates);
   const promote = useMutation(api.staff.promote);
@@ -122,6 +126,7 @@ export default function AdminSettingsPage() {
   const setStaffStatus = useMutation(api.staff.setStatus);
   const retryEmail = useMutation(api.notifications.retryEmail);
   const seed = useMutation(api.setup.seedStarterCatalogue);
+  const sendTestEmail = useAction(api.email.sendTest);
 
   /* A cached query can already hold the record on the first render, so the
      initial state comes from it when it is there. */
@@ -144,6 +149,7 @@ export default function AdminSettingsPage() {
   );
   const [permissionDraft, setPermissionDraft] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
+  const [testPending, setTestPending] = useState(false);
 
   /* The query resolves after the first render, so the editable copy is seeded
      from the record as soon as it arrives. Adjusting it here rather than in an
@@ -197,6 +203,41 @@ export default function AdminSettingsPage() {
       );
     } finally {
       setPending(false);
+    }
+  };
+
+  /*
+   * A stored "sent" row only proves the gateway answered, so the test goes to a
+   * real inbox and reports what the gateway said about it. The recipient is
+   * resolved on the server from the session - the console cannot name one.
+   */
+  const sendTest = async () => {
+    setTestPending(true);
+    try {
+      const result = await sendTestEmail({});
+      if (result.status === "sent") {
+        toast.success(`Test email sent to ${result.to}.`, {
+          description: `From ${result.from}. Check the inbox and the spam folder - this is what customers receive.`,
+        });
+      } else if (result.status === "skipped") {
+        toast.warning("Test email not sent.", {
+          description: result.error ?? "The email provider is not configured.",
+        });
+      } else {
+        toast.error("The provider rejected the test email.", {
+          description:
+            result.error ??
+            "Try again, then check the delivery issues below.",
+        });
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not send the test email.",
+      );
+    } finally {
+      setTestPending(false);
     }
   };
 
@@ -318,8 +359,71 @@ export default function AdminSettingsPage() {
               <p className="text-[0.62rem] leading-4 text-muted-foreground">
                 Every notification and consignment email is sent from this
                 address under the company name. Leave it blank to use the
-                deployment's EMAIL_FROM_ADDRESS.
+                deployment's EMAIL_FROM_ADDRESS, and then the gateway's own
+                authenticated sender.
               </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2">
+              <p className="max-w-[24rem] text-[0.62rem] leading-4 text-muted-foreground">
+                Send a test to {user?.email ?? "your own inbox"} to check the
+                From line and where it lands. It uses the saved sender, so save
+                your changes first.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 shrink-0 rounded-[4px] bg-transparent text-[0.62rem]"
+                disabled={testPending}
+                onClick={sendTest}
+              >
+                {testPending && <Loader2 className="size-3.5 animate-spin" />}
+                Send test email
+              </Button>
+            </div>
+
+            {/* The same rows the audit screen holds, surfaced where the check
+                is made: who last confirmed delivery, when, and what happened. */}
+            <div className="space-y-2 rounded-lg border border-line bg-ice/20 px-3 py-2.5 sm:col-span-2">
+              <p className="text-[0.55rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Recent checks
+              </p>
+              {checks === undefined ? (
+                <p className="text-[0.62rem] text-muted-foreground">
+                  Loading checks…
+                </p>
+              ) : checks.length === 0 ? (
+                <p className="text-[0.62rem] text-muted-foreground">
+                  No test sends yet. The first check appears here as soon as it
+                  is made.
+                </p>
+              ) : (
+                <ul className="divide-y divide-line">
+                  {checks.map((check) => (
+                    <li
+                      key={check._id}
+                      className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 py-1.5 text-[0.62rem] leading-4"
+                    >
+                      <span className="font-medium text-ink">
+                        {check.actorName}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {formatDateTime(check.at)}
+                      </span>
+                      <StatusPill status={check.status} />
+                      <span className="text-muted-foreground">
+                        {check.to ? `to ${check.to}` : "no recipient record"}
+                      </span>
+                      {check.error && (
+                        <span className="w-full text-destructive">
+                          {check.error}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <div className="space-y-1.5 sm:col-span-2">

@@ -388,14 +388,10 @@ createRoot(document.getElementById("root")!).render(
                     <Route path="payments" element={<PaymentsPage />} />
                     <Route path="documents" element={<DocumentsPage />} />
                     <Route path="support" element={<SupportPage />} />
-                    <Route
-                      path="profile"
-                      element={
-                        <SelfServiceOnly>
-                          <ProfilePage />
-                        </SelfServiceOnly>
-                      }
-                    />
+                    {/* Every signed-in role has an account to edit: the
+                        details, the sign-in address, the password, and for
+                        everyone but a super admin, deleting it. */}
+                    <Route path="profile" element={<ProfilePage />} />
                     <Route
                       path="broker/customers"
                       element={

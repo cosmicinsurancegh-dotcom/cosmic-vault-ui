@@ -8,6 +8,7 @@ import {
   type Viewer,
 } from "./lib/authz";
 import { writeAudit } from "./lib/audit";
+import { closeAccountRecord } from "./lib/account";
 import { assertCustomerAccess } from "./lib/access";
 import {
   assertInviteEmail,
@@ -333,14 +334,26 @@ export const detail = query({
           .take(10),
       ]);
 
+    /* Two streams: the customer record's own history, and the account-level
+       events (email changes, closures, password resets) recorded against the
+       user, which is what a deleted account leaves behind. */
     const audit = staff
-      ? await ctx.db
-          .query("auditLogs")
-          .withIndex("by_entity", (q) =>
-            q.eq("entityType", "customers").eq("entityId", args.userId),
+      ? (
+          await Promise.all(
+            ["customers", "users"].map((entityType) =>
+              ctx.db
+                .query("auditLogs")
+                .withIndex("by_entity", (q) =>
+                  q.eq("entityType", entityType).eq("entityId", args.userId),
+                )
+                .order("desc")
+                .take(20),
+            ),
           )
-          .order("desc")
-          .take(20)
+        )
+          .flat()
+          .sort((a, b) => b.at - a.at)
+          .slice(0, 20)
       : [];
 
     const assignments = staff
@@ -422,6 +435,32 @@ export const updateStaff = mutation({
         notes: args.notes,
       },
     });
+    return true;
+  },
+});
+
+/**
+ * Closing a customer's account from the console, on their request.
+ *
+ * Same routine as the holder's own deletion: credentials and sessions are
+ * destroyed and the personal details are replaced, while policies, claims and
+ * payments stay attached to the (now anonymised) record. Staff accounts are out
+ * of scope here - that is staff management - and a super admin is never
+ * deletable.
+ */
+export const closeAccount = mutation({
+  args: { userId: v.id("users"), reason: v.string() },
+  handler: async (ctx, args) => {
+    const viewer = await requirePermission(ctx, PERMISSIONS.CUSTOMERS_MANAGE);
+    const target = await ctx.db.get(args.userId);
+    if (!target) throw new Error("Customer not found.");
+    if (target.role === "admin" || target.role === "super_admin") {
+      throw new Error("Use staff management to close a staff account.");
+    }
+    if (target.status === "closed") throw new Error("That account is already closed.");
+
+    const reason = requiredText(args.reason, "Reason", 500);
+    await closeAccountRecord(ctx, viewer, target, reason);
     return true;
   },
 });

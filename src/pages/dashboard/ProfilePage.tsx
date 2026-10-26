@@ -1,5 +1,5 @@
+import { AccountSecurityPanel } from "@/components/dashboard/AccountSecurityPanel";
 import {
-  Callout,
   Detail,
   LoadingState,
   PageHeader,
@@ -8,22 +8,14 @@ import {
   StatusPill,
 } from "@/components/dashboard/PlatformUI";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import { formatDate } from "@/lib/format";
 import { normalizeRole } from "@/lib/permissions";
-import { useAction, useMutation, useQuery } from "convex/react";
-import { KeyRound, Loader2, ShieldCheck } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
+import { Loader2, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -104,11 +96,18 @@ export default function ProfilePage() {
   const update = useMutation(api.customers.updateProfile);
   const updateBroker = useMutation(api.brokers.updateSelf);
   const createTicket = useMutation(api.tickets.create);
-  const passwordStatus = useQuery(api.accountSecurity.passwordStatus);
-  const savePassword = useAction(api.accountSecurity.setPassword);
+  const updateName = useMutation(api.accountSecurity.updateName);
 
   const role = normalizeRole(me?.user?.role);
   const profile = me?.profile;
+  const roleLabel =
+    role === "super_admin"
+      ? "Super admin"
+      : role === "admin"
+        ? "Administrator"
+        : role === "broker"
+          ? "Broker"
+          : "Customer";
 
   /* A cached query can already hold the record on the first render, so the
      initial state comes from it when it is there. */
@@ -120,35 +119,8 @@ export default function ProfilePage() {
   );
   const [request, setRequest] = useState("");
   const [pending, setPending] = useState(false);
-  const [passwordOpen, setPasswordOpen] = useState(false);
-  const [passwordForm, setPasswordForm] = useState({ next: "", confirm: "" });
-  const [passwordSaving, setPasswordSaving] = useState(false);
-
-  const handleSavePassword = async () => {
-    if (passwordForm.next.length < 8) {
-      toast.error("Use at least 8 characters for your password.");
-      return;
-    }
-    if (passwordForm.next !== passwordForm.confirm) {
-      toast.error("Those passwords don't match.");
-      return;
-    }
-    setPasswordSaving(true);
-    try {
-      await savePassword({ password: passwordForm.next });
-      toast.success("Password saved.", {
-        description: "You can now sign in with your email and password, or keep using an email code.",
-      });
-      setPasswordOpen(false);
-      setPasswordForm({ next: "", confirm: "" });
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Could not save the password.",
-      );
-    } finally {
-      setPasswordSaving(false);
-    }
-  };
+  const [staffName, setStaffName] = useState(me?.user?.name ?? "");
+  const [nameSaving, setNameSaving] = useState(false);
 
   /* The queries resolve after the first render. Seed each editable copy as soon
      as its record arrives - during render, guarded by the record identity - so
@@ -164,6 +136,14 @@ export default function ProfilePage() {
   if (brokerProfile?.profile && brokerProfile !== seededBroker) {
     setSeededBroker(brokerProfile);
     setBrokerForm(brokerContact(brokerProfile.profile));
+  }
+
+  /* Staff have no customer profile: their record is the users row itself, and
+     the name on it is what the audit trail shows beside their actions. */
+  const [seededName, setSeededName] = useState(me?.user?.name ?? "");
+  if ((me?.user?.name ?? "") !== seededName) {
+    setSeededName(me?.user?.name ?? "");
+    setStaffName(me?.user?.name ?? "");
   }
 
   if (me === undefined || reference === undefined) {
@@ -237,6 +217,86 @@ export default function ProfilePage() {
             </Button>
           </div>
         </Panel>
+        <AccountSecurityPanel
+          email={me.user?.email ?? ""}
+          roleLabel={roleLabel}
+          canDelete
+        />
+      </div>
+    );
+  }
+
+  /* Staff have no customer profile: this dashboard edits the account itself. */
+  if (role === "admin" || role === "super_admin") {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Staff profile"
+          title="Your staff account."
+          description="Your name appears on the audit trail beside everything you do. The email, password and deletion controls are below."
+        />
+        <div className="grid gap-5 lg:grid-cols-[1.3fr_1fr]">
+          <Panel>
+            <PanelHeader
+              title="Staff details"
+              description="Recorded against every action you take in the console."
+              action={<StatusPill status={me.user?.status ?? "active"} />}
+            />
+            <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="staff-name">Full name</Label>
+                <Input
+                  id="staff-name"
+                  value={staffName}
+                  onChange={(event) => setStaffName(event.target.value)}
+                  className="h-10 rounded-xl bg-card"
+                />
+              </div>
+              <Detail label="Email">{me.user?.email ?? "-"}</Detail>
+              <Detail label="Role">{roleLabel}</Detail>
+              <Detail label="Staff access since">
+                {me.user?.lastRoleChangeAt
+                  ? formatDate(me.user.lastRoleChangeAt)
+                  : "-"}
+              </Detail>
+              <div className="sm:col-span-2">
+                <Button
+                  className="rounded-[4px]"
+                  disabled={
+                    nameSaving ||
+                    staffName.trim().length < 2 ||
+                    staffName.trim() === (me.user?.name ?? "")
+                  }
+                  onClick={async () => {
+                    setNameSaving(true);
+                    try {
+                      await updateName({ name: staffName });
+                      toast.success("Details saved.");
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "Could not save the details.",
+                      );
+                    } finally {
+                      setNameSaving(false);
+                    }
+                  }}
+                >
+                  {nameSaving && <Loader2 className="size-4 animate-spin" />}
+                  Save details
+                </Button>
+              </div>
+            </div>
+          </Panel>
+
+          <AccountSecurityPanel
+            email={me.user?.email ?? ""}
+            roleLabel={roleLabel}
+            canDelete={role !== "super_admin"}
+            deleteBlockedReason="Super admin accounts cannot be deleted, because the deployment would lose the only role that can grant access. Hand the role to another account first."
+          />
+        </div>
       </div>
     );
   }
@@ -270,7 +330,7 @@ export default function ProfilePage() {
               <Label htmlFor="profile-email">Email</Label>
               <Input id="profile-email" value={me.user?.email ?? ""} readOnly className="h-10 rounded-xl bg-muted" />
               <p className="text-[0.62rem] text-muted-foreground">
-                Email is tied to sign-in. Contact support to change it securely.
+                Sign-in codes go here. Change it under Account & sign-in.
               </p>
             </div>
             <div className="space-y-1.5">
@@ -417,43 +477,11 @@ export default function ProfilePage() {
         </Panel>
 
         <div className="space-y-5">
-          <Panel>
-            <PanelHeader title="Account security" />
-            <div className="space-y-3 px-5 py-4">
-              <Detail label="Sign-in methods">
-                {passwordStatus?.hasPassword
-                  ? "Email one-time code and password"
-                  : "Email one-time code (passwordless)"}
-              </Detail>
-              <Detail label="Password">
-                {passwordStatus === undefined
-                  ? "Checking…"
-                  : passwordStatus.hasPassword
-                    ? "Set - sign in with it, or with an email code"
-                    : "Not set - add one to sign in without waiting for a code"}
-              </Detail>
-              <Detail label="Email verified">
-                {me.user?.emailVerificationTime
-                  ? formatDate(me.user.emailVerificationTime)
-                  : "Verified when you signed in with a code"}
-              </Detail>
-              <Detail label="Role">Customer</Detail>
-              <div className="pt-1">
-                <Button
-                  variant="outline"
-                  className="rounded-[4px] bg-transparent"
-                  onClick={() => setPasswordOpen(true)}
-                >
-                  <KeyRound className="size-4" />
-                  {passwordStatus?.hasPassword ? "Change password" : "Set a password"}
-                </Button>
-              </div>
-              <Callout tone="info">
-                A password is optional: your email code always works. Use at least 8
-                characters, and never share a one-time code with anyone.
-              </Callout>
-            </div>
-          </Panel>
+          <AccountSecurityPanel
+            email={me.user?.email ?? ""}
+            roleLabel={roleLabel}
+            canDelete
+          />
 
           <Panel>
             <PanelHeader
@@ -499,78 +527,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <Dialog
-        open={passwordOpen}
-        onOpenChange={(open) => {
-          setPasswordOpen(open);
-          if (!open) setPasswordForm({ next: "", confirm: "" });
-        }}
-      >
-        <DialogContent className="rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {passwordStatus?.hasPassword ? "Change your password" : "Set a password"}
-            </DialogTitle>
-            <DialogDescription>
-              Your email code keeps working either way. Use at least 8 characters.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="new-password">New password</Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={passwordForm.next}
-                onChange={(event) =>
-                  setPasswordForm({ ...passwordForm, next: event.target.value })
-                }
-                placeholder="At least 8 characters"
-                className="h-11 rounded-xl bg-card"
-                autoComplete="new-password"
-                minLength={8}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="confirm-password">Confirm password</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                value={passwordForm.confirm}
-                onChange={(event) =>
-                  setPasswordForm({ ...passwordForm, confirm: event.target.value })
-                }
-                placeholder="Repeat your password"
-                className="h-11 rounded-xl bg-card"
-                autoComplete="new-password"
-                minLength={8}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              className="rounded-[4px]"
-              onClick={() => setPasswordOpen(false)}
-              disabled={passwordSaving}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="rounded-[4px]"
-              onClick={handleSavePassword}
-              disabled={
-                passwordSaving ||
-                passwordForm.next.length < 8 ||
-                passwordForm.next !== passwordForm.confirm
-              }
-            >
-              {passwordSaving && <Loader2 className="size-4 animate-spin" />}
-              Save password
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
