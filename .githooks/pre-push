@@ -24,8 +24,9 @@
 # A push like that is refused outright rather than landing and failing later, so
 # the hook says which ref a push is about to update and leaves the choice - pull
 # request, or `--no-verify` - to the person pushing. It warns rather than blocks
-# because a push whose commits already carry passing checks from another ref is
-# accepted: the local hook cannot know whether GitHub will refuse this one.
+# because the outcome is not locally knowable: the check rule on its own accepts a
+# push whose commits already passed the check on another ref, and it is the
+# pull_request rule alongside it that requires the branch to move through a merge.
 #
 # Installed by `bun install` (the `prepare` script sets
 # `core.hooksPath=.githooks`); run that by hand if the hook does not fire:

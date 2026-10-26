@@ -212,8 +212,10 @@ Three things decide whether this does what you want:
   that actor alone, at the cost of the check no longer being absolute for them.
   `.githooks/pre-push` warns before such a push leaves the machine: it names the
   protected branch, the commit at its head and the `GH013` refusal to expect. It
-  warns rather than blocks because a push whose commits already carry passing
-  checks from another ref is accepted, so the refusal is not a certainty.
+  warns rather than blocks because the outcome is not locally knowable: the check
+  rule on its own accepts a push whose commits already passed the check on
+  another ref, and the `pull_request` rule alongside it is what requires the
+  branch to move through a merge.
 - A required check gates an **update of the branch**, not the commit that first
   introduces the problem: GitHub's own wording is that commits "must first be
   pushed to another ref where the checks pass", and a push of a commit without
