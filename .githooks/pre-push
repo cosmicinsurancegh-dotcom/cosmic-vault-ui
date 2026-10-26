@@ -13,6 +13,21 @@
 # checks the commits a push would send and warns about any author that would
 # block the deployment. It never blocks the push.
 #
+# The second thing it watches is the `dev`/`main` ruleset documented in the
+# README ("Merging into dev and main"), live since 2026-10-26 as `dev-main-gate`.
+# GitHub refuses a push that moves one of those branches unless the pushed
+# commits' `Vitest unit suite` checks already passed on another ref, and answers
+# with
+#
+#   remote: error: GH013: Repository rule violations found for refs/heads/dev
+#
+# A push like that is refused outright rather than landing and failing later, so
+# the hook says which ref a push is about to update and leaves the choice - pull
+# request, or `--no-verify` - to the person pushing. It warns rather than blocks
+# because the outcome is not locally knowable: the check rule on its own accepts a
+# push whose commits already passed the check on another ref, and it is the
+# pull_request rule alongside it that requires the branch to move through a merge.
+#
 # Installed by `bun install` (the `prepare` script sets
 # `core.hooksPath=.githooks`); run that by hand if the hook does not fire:
 #
@@ -27,6 +42,17 @@ set -u
 
 OWNER_DEFAULT="347948316+cosmicinsurancegh-dotcom@users.noreply.github.com"
 ZERO="0000000000000000000000000000000000000000"
+# Branches the ruleset protects. Compared against the *remote* ref, because that
+# is the ref GitHub decides on. Keep in step with the ruleset's conditions in
+# README.md if the protected branches ever change.
+GATED_REFS="refs/heads/dev refs/heads/main"
+
+is_gated() {
+  case " $GATED_REFS " in
+    *" $1 "*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 # Configured owners, one per line, normalised on the way in so that
 # "a@b.com, c@d.com" and repeated --add both work.
@@ -46,11 +72,20 @@ is_owner() {
 # <local ref> <local sha> <remote ref> <remote sha>, one line per pushed ref.
 problems=""
 count=0
+gated=""
+gated_count=0
 
-while read -r local_ref local_sha _remote_ref remote_sha; do
+while read -r local_ref local_sha remote_ref remote_sha; do
   [ -n "${local_sha:-}" ] || continue
   # Deleting a remote branch sends no commits.
   [ "$local_sha" = "$ZERO" ] && continue
+
+  if is_gated "${remote_ref:-}"; then
+    branch="${remote_ref#refs/heads/}"
+    gated="${gated}   ${branch}  $(git log -1 --format='%h %s' "$local_sha" 2>/dev/null || printf '%s' "$local_sha")
+"
+    gated_count=$((gated_count + 1))
+  fi
 
   if [ "${remote_sha:-$ZERO}" = "$ZERO" ]; then
     # New branch: everything reachable here and not from any remote yet.
@@ -86,6 +121,24 @@ if [ "$count" -gt 0 ]; then
     echo "  Commit as the owner:  git config --local user.email \"${owner_hint}\""
     echo "  Change expectation:   git config --local --add vercel.projectOwnerEmail \"<email>\""
     echo "  Skip this warning:    git push --no-verify"
+    echo ""
+  } >&2
+fi
+
+if [ "$gated_count" -gt 0 ]; then
+  {
+    echo ""
+    echo "! This push updates a branch protected by the dev/main ruleset:"
+    echo ""
+    printf '%s' "$gated"
+    echo "  GitHub refuses a direct push to the branch unless the pushed commits'"
+    echo "  Vitest unit suite checks already passed on another ref (the ruleset is"
+    echo "  dev-main-gate; see README.md, \"Merging into dev and main\"). Expect:"
+    echo ""
+    echo "    remote: error: GH013: Repository rule violations found"
+    echo ""
+    echo "  Push a work branch and open a pull request into it instead."
+    echo "  Skip this warning:  git push --no-verify"
     echo ""
   } >&2
 fi

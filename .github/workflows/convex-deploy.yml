@@ -6,6 +6,12 @@ name: Deploy Convex functions
 #   manual, prod     -> descriptive-ferret-801, only from `main` and only when
 #                       `confirm` is typed as deploy-prod.
 # No push ever reaches production: a merge to `main` is not a deploy.
+#
+# Both deploys are also gated on the unit suite (`unit` job below): a failing
+# guard, or any other red test, stops the deploy instead of shipping next to a
+# red check, dev and production alike. That job calls
+# .github/workflows/unit-tests.yml, the same workflow every push runs, so the
+# gate and the push check cannot drift apart.
 on:
   push:
     branches: [dev]
@@ -36,8 +42,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The suite lives in one file. This job only calls it, so a change to the
+  # steps reaches the gate and the every-push check at the same time; a calling
+  # job takes no steps and no timeout of its own (unit-tests.yml sets both).
+  unit:
+    name: Vitest unit suite
+    uses: ./.github/workflows/unit-tests.yml
+    permissions:
+      contents: read
+
   dev:
     name: Deploy functions to dev (avid-camel-675)
+    # No green suite, no deploy. A failed dependency skips this job, so the
+    # functions keep whatever version is currently deployed.
+    needs: unit
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
       (github.event_name == 'workflow_dispatch' && inputs.target == 'dev')
@@ -82,6 +100,9 @@ jobs:
 
   prod:
     name: Deploy functions to prod (descriptive-ferret-801)
+    # Gated on `unit` exactly like dev, so production is never released from a
+    # red tree: fix the test, or the code, and let the suite go green.
+    needs: unit
     # Dispatch runs from whichever branch was selected, so prod also requires
     # main. Pushes never qualify.
     if: |
