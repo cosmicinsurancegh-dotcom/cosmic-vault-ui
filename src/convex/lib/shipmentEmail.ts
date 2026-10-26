@@ -173,6 +173,16 @@ function toneFor(status: ShipmentStatus) {
 }
 
 /**
+ * An absolute address for a console route, or nothing when the deployment has
+ * no site URL configured. A mail client cannot follow a relative href, so a
+ * link is only drawn where there is an origin to draw it from.
+ */
+function siteUrl(appUrl: string, path: string) {
+  const base = appUrl.trim().replace(/\/+$/, "");
+  return /^https?:\/\//i.test(base) ? `${base}${path}` : "";
+}
+
+/**
  * The website's own mark in the navy header. It is the same PNG the vault email
  * uses, served from the app origin the CTA already points at, so the two emails
  * open with the same logo. Without a usable origin - a preview with no site
@@ -180,13 +190,13 @@ function toneFor(status: ShipmentStatus) {
  * image.
  */
 function headerMark(appUrl: string, size = 22) {
-  const base = appUrl.trim().replace(/\/+$/, "");
-  if (!/^https?:\/\//i.test(base)) {
+  const source = siteUrl(appUrl, "/email/logo-mark.png");
+  if (!source) {
     return `<span style="display:inline-block;width:${size}px;height:${size}px;background-color:${ELECTRIC};border-radius:4px;vertical-align:middle;font-size:0;line-height:0;">&nbsp;</span>`;
   }
 
   return `<img src="${escapeHtml(
-    `${base}/email/logo-mark.png`,
+    source,
   )}" width="${size}" height="${size}" alt="" style="display:inline-block;width:${size}px;height:${size}px;border:0;vertical-align:middle;" />`;
 }
 
@@ -359,12 +369,21 @@ function shell({
   reference?: string;
   children: string;
 }) {
-  const footerLink = (path: string, label: string) =>
-    `<p style="margin:0 0 8px;font-family:${RAIL_FONT};font-size:10px;line-height:16px;"><a href="${escapeHtml(
-      `${appUrl.replace(/\/+$/, "")}${path}`,
+  /* The footer columns are a site map, so the labels stay even when there is
+     no origin to link them to - they just stop being links. */
+  const footerLink = (path: string, label: string) => {
+    const href = siteUrl(appUrl, path);
+    if (!href) {
+      return `<p style="margin:0 0 8px;font-family:${RAIL_FONT};font-size:10px;line-height:16px;color:${EMAIL_COLOURS.navyMuted};">${escapeHtml(
+        label,
+      )}</p>`;
+    }
+    return `<p style="margin:0 0 8px;font-family:${RAIL_FONT};font-size:10px;line-height:16px;"><a href="${escapeHtml(
+      href,
     )}" style="color:${EMAIL_COLOURS.navyMuted};text-decoration:none;">${escapeHtml(
       label,
     )}</a></p>`;
+  };
 
   return `<!doctype html>
 <html lang="en">
@@ -479,6 +498,7 @@ export function renderShipmentStatusEmail(input: ShipmentEmailInput) {
      beside a delivered pill it would read as the delivery time. */
   const showEta = Boolean(input.shipment.eta) && !arrivedOrCancelled;
   const subject = `${headline} - ${input.mineral.reference}`;
+  const trackUrl = siteUrl(input.appUrl, "/dashboard/minerals");
 
   const body = `
     <tr>
@@ -616,14 +636,18 @@ export function renderShipmentStatusEmail(input: ShipmentEmailInput) {
     }
     <tr>
       <td align="center" style="padding:28px 32px 30px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+        ${
+          trackUrl
+            ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0">
           <tr>
             <td align="center" style="background-color:${ELECTRIC};border-radius:4px;">
-              <a href="${escapeHtml(input.appUrl)}/dashboard/minerals" style="display:inline-block;padding:13px 26px;font-size:13px;font-weight:700;letter-spacing:0.01em;color:${EMAIL_COLOURS.white};text-decoration:none;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Track this shipment</a>
+              <a href="${escapeHtml(trackUrl)}" style="display:inline-block;padding:13px 26px;font-size:13px;font-weight:700;letter-spacing:0.01em;color:${EMAIL_COLOURS.white};text-decoration:none;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Track this shipment</a>
             </td>
           </tr>
         </table>
-        <p style="margin:12px 0 0;font-size:10px;color:${EMAIL_COLOURS.faint};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Sign in with your email address - no password needed.</p>
+        <p style="margin:12px 0 0;font-size:10px;color:${EMAIL_COLOURS.faint};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Sign in with your email address - no password needed.</p>`
+            : `<p style="margin:0;font-size:11px;line-height:17px;color:${MUTED};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Track this shipment from your vault at your dashboard.</p>`
+        }
       </td>
     </tr>`;
 
@@ -658,7 +682,9 @@ export function renderShipmentStatusEmail(input: ShipmentEmailInput) {
       : "",
     input.note ? `\nLogistics note: ${input.note}` : "",
     "",
-    `Track this shipment: ${input.appUrl}/dashboard/minerals`,
+    trackUrl
+      ? `Track this shipment: ${trackUrl}`
+      : "Track this shipment from your vault at your dashboard.",
     "",
     `${input.companyName}`,
     input.supportEmail,
@@ -684,6 +710,8 @@ export function renderShipmentStatusEmail(input: ShipmentEmailInput) {
 
 export function renderAssignmentEmail(input: AssignmentEmailInput) {
   const subject = `${input.mineral.name} has been added to your vault`;
+  const vaultUrl = siteUrl(input.appUrl, "/dashboard/minerals");
+  const signInUrl = siteUrl(input.appUrl, "/auth");
   const trackLine = input.shipment
     ? `${input.shipment.reference}: ${input.shipment.origin} → ${input.shipment.destination}`
     : undefined;
@@ -744,17 +772,21 @@ export function renderAssignmentEmail(input: AssignmentEmailInput) {
     }
     <tr>
       <td align="center" style="padding:28px 32px 30px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+        ${
+          vaultUrl
+            ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0">
           <tr>
             <td align="center" style="background-color:${ELECTRIC};border-radius:4px;">
-              <a href="${escapeHtml(input.appUrl)}/dashboard/minerals" style="display:inline-block;padding:13px 26px;font-size:13px;font-weight:700;color:${EMAIL_COLOURS.white};text-decoration:none;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Open your vault</a>
+              <a href="${escapeHtml(vaultUrl)}" style="display:inline-block;padding:13px 26px;font-size:13px;font-weight:700;color:${EMAIL_COLOURS.white};text-decoration:none;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Open your vault</a>
             </td>
           </tr>
         </table>
         ${
           input.isNewAccount
-            ? `<p style="margin:12px 0 0;font-size:10px;line-height:16px;color:${EMAIL_COLOURS.faint};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Sign in at ${escapeHtml(input.appUrl)}/auth with this email address - we send a one-time code, so there is no password to set.</p>`
+            ? `<p style="margin:12px 0 0;font-size:10px;line-height:16px;color:${EMAIL_COLOURS.faint};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Sign in at ${escapeHtml(signInUrl)} with this email address - we send a one-time code, so there is no password to set.</p>`
             : ""
+        }`
+            : `<p style="margin:0;font-size:11px;line-height:17px;color:${MUTED};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Open your vault from your dashboard once you sign in.</p>`
         }
       </td>
     </tr>`;
@@ -775,9 +807,13 @@ export function renderAssignmentEmail(input: AssignmentEmailInput) {
       : "",
     trackLine ? `Shipment: ${trackLine}` : "",
     "",
-    `Open your vault: ${input.appUrl}/dashboard/minerals`,
+    vaultUrl
+      ? `Open your vault: ${vaultUrl}`
+      : "Open your vault from your dashboard once you sign in.",
     input.isNewAccount
-      ? `Sign in with this email address at ${input.appUrl}/auth - we send a one-time code, so there is no password to set.`
+      ? signInUrl
+        ? `Sign in with this email address at ${signInUrl} - we send a one-time code, so there is no password to set.`
+        : "Sign in with this email address - we send a one-time code, so there is no password to set."
       : "",
     "",
     `${input.companyName}`,
