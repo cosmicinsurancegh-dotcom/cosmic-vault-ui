@@ -1508,7 +1508,7 @@ describe("shipment status email", () => {
     },
   };
 
-  it("builds the branded status email with the shipment progress", () => {
+  it("draws the consignment route instead of the old stage bars", () => {
     const email = renderShipmentStatusEmail(base);
 
     expect(email.subject).toContain("on its way");
@@ -1516,11 +1516,52 @@ describe("shipment status email", () => {
     expect(email.html).toContain("Shipment update");
     expect(email.html).toContain("Gold bullion");
     expect(email.html).toContain("In transit");
-    expect(email.html).toContain("Out for delivery");
     expect(email.html).toContain("CV-MIN-2026-014");
     expect(email.html).toContain("https://vault.test/dashboard/minerals");
     expect(email.text).toContain("Status: In transit");
     expect(email.text).toContain("Route: Zurich, CH to London, GB");
+
+    // The four progress bars are gone: origin, live position and destination
+    // sit on one line, the way the dispatch board draws the route.
+    expect(email.html).not.toContain("height:4px");
+    expect(email.html).not.toContain("Out for delivery");
+    expect(email.html).toContain(">Origin<");
+    expect(email.html).toContain(">Position<");
+    expect(email.html).toContain(">Destination<");
+    expect(email.html).toContain("Zurich, CH");
+    expect(email.html).toContain("Basel, CH");
+    expect(email.html).toContain("London, GB");
+
+    // The markers are the same pin and truck the dashboard uses.
+    expect(email.html).toContain(
+      "https://vault.test/email/route-pin-origin.png",
+    );
+    expect(email.html).toContain("https://vault.test/email/route-truck.png");
+    expect(email.html).toContain(
+      "https://vault.test/email/route-pin-destination.png",
+    );
+
+    // In transit reaches the truck; the last leg is still dashed.
+    expect(email.html).toContain("border-top:2px solid");
+    expect(email.html).toContain("border-top:2px dashed");
+  });
+
+  it("fills the route to the destination only once it is delivered", () => {
+    const delivered = renderShipmentStatusEmail({
+      ...base,
+      status: "delivered",
+      previousStatus: "out_for_delivery",
+    });
+    expect(delivered.html).not.toContain("border-top:2px dashed");
+    expect(delivered.html).toContain(">Destination<");
+
+    // Out for delivery reaches the second waypoint, not the door.
+    const outForDelivery = renderShipmentStatusEmail({
+      ...base,
+      status: "out_for_delivery",
+      previousStatus: "in_transit",
+    });
+    expect(outForDelivery.html).toContain("border-top:2px dashed");
   });
 
   it("never reports the status as the consignment's location", () => {
@@ -1534,6 +1575,7 @@ describe("shipment status email", () => {
     // one is said plainly instead of wearing the status word.
     expect(email.html).toContain("Current location");
     expect(email.html).toContain("Not recorded");
+    expect(email.html).toContain("No location recorded");
   });
 
   it("escapes member-facing values instead of injecting markup", () => {

@@ -11,8 +11,8 @@
  * inline styles only (no scripts, no external fonts, no CSS files). A porcelain
  * canvas, a white card with 4px corners and hairline borders, electric-blue
  * accents, ink-navy type, uppercase micro-labels at wide tracking, pill chips,
- * and the shipping desk's route rail - a dashed track, a solid progress fill,
- * diamond waypoints and three stations with tabular timestamps. The footer is
+ * and the shipping desk's route rail - pins at either end, the carrier's mode
+ * at the live position, a dashed track and a solid passed span. The footer is
  * the dashboard's dark navy panel. A three-pixel amber rule at the very top
  * echoes the orbit in the brand mark.
  */
@@ -157,12 +157,17 @@ const STATUS_CHIP_LABEL: Record<ShipmentEmailStatus, string> = {
   shipped: "Delivered",
 };
 
-/** Where the route marker sits between origin and destination. */
+/**
+ * How far the route fill reaches for each status. The rail lands its fill on
+ * the waypoints rather than sliding continuously - first waypoint, truck,
+ * second waypoint, destination - so this email and the Convex-native shipment
+ * email draw the same journey at every stage.
+ */
 const ROUTE_PROGRESS: Record<ShipmentEmailStatus, number> = {
-  pending: 0.12,
-  in_progress: 0.36,
+  pending: 0,
+  in_progress: 0.25,
   on_hold: 0.5,
-  in_transit: 0.72,
+  in_transit: 0.5,
   shipped: 1,
 };
 
@@ -263,10 +268,6 @@ function dayStamp(at: number) {
 
 function fullStamp(at: number) {
   return `${DAY_WITH_YEAR.format(new Date(at))}, ${TIME.format(new Date(at))} UTC`;
-}
-
-function shortStamp(at: number) {
-  return `${dayStamp(at)}, ${TIME.format(new Date(at))}`;
 }
 
 function firstName(name: string) {
@@ -480,6 +481,175 @@ function rail(
         </table>`;
 }
 
+/** The route's passing line: solid once travelled, dashed while still ahead. */
+function routeLine(filled: boolean, accent: string) {
+  const colour = filled ? accent : PALETTE.line;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
+                    <tr><td height="2" style="height:2px;line-height:2px;font-size:0;border-top:${
+                      filled ? "2px solid" : "2px dashed"
+                    } ${colour};">&nbsp;</td></tr>
+                  </table>`;
+}
+
+/** The shipping desk's waypoint diamond, filled once the route passes it. */
+function routeDiamond(filled: boolean, accent: string) {
+  return `<td width="9" align="center" valign="middle" style="width:9px;font-family:${FONT_STACK};font-size:8px;line-height:8px;color:${
+    filled ? accent : PALETTE.line
+  };">&#9670;</td>`;
+}
+
+/** A station marker: a pin at either end, the carrier's mode at the live one. */
+function routeMarker({
+  background,
+  border,
+  colour,
+  icon,
+}: {
+  background: string;
+  border: string;
+  colour: string;
+  icon?: string;
+}) {
+  return `<table role="presentation" width="30" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
+                  <tr>
+                    <td width="30" height="30" align="center" valign="middle" style="width:30px;height:30px;border-radius:15px;background-color:${background};border:${border};text-align:center;">${
+                      icon
+                        ? `<img src="${escapeAttribute(
+                            icon,
+                          )}" width="15" height="15" alt="" style="display:block;width:15px;height:15px;border:0;margin:0 auto;" />`
+                        : `<span style="font-family:${FONT_STACK};font-size:10px;line-height:15px;color:${colour};">&#9670;</span>`
+                    }</td>
+                  </tr>
+                </table>`;
+}
+
+function routeStation(kicker: string, title: string, attention = false) {
+  return `<p style="margin:10px 0 0;font-family:${FONT_STACK};font-size:9px;line-height:12px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:${
+    PALETTE.faint
+  };text-align:center;">${escapeHtml(kicker)}</p>
+                <p style="margin:5px 0 0;font-family:${FONT_STACK};font-size:13px;line-height:17px;font-weight:700;letter-spacing:-0.01em;color:${
+                  attention ? PALETTE.amber : PALETTE.ink
+                };text-align:center;">${escapeHtml(title)}</p>`;
+}
+
+/**
+ * The consignment route, drawn exactly as the Convex-native shipment email
+ * draws it: origin pin, the carrier's mode at the live position, destination
+ * pin, with the passed span solid and the rest of the journey dashed. The
+ * vault keeps no position, so the middle station says so plainly rather than
+ * lending the status word as a place.
+ */
+function routeRail({
+  origin,
+  destination,
+  status,
+  accent,
+  appOrigin,
+}: {
+  origin: string;
+  destination: string;
+  status: ShipmentEmailStatus;
+  accent: string;
+  appOrigin?: string;
+}) {
+  const progress = ROUTE_PROGRESS[status];
+  const attention = status === "on_hold";
+  const delivered = status === "shipped";
+  const position = "No location recorded";
+  const icon = (file: string) =>
+    appOrigin ? `${appOrigin}/email/${file}` : undefined;
+
+  const originMarker = routeMarker({
+    background: PALETTE.primary,
+    border: `1px solid ${PALETTE.primary}`,
+    colour: PALETTE.white,
+    icon: icon("route-pin-origin.png"),
+  });
+  const positionMarker = routeMarker({
+    background: accent,
+    border: `1px solid ${accent}`,
+    colour: PALETTE.white,
+    icon: icon("route-truck.png"),
+  });
+  const destinationMarker = routeMarker(
+    delivered
+      ? {
+          background: PALETTE.emerald,
+          border: `1px solid ${PALETTE.emerald}`,
+          colour: PALETTE.white,
+          icon: icon("route-pin-origin.png"),
+        }
+      : {
+          background: PALETTE.card,
+          border: `1px solid ${PALETTE.primaryLine}`,
+          colour: PALETTE.primaryDeep,
+          icon: icon("route-pin-destination.png"),
+        },
+  );
+
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
+      <tr>
+        <td width="33.33%" align="center" valign="top" style="padding:0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+            <tr>
+              <td width="50%" style="padding:0;"></td>
+              <td width="30" valign="middle" style="width:30px;padding:0;">${originMarker}</td>
+              <td width="50%" valign="middle" style="padding:0;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                  <tr>
+                    <td valign="middle" style="padding:0;">${routeLine(
+                      progress >= 0.25,
+                      accent,
+                    )}</td>
+                    ${routeDiamond(progress >= 0.25, accent)}
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+          ${routeStation("Origin", origin)}
+        </td>
+        <td width="33.33%" align="center" valign="top" style="padding:0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+            <tr>
+              <td width="50%" valign="middle" style="padding:0;">${routeLine(
+                progress >= 0.5,
+                accent,
+              )}</td>
+              <td width="30" valign="middle" style="width:30px;padding:0;">${positionMarker}</td>
+              <td width="50%" valign="middle" style="padding:0;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                  <tr>
+                    <td valign="middle" style="padding:0;">${routeLine(
+                      progress >= 0.75,
+                      accent,
+                    )}</td>
+                    ${routeDiamond(progress >= 0.75, accent)}
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+          ${routeStation("Position", position, attention)}
+        </td>
+        <td width="33.33%" align="center" valign="top" style="padding:0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+            <tr>
+              <td width="50%" valign="middle" style="padding:0;">${routeLine(
+                progress >= 1,
+                accent,
+              )}</td>
+              <td width="30" valign="middle" style="width:30px;padding:0;">${destinationMarker}</td>
+              <td width="50%" style="padding:0;"></td>
+            </tr>
+          </table>
+          ${routeStation("Destination", destination)}
+        </td>
+      </tr>
+    </table>`;
+}
+
 function chip(
   label: string,
   tone: { border: string; background: string; text: string },
@@ -605,64 +775,11 @@ export function renderShipmentUpdateEmail(
   const accent = input.status === "on_hold" ? PALETTE.amber : PALETTE.primary;
   const steps = buildSteps(input);
   const currentIndex = steps.findIndex((step) => step.state === "active");
-  const releasedAt = input.events[0]?.at ?? input.updatedAt;
   const originCity = toText(input.originCity, input.origin);
   const destinationCity = toText(input.destinationCity, input.destination);
 
   const subject = `${copy.subject} \u00b7 ${input.trackingNumber}`;
   const preheader = `${copy.headline}. ${note} Estimated delivery ${eta}.`;
-
-  const routeStations: Station[] = [
-    {
-      marker: {
-        background: PALETTE.primary,
-        border: `1px solid ${PALETTE.primary}`,
-        color: PALETTE.white,
-        glyph: "&#9670;",
-        size: 10,
-      },
-      kicker: "Origin",
-      title: originCity,
-      lines: [`Released ${dayStamp(releasedAt)}`, input.carrier],
-    },
-    {
-      marker: stepMarker(delivered ? "complete" : "active", input.status),
-      /* The vault record carries no position, so this station names the state
-         of the journey rather than a place the email does not have. */
-      kicker: "Progress",
-      title: STATUS_CHIP_LABEL[input.status],
-      titleColor: input.status === "on_hold" ? PALETTE.amber : PALETTE.ink,
-      lines: [
-        `Updated ${shortStamp(input.updatedAt)}`,
-        `${input.events.length} recorded event${input.events.length === 1 ? "" : "s"}`,
-      ],
-    },
-    {
-      marker: delivered
-        ? {
-            background: PALETTE.emerald,
-            border: `1px solid ${PALETTE.emerald}`,
-            color: PALETTE.white,
-            glyph: "&#10003;",
-            size: 11,
-          }
-        : {
-            background: PALETTE.card,
-            border: `1px solid ${PALETTE.primary}`,
-            color: PALETTE.primaryDeep,
-            glyph: "&#9670;",
-            size: 10,
-          },
-      kicker: "Destination",
-      title: destinationCity,
-      lines: [
-        delivered
-          ? `Delivered ${dayStamp(input.events[input.events.length - 1]?.at ?? input.updatedAt)}`
-          : `Est. delivery ${dayStamp(input.estimatedDelivery)}`,
-        delivered ? "Signature on delivery" : "Door to door",
-      ],
-    },
-  ];
 
   const journeyStations: Station[] = steps.map((step) => {
     const stamp = stepStamp(step, input.estimatedDelivery);
@@ -804,7 +921,13 @@ export function renderShipmentUpdateEmail(
                   <tr>
                     <td style="padding:18px 18px 16px;">
                       ${sectionLabel("Consignment route")}
-                      ${rail(routeStations, ROUTE_PROGRESS[input.status], accent, true)}
+                      ${routeRail({
+                        origin: originCity,
+                        destination: destinationCity,
+                        status: input.status,
+                        accent,
+                        appOrigin,
+                      })}
                     </td>
                   </tr>
                 </table>

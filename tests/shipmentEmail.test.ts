@@ -3,6 +3,7 @@ import {
   renderShipmentUpdateEmail,
   SHIPMENT_EMAIL_STATUSES,
 } from "../src/convex/vault/shipmentEmail";
+import { renderShipmentStatusEmail } from "../src/convex/lib/shipmentEmail";
 import { DEMO_MINERALS } from "../src/lib/vault/demoData";
 import {
   previewShipmentEmail,
@@ -200,10 +201,103 @@ describe("shipment update email", () => {
       `Route: ${mineral.shipping!.origin.city} to ${mineral.shipping!.destination.city}`,
     );
 
-    // The vault records no position, so the middle station names the progress
-    // of the journey instead of offering the status as a place.
-    expect(email.html).toContain("Progress");
-    expect(email.html).not.toContain("Position");
+    // The route rail is the same pin-and-truck drawing the Convex-native
+    // shipment email uses: origin, position and destination, one line.
+    expect(email.html).toContain(">Origin<");
+    expect(email.html).toContain(">Position<");
+    expect(email.html).toContain(">Destination<");
+    expect(email.html).toContain(
+      "https://vault.example/email/route-pin-origin.png",
+    );
+    expect(email.html).toContain("https://vault.example/email/route-truck.png");
+    expect(email.html).toContain(
+      "https://vault.example/email/route-pin-destination.png",
+    );
+
+    // The vault records no position, so the middle station says so plainly
+    // rather than offering the status as a place.
+    expect(email.html).toContain("No location recorded");
+    expect(email.html).not.toContain(">Progress<");
+  });
+
+  it("draws the same route rail as the Convex-native shipment email", () => {
+    // Both templates carry their own copy of the rail markup, so this guard
+    // keeps them from drifting apart: same stations, same solid and dashed
+    // segments, same markers and the same carrier icons at every stage.
+    const stages: {
+      vault: (typeof SHIPMENT_EMAIL_STATUSES)[number];
+      convex: Parameters<typeof renderShipmentStatusEmail>[0]["status"];
+    }[] = [
+      { vault: "in_progress", convex: "preparing" },
+      { vault: "on_hold", convex: "customs_hold" },
+      { vault: "in_transit", convex: "in_transit" },
+      { vault: "shipped", convex: "delivered" },
+    ];
+
+    const count = (html: string, pattern: RegExp) => html.match(pattern) ?? [];
+    const rail = (html: string) => {
+      const start = html.indexOf("border-radius:15px");
+      expect(start).toBeGreaterThan(-1);
+      const tail = html.slice(start);
+      return {
+        segments: count(tail, /border-top:2px (solid|dashed)/g)
+          .map((hit) => hit.replace("border-top:2px ", ""))
+          .slice(0, 4),
+        // Colours come from each email's own palette; the markers themselves
+        // must still be the same three 30px discs.
+        markers: count(
+          tail,
+          /border-radius:15px;background-color:#[0-9A-Fa-f]{6}/g,
+        )
+          .slice(0, 3)
+          .map(() => "marker"),
+        icons: count(tail, /\/email\/route-[a-z-]+\.png/g).slice(0, 3),
+        stations: [">Origin<", ">Position<", ">Destination<"].map((label) =>
+          tail.includes(label),
+        ),
+      };
+    };
+
+    const base = shipmentEmailArgs(
+      demoMineral("in_transit"),
+      "in_transit",
+      "",
+    )!;
+
+    for (const stage of stages) {
+      const vault = previewShipmentEmail(
+        {
+          ...base,
+          status: stage.vault,
+          events: [{ status: stage.vault, at: Date.UTC(2026, 9, 24) }],
+        },
+        { appOrigin: ORIGIN },
+      );
+      const convex = renderShipmentStatusEmail({
+        recipientName: "David Mensah",
+        companyName: "Cosmic Vault Insurance",
+        supportEmail: "concierge@cosmicvault.co",
+        appUrl: ORIGIN,
+        updatedAt: "24 Oct 2026",
+        status: stage.convex,
+        mineral: {
+          name: base.mineralName,
+          reference: base.vaultId,
+          category: base.category,
+          quantity: base.weightLabel,
+          declaredValue: "",
+        },
+        shipment: {
+          reference: base.trackingNumber,
+          carrier: base.carrier,
+          trackingNumber: base.trackingNumber,
+          origin: "Berlin",
+          destination: "London",
+        },
+      });
+
+      expect(rail(vault.html)).toEqual(rail(convex.html));
+    }
   });
 
   it("returns nothing for a mineral that is still in the vault", () => {

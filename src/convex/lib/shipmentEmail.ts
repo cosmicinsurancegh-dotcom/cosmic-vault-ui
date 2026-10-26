@@ -10,9 +10,9 @@ import {
  * Branded transactional emails for mineral shipments.
  *
  * The layout follows the Cosmic Vault identity - deep navy header, electric
- * blue accents, hairline borders and a four-step delivery tracker - and is
- * built with tables and inline styles so it renders consistently in Gmail,
- * Outlook and Apple Mail.
+ * blue accents, hairline borders and the origin-to-destination route rail the
+ * dashboard draws - and is built with tables and inline styles so it renders
+ * consistently in Gmail, Outlook and Apple Mail.
  */
 
 export type EmailMineral = {
@@ -150,25 +150,159 @@ function sectionTitle(title: string) {
   return `<p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${MUTED};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${escapeHtml(title)}</p>`;
 }
 
-function tracker(status: ShipmentStatus) {
-  const completed = shipmentStageCount(status);
-  const needsAttention = shipmentNeedsAttention(status);
+const RAIL_TRACK = "#c3cddf";
 
-  const cells = SHIPMENT_STAGES.map((stage, index) => {
-    const done = index < completed;
-    const current = index === completed - 1;
-    const colour = done ? ELECTRIC : "#dde3ef";
-    const labelColour = done ? INK : "#8b94a8";
-    return `
-      <td width="25%" align="left" style="padding:0 4px 0 0;vertical-align:top;">
-        <div style="height:4px;background-color:${colour};border-radius:2px;font-size:0;line-height:0;">&nbsp;</div>
-        <p style="margin:8px 0 0;font-size:10px;font-weight:${current ? "700" : "600"};letter-spacing:0.08em;text-transform:uppercase;color:${labelColour};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${escapeHtml(stage.label)}</p>
-      </td>`;
-  }).join("");
+/** One hairline of the route: solid once passed, dashed while still ahead. */
+function railLine(filled: boolean, accent: string) {
+  const colour = filled ? accent : RAIL_TRACK;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
+                    <tr><td height="2" style="height:2px;line-height:2px;font-size:0;border-top:${
+                      filled ? "2px solid" : "2px dashed"
+                    } ${colour};">&nbsp;</td></tr>
+                  </table>`;
+}
+
+/** The shipping desk's waypoint diamond, filled once the route passes it. */
+function railDiamond(filled: boolean, accent: string) {
+  return `<td width="9" align="center" valign="middle" style="width:9px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;line-height:8px;color:${
+    filled ? accent : RAIL_TRACK
+  };">&#9670;</td>`;
+}
+
+/** A station marker: a pin at either end, the carrier's mode at the live one. */
+function railMarker({
+  background,
+  border,
+  icon,
+}: {
+  background: string;
+  border: string;
+  icon: string;
+}) {
+  return `<table role="presentation" width="30" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
+                  <tr>
+                    <td width="30" height="30" align="center" valign="middle" style="width:30px;height:30px;border-radius:15px;background-color:${background};border:${border};text-align:center;">
+                      <img src="${escapeHtml(icon)}" width="15" height="15" alt="" style="display:block;width:15px;height:15px;border:0;margin:0 auto;" />
+                    </td>
+                  </tr>
+                </table>`;
+}
+
+function railStation(kicker: string, title: string, attention = false) {
+  return `<p style="margin:10px 0 0;font-size:9px;line-height:12px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8b94a8;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;text-align:center;">${escapeHtml(
+    kicker,
+  )}</p>
+                <p style="margin:5px 0 0;font-size:13px;line-height:17px;font-weight:700;letter-spacing:-0.01em;color:${
+                  attention ? "#b45309" : INK
+                };font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;text-align:center;">${escapeHtml(
+                  title,
+                )}</p>`;
+}
+
+/**
+ * The consignment route: origin, live position and destination on one line,
+ * with the passed span in electric blue and the rest of the journey dashed.
+ * The stage count decides how far the fill reaches, so the email agrees with
+ * the dispatch board: preparing reaches the first waypoint, in transit the
+ * truck, out for delivery the second, and only delivery reaches the
+ * destination.
+ */
+function routeRail(input: ShipmentEmailInput) {
+  const status = input.status;
+  const progress = shipmentStageCount(status) / SHIPMENT_STAGES.length;
+  const needsAttention = shipmentNeedsAttention(status);
+  const delivered = status === "delivered";
+  const accent = needsAttention ? "#b45309" : ELECTRIC;
+  const icon = (file: string) => `${input.appUrl}/email/${file}`;
+
+  // The vault record carries no position until staff record one; saying so is
+  // better than lending the status word as if it were a place.
+  const position = input.location ?? "No location recorded";
+
+  const originMarker = railMarker({
+    background: ELECTRIC,
+    border: `1px solid ${ELECTRIC}`,
+    icon: icon("route-pin-origin.png"),
+  });
+  const positionMarker = railMarker({
+    background: accent,
+    border: `1px solid ${accent}`,
+    icon: icon("route-truck.png"),
+  });
+  const destinationMarker = railMarker(
+    delivered
+      ? {
+          background: "#047857",
+          border: "1px solid #047857",
+          icon: icon("route-pin-origin.png"),
+        }
+      : {
+          background: "#ffffff",
+          border: "1px solid #c9d9f8",
+          icon: icon("route-pin-destination.png"),
+        },
+  );
 
   return `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border-spacing:0;">
-      <tr>${cells}</tr>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
+      <tr>
+        <td width="33.33%" align="center" valign="top" style="padding:0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+            <tr>
+              <td width="50%" style="padding:0;"></td>
+              <td width="30" valign="middle" style="width:30px;padding:0;">${originMarker}</td>
+              <td width="50%" valign="middle" style="padding:0;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                  <tr>
+                    <td valign="middle" style="padding:0;">${railLine(
+                      progress >= 0.25,
+                      accent,
+                    )}</td>
+                    ${railDiamond(progress >= 0.25, accent)}
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+          ${railStation("Origin", input.shipment.origin)}
+        </td>
+        <td width="33.33%" align="center" valign="top" style="padding:0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+            <tr>
+              <td width="50%" valign="middle" style="padding:0;">${railLine(
+                progress >= 0.5,
+                accent,
+              )}</td>
+              <td width="30" valign="middle" style="width:30px;padding:0;">${positionMarker}</td>
+              <td width="50%" valign="middle" style="padding:0;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                  <tr>
+                    <td valign="middle" style="padding:0;">${railLine(
+                      progress >= 0.75,
+                      accent,
+                    )}</td>
+                    ${railDiamond(progress >= 0.75, accent)}
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+          ${railStation("Position", position, needsAttention)}
+        </td>
+        <td width="33.33%" align="center" valign="top" style="padding:0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+            <tr>
+              <td width="50%" valign="middle" style="padding:0;">${railLine(
+                progress >= 1,
+                accent,
+              )}</td>
+              <td width="30" valign="middle" style="width:30px;padding:0;">${destinationMarker}</td>
+              <td width="50%" style="padding:0;"></td>
+            </tr>
+          </table>
+          ${railStation("Destination", input.shipment.destination)}
+        </td>
+      </tr>
     </table>
     ${
       needsAttention
@@ -289,7 +423,7 @@ export function renderShipmentStatusEmail(input: ShipmentEmailInput) {
       </td>
     </tr>
     <tr>
-      <td class="cv-pad" style="padding:24px 32px 0;">${tracker(input.status)}</td>
+      <td class="cv-pad" style="padding:24px 32px 0;">${routeRail(input)}</td>
     </tr>
     <tr>
       <td class="cv-pad" style="padding:28px 32px 0;">
