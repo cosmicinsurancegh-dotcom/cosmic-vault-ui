@@ -118,20 +118,33 @@ change. Both logins are stored, and the active one is what `gh` and HTTPS
 
 The configuration, decided explicitly rather than assumed: `dev` and `main` take
 changes only through a **pull request**, that pull request's `Vitest unit suite`
-check must pass, and there are **no bypass actors** - nobody, owner included, can
-update either branch outside a green check. That is the strict form on purpose:
-a bypass list is what would let the check be sidestepped, so the value of the
-rule depends on it being empty. The cost is that the direct push to `dev` and
-`main` is gone; every change arrives on a branch and merges through a pull
-request, which is how the release checklist below is written.
+check must pass, **no one may delete either branch**, and there are **no bypass
+actors** - nobody, owner included, can update or delete them outside a green
+check. That is the strict form on purpose: a bypass list is what would let the
+check be sidestepped, so the value of the rule depends on it being empty. The
+cost is that the direct push to `dev` and `main` is gone; every change arrives on
+a branch and merges through a pull request, which is how the release checklist
+below is written.
+
+The deletion rule is not decoration. The repository has _Automatically delete
+head branches_ turned on (`delete_branch_on_merge`), which is what keeps merged
+feature branches from piling up - but a pull request **from** `dev` into `main`
+has `dev` as its head branch, so without the rule the first release pull request
+would delete `dev` on merge. GitHub says branch protection rules and repository
+rules "can also prevent branches being automatically deleted"
+([managing automatic deletion](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-the-automatic-deletion-of-branches)),
+and the deletion rule is that protection; a ruleset that merely _targets_ a
+branch is not enough. The trade is that `dev` and `main` can no longer be deleted
+by anyone, so removing one for good means deleting this rule first (or adding a
+bypass actor for that moment).
 
 **In the UI** - this is what `dev-main-gate` is, named the way GitHub names it:
 Settings → Rules → Rulesets, target `refs/heads/dev` and `refs/heads/main`, rules
-_Require a pull request before merging_ and _Require status checks to pass_,
-`Vitest unit suite` as the required check, Enforcement _Active_, bypass list
-empty. The approving-review count is zero: with two accounts, requiring a review
-would mean a second account has to approve every pull request, and the check is
-the gate wanted here.
+_Require a pull request before merging_, _Require status checks to pass_ and
+_Restrict deletions_, `Vitest unit suite` as the required check, Enforcement
+_Active_, bypass list empty. The approving-review count is zero: with two
+accounts, requiring a review would mean a second account has to approve every
+pull request, and the check is the gate wanted here.
 
 **To recreate or replace it** (the endpoint needs _Administration: write_):
 
@@ -145,6 +158,9 @@ gh api --method POST repos/cosmicinsurancegh-dotcom/cosmic-vault-ui/rulesets --i
     "ref_name": { "include": ["refs/heads/dev", "refs/heads/main"], "exclude": [] }
   },
   "rules": [
+    {
+      "type": "deletion"
+    },
     {
       "type": "pull_request",
       "parameters": {
@@ -171,10 +187,14 @@ JSON
 ```
 
 This body created the live ruleset: the same body extracted from this file was
-piped into `gh api` and returned id `25890320`. Three details are worth keeping:
+piped into `gh api` and returned id `25890320`. Four details are worth keeping:
 
 - It omits `bypass_actors` entirely. That field being absent is what makes the
   rules universal, and adding an entry to it is the only way to loosen them.
+- The deletion rule is the one that stops _Automatically delete head branches_
+  from removing `dev` when a release pull request is merged into `main`. Bare
+  `{ "type": "deletion" }` takes no parameters; it was added to this ruleset
+  after the automatic deletion was turned on, which is when the hazard appeared.
 - `conditions.ref_name` needs `"exclude": []` even though every branch is
   included. Without it the create call fails `422` with a message naming the
   missing parameter (`exclude`); that is exactly how the first attempt failed
@@ -196,16 +216,22 @@ repositories and branches to be created if a check would otherwise prohibit
 it", so at `false` the check applies to a matching branch at creation, not only
 when one is updated.
 
-Verify it, from any account:
+Verify it, from any account - three rules on each branch, and automatic deletion
+on:
 
 ```bash
 gh api repos/cosmicinsurancegh-dotcom/cosmic-vault-ui/rules/branches/dev \
-  --jq '.[] | .type'
+  --jq '[.[] | .type] | sort | join(", ")'
+# -> deletion, pull_request, required_status_checks
+
+gh api repos/cosmicinsurancegh-dotcom/cosmic-vault-ui \
+  --jq '"delete_branch_on_merge=\(.delete_branch_on_merge)"'
+# -> delete_branch_on_merge=true
 ```
 
 Three things decide whether this does what you want:
 
-- With both rules active and no bypass, a direct push to either branch is
+- With these rules active and no bypass, a direct push to either branch is
   refused for every account: a ruleset does not exempt the owner unless a bypass
   entry says so. A pull request is the only way in. If a direct push is ever
   needed again, that is what `bypass_actors` is for - one entry restores it for
@@ -225,7 +251,10 @@ Three things decide whether this does what you want:
 - Who the merge commit ends up authored by decides whether Vercel will build it,
   because that is the only author its Hobby project accepts (see above), and
   GitHub does not hand the authorship to whoever clicks merge - reports differ on
-  whether a squash merge carries the pull request's author or the merger's. If a
+  whether a squash merge carries the pull request's author or the merger's. Both
+  merges recorded here had the same account as author and merger, and came out
+  authored by that account, so the case that would tell them apart is still
+  untested. If a
   merged pull request lands a commit authored by another account, the release
   check says so in Vercel's own words rather than failing quietly, so merge the
   first pull request and read `bun run deploy:status` (the `Smoke the live site`
