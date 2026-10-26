@@ -13,6 +13,7 @@ import {
   PanelHeader,
 } from "@/components/dashboard/PlatformUI";
 import { api } from "@/convex/_generated/api";
+import { resolveShipmentMapUrl } from "@/lib/shipmentMapUrl";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
   SHIPMENT_STATUSES,
@@ -283,12 +284,18 @@ export default function AdminShipmentsPage() {
   ) => {
     setPublishing(true);
     try {
+      const mapUrl = await resolveShipmentMapUrl(
+        row.shipment.origin,
+        row.shipment.destination,
+        new AbortController().signal,
+      );
       const result = await updateStatus({
         shipmentId: row.shipment._id,
         status: input.status,
         location: input.location,
         note: input.note,
         estimatedArrivalAt: input.estimatedArrivalAt,
+        mapUrl,
       });
       const label = SHIPMENT_STATUS_LABELS[input.status].toLowerCase();
       if (result.notified) {

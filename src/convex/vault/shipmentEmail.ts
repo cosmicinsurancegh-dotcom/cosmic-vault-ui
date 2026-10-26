@@ -17,6 +17,9 @@
  * echoes the orbit in the brand mark.
  */
 
+import { renderRouteRail } from "../lib/routeRail";
+import { isStaticMapUrl } from "../lib/staticMap";
+
 export const SHIPMENT_EMAIL_STATUSES = [
   "pending",
   "in_progress",
@@ -59,6 +62,8 @@ export type ShipmentEmailInput = {
   trackingUrl: string;
   /** Absolute origin used for footer links and the mineral photo. */
   appOrigin?: string;
+  /** A Mapbox static image of the route; the rail is drawn without one. */
+  mapUrl?: string;
   companyName?: string;
   supportEmail?: string;
 };
@@ -481,63 +486,12 @@ function rail(
         </table>`;
 }
 
-/** The route's passing line: solid once travelled, dashed while still ahead. */
-function routeLine(filled: boolean, accent: string) {
-  const colour = filled ? accent : PALETTE.line;
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
-                    <tr><td height="2" style="height:2px;line-height:2px;font-size:0;border-top:${
-                      filled ? "2px solid" : "2px dashed"
-                    } ${colour};">&nbsp;</td></tr>
-                  </table>`;
-}
-
-/** The shipping desk's waypoint diamond, filled once the route passes it. */
-function routeDiamond(filled: boolean, accent: string) {
-  return `<td width="9" align="center" valign="middle" style="width:9px;font-family:${FONT_STACK};font-size:8px;line-height:8px;color:${
-    filled ? accent : PALETTE.line
-  };">&#9670;</td>`;
-}
-
-/** A station marker: a pin at either end, the carrier's mode at the live one. */
-function routeMarker({
-  background,
-  border,
-  colour,
-  icon,
-}: {
-  background: string;
-  border: string;
-  colour: string;
-  icon?: string;
-}) {
-  return `<table role="presentation" width="30" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
-                  <tr>
-                    <td width="30" height="30" align="center" valign="middle" style="width:30px;height:30px;border-radius:15px;background-color:${background};border:${border};text-align:center;">${
-                      icon
-                        ? `<img src="${escapeAttribute(
-                            icon,
-                          )}" width="15" height="15" alt="" style="display:block;width:15px;height:15px;border:0;margin:0 auto;" />`
-                        : `<span style="font-family:${FONT_STACK};font-size:10px;line-height:15px;color:${colour};">&#9670;</span>`
-                    }</td>
-                  </tr>
-                </table>`;
-}
-
-function routeStation(kicker: string, title: string, attention = false) {
-  return `<p style="margin:10px 0 0;font-family:${FONT_STACK};font-size:9px;line-height:12px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:${
-    PALETTE.faint
-  };text-align:center;">${escapeHtml(kicker)}</p>
-                <p style="margin:5px 0 0;font-family:${FONT_STACK};font-size:13px;line-height:17px;font-weight:700;letter-spacing:-0.01em;color:${
-                  attention ? PALETTE.amber : PALETTE.ink
-                };text-align:center;">${escapeHtml(title)}</p>`;
-}
-
 /**
- * The consignment route, drawn exactly as the Convex-native shipment email
- * draws it: origin pin, the carrier's mode at the live position, destination
- * pin, with the passed span solid and the rest of the journey dashed. The
- * vault keeps no position, so the middle station says so plainly rather than
- * lending the status word as a place.
+ * The consignment route, drawn by the shared rail the Convex-native email also
+ * uses: origin pin, the carrier's mode at the live position, destination pin,
+ * with the passed span solid and the rest of the journey dashed. The vault
+ * keeps no position, so the middle station says so plainly rather than lending
+ * the status word as a place.
  */
 function routeRail({
   origin,
@@ -552,102 +506,86 @@ function routeRail({
   accent: string;
   appOrigin?: string;
 }) {
-  const progress = ROUTE_PROGRESS[status];
-  const attention = status === "on_hold";
-  const delivered = status === "shipped";
-  const position = "No location recorded";
-  const icon = (file: string) =>
-    appOrigin ? `${appOrigin}/email/${file}` : undefined;
-
-  const originMarker = routeMarker({
-    background: PALETTE.primary,
-    border: `1px solid ${PALETTE.primary}`,
-    colour: PALETTE.white,
-    icon: icon("route-pin-origin.png"),
+  return renderRouteRail({
+    origin,
+    destination,
+    progress: ROUTE_PROGRESS[status],
+    attention: status === "on_hold",
+    delivered: status === "shipped",
+    iconBase: appOrigin,
+    fontStack: FONT_STACK,
+    tone: {
+      origin: PALETTE.primary,
+      accent,
+      attention: PALETTE.amber,
+      track: PALETTE.line,
+      ink: PALETTE.ink,
+      faint: PALETTE.faint,
+      white: PALETTE.white,
+      surface: PALETTE.card,
+      outline: PALETTE.primaryLine,
+      outlineInk: PALETTE.primaryDeep,
+      emerald: PALETTE.emerald,
+    },
   });
-  const positionMarker = routeMarker({
-    background: accent,
-    border: `1px solid ${accent}`,
-    colour: PALETTE.white,
-    icon: icon("route-truck.png"),
-  });
-  const destinationMarker = routeMarker(
-    delivered
-      ? {
-          background: PALETTE.emerald,
-          border: `1px solid ${PALETTE.emerald}`,
-          colour: PALETTE.white,
-          icon: icon("route-pin-origin.png"),
-        }
-      : {
-          background: PALETTE.card,
-          border: `1px solid ${PALETTE.primaryLine}`,
-          colour: PALETTE.primaryDeep,
-          icon: icon("route-pin-destination.png"),
-        },
-  );
+}
 
-  return `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
-      <tr>
-        <td width="33.33%" align="center" valign="top" style="padding:0;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-            <tr>
-              <td width="50%" style="padding:0;"></td>
-              <td width="30" valign="middle" style="width:30px;padding:0;">${originMarker}</td>
-              <td width="50%" valign="middle" style="padding:0;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                  <tr>
-                    <td valign="middle" style="padding:0;">${routeLine(
-                      progress >= 0.25,
-                      accent,
-                    )}</td>
-                    ${routeDiamond(progress >= 0.25, accent)}
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-          ${routeStation("Origin", origin)}
-        </td>
-        <td width="33.33%" align="center" valign="top" style="padding:0;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-            <tr>
-              <td width="50%" valign="middle" style="padding:0;">${routeLine(
-                progress >= 0.5,
-                accent,
-              )}</td>
-              <td width="30" valign="middle" style="width:30px;padding:0;">${positionMarker}</td>
-              <td width="50%" valign="middle" style="padding:0;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                  <tr>
-                    <td valign="middle" style="padding:0;">${routeLine(
-                      progress >= 0.75,
-                      accent,
-                    )}</td>
-                    ${routeDiamond(progress >= 0.75, accent)}
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-          ${routeStation("Position", position, attention)}
-        </td>
-        <td width="33.33%" align="center" valign="top" style="padding:0;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-            <tr>
-              <td width="50%" valign="middle" style="padding:0;">${routeLine(
-                progress >= 1,
-                accent,
-              )}</td>
-              <td width="30" valign="middle" style="width:30px;padding:0;">${destinationMarker}</td>
-              <td width="50%" style="padding:0;"></td>
-            </tr>
-          </table>
-          ${routeStation("Destination", destination)}
-        </td>
-      </tr>
-    </table>`;
+/**
+ * The route: a real map when one was resolved for the consignment, otherwise
+ * the drawn rail. The map is a plain image - email clients run no scripts -
+ * and it links to the member's tracking view when that link is usable.
+ */
+function routeFigure({
+  origin,
+  destination,
+  status,
+  accent,
+  appOrigin,
+  mapUrl,
+  trackingUrl,
+}: {
+  origin: string;
+  destination: string;
+  status: ShipmentEmailStatus;
+  accent: string;
+  appOrigin?: string;
+  mapUrl?: string;
+  trackingUrl?: string;
+}) {
+  if (!isStaticMapUrl(mapUrl)) {
+    return routeRail({ origin, destination, status, accent, appOrigin });
+  }
+
+  const link = safeUrl(trackingUrl);
+  const image = `<img src="${escapeAttribute(
+    mapUrl,
+  )}" width="240" height="154" alt="Map of the route from ${escapeAttribute(
+    origin,
+  )} to ${escapeAttribute(
+    destination,
+  )}" style="display:block;width:100%;max-width:240px;height:auto;border:1px solid ${PALETTE.line};border-radius:4px;" />`;
+  const figure = link
+    ? `<a href="${escapeAttribute(link)}" style="text-decoration:none;">${image}</a>`
+    : image;
+
+  return `${figure}
+                <p style="margin:8px 0 0;font-family:${FONT_STACK};font-size:8px;line-height:12px;letter-spacing:0.04em;color:${PALETTE.faint};">Mapbox &nbsp;&middot;&nbsp; &copy; OpenStreetMap contributors</p>`;
+}
+
+/**
+ * The brand mark, as a PNG: Gmail strips SVG. Without an app origin there is
+ * nothing to load, so the tile falls back to the letter.
+ */
+function brandMark(appOrigin: string | undefined, size: number) {
+  const base = appOrigin
+    ? `<img src="${escapeAttribute(
+        `${appOrigin}/email/logo-mark.png`,
+      )}" width="${size}" height="${size}" alt="" style="display:block;width:${size}px;height:${size}px;border:0;" />`
+    : "C";
+  const background = appOrigin ? "transparent" : PALETTE.primary;
+  return `<td width="${size}" height="${size}" align="center" valign="middle" style="width:${size}px;height:${size}px;border-radius:4px;background-color:${background};text-align:center;font-family:${FONT_STACK};font-size:${Math.round(
+    size / 2,
+  )}px;font-weight:700;color:${PALETTE.white};">${base}</td>`;
 }
 
 function chip(
@@ -825,6 +763,7 @@ export function renderShipmentUpdateEmail(
         .cv-hero { padding: 26px 20px 24px !important; }
         .cv-title { font-size: 23px !important; line-height: 29px !important; }
         .cv-service { display: block !important; width: 100% !important; padding: 0 0 14px 0 !important; }
+        .cv-split { display: block !important; width: 100% !important; padding: 0 0 12px 0 !important; }
         .cv-step-title { font-size: 10px !important; }
         .cv-step-copy { font-size: 8px !important; }
       }
@@ -838,11 +777,6 @@ export function renderShipmentUpdateEmail(
       <tr>
         <td align="center" style="padding:26px 12px;">
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;border-collapse:collapse;background-color:${PALETTE.card};border:1px solid ${PALETTE.line};border-radius:4px;overflow:hidden;">
-
-            <!-- Brand rule: the amber orbit from the mark -->
-            <tr>
-              <td height="3" style="height:3px;line-height:3px;font-size:0;background-color:#FFC400;">&nbsp;</td>
-            </tr>
 
             <!-- Utility strip -->
             <tr>
@@ -868,7 +802,7 @@ export function renderShipmentUpdateEmail(
                     <td valign="middle">
                       <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                         <tr>
-                          <td width="30" height="30" align="center" valign="middle" style="width:30px;height:30px;border-radius:4px;background-color:${PALETTE.primary};text-align:center;font-family:${FONT_STACK};font-size:14px;font-weight:700;color:${PALETTE.white};">C</td>
+                          ${brandMark(appOrigin, 30)}
                           <td style="padding-left:10px;">
                             <p style="margin:0;font-family:${FONT_STACK};font-size:15px;line-height:17px;font-weight:700;letter-spacing:-0.02em;color:${PALETTE.ink};">${escapeHtml(
                               company,
@@ -914,20 +848,66 @@ export function renderShipmentUpdateEmail(
               </td>
             </tr>
 
-            <!-- Route -->
+            <!-- Route and consignment, side by side -->
             <tr>
               <td class="cv-pad" style="padding:24px 28px 0;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;border:1px solid ${PALETTE.line};border-radius:4px;background-color:${PALETTE.card};">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                   <tr>
-                    <td style="padding:18px 18px 16px;">
-                      ${sectionLabel("Consignment route")}
-                      ${routeRail({
-                        origin: originCity,
-                        destination: destinationCity,
-                        status: input.status,
-                        accent,
-                        appOrigin,
-                      })}
+                    <!-- The route: a map when one was resolved, otherwise the rail. -->
+                    <td class="cv-split" width="41%" valign="top" style="width:41%;padding:0 10px 0 0;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;border:1px solid ${PALETTE.line};border-radius:4px;background-color:${PALETTE.card};">
+                        <tr>
+                          <td style="padding:16px 14px 14px;">
+                            ${sectionLabel("Consignment route")}
+                            ${routeFigure({
+                              origin: originCity,
+                              destination: destinationCity,
+                              status: input.status,
+                              accent,
+                              appOrigin,
+                              mapUrl: input.mapUrl,
+                              trackingUrl,
+                            })}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                    <!-- The consignment itself: the wider column. -->
+                    <td class="cv-split" width="59%" valign="top" style="width:59%;padding:0;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;border:1px solid ${PALETTE.line};border-radius:4px;background-color:${PALETTE.card};">
+                        <tr>
+                          <td style="padding:16px 16px 12px;">
+                            ${sectionLabel("Your consignment")}
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                              <tr>
+                                ${photoCell(input, appOrigin)}
+                                <td valign="middle">
+                                  <p style="margin:0;font-family:${FONT_STACK};font-size:13px;line-height:18px;font-weight:700;letter-spacing:-0.01em;color:${PALETTE.ink};">${escapeHtml(
+                                    input.mineralName,
+                                  )}</p>
+                                  <p style="margin:3px 0 0;font-family:${FONT_STACK};font-size:10px;line-height:15px;color:${PALETTE.muted};">${escapeHtml(
+                                    input.category,
+                                  )} &nbsp;&middot;&nbsp; ${escapeHtml(input.weightLabel)}</p>
+                                  <p style="margin:2px 0 0;font-family:${FONT_STACK};font-size:9px;line-height:14px;color:${PALETTE.faint};">${escapeHtml(
+                                    input.mineralType,
+                                  )} &nbsp;&middot;&nbsp; ${escapeHtml(input.vaultId)}</p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding:0 16px 14px;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;border-top:1px solid ${PALETTE.lineSoft};">
+                              ${detailRow("Carrier", `${input.carrier} \u00b7 ${input.service}`)}
+                              ${detailRow("Tracking number", input.trackingNumber)}
+                              ${detailRow("Origin", input.origin)}
+                              ${detailRow("Destination", input.destination)}
+                              ${detailRow("Estimated delivery", eta, true)}
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
                     </td>
                   </tr>
                 </table>
@@ -953,46 +933,6 @@ export function renderShipmentUpdateEmail(
                             )}</p>
                           </td>
                         </tr>
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-
-            <!-- Consignment -->
-            <tr>
-              <td class="cv-pad" style="padding:16px 28px 0;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;border:1px solid ${PALETTE.line};border-radius:4px;background-color:${PALETTE.card};">
-                  <tr>
-                    <td style="padding:18px 18px 14px;">
-                      ${sectionLabel("Your consignment")}
-                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                        <tr>
-                          ${photoCell(input, appOrigin)}
-                          <td valign="middle">
-                            <p style="margin:0;font-family:${FONT_STACK};font-size:13px;line-height:18px;font-weight:700;letter-spacing:-0.01em;color:${PALETTE.ink};">${escapeHtml(
-                              input.mineralName,
-                            )}</p>
-                            <p style="margin:3px 0 0;font-family:${FONT_STACK};font-size:10px;line-height:15px;color:${PALETTE.muted};">${escapeHtml(
-                              input.category,
-                            )} &nbsp;&middot;&nbsp; ${escapeHtml(input.weightLabel)}</p>
-                            <p style="margin:2px 0 0;font-family:${FONT_STACK};font-size:9px;line-height:14px;color:${PALETTE.faint};">${escapeHtml(
-                              input.mineralType,
-                            )} &nbsp;&middot;&nbsp; ${escapeHtml(input.vaultId)}</p>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:0 18px 16px;">
-                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;border-top:1px solid ${PALETTE.lineSoft};">
-                        ${detailRow("Carrier", `${input.carrier} \u00b7 ${input.service}`)}
-                        ${detailRow("Tracking number", input.trackingNumber)}
-                        ${detailRow("Origin", input.origin)}
-                        ${detailRow("Destination", input.destination)}
-                        ${detailRow("Estimated delivery", eta, true)}
                       </table>
                     </td>
                   </tr>
@@ -1055,7 +995,7 @@ export function renderShipmentUpdateEmail(
                     <td valign="top" width="46%" style="padding:0 18px 18px 0;">
                       <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                         <tr>
-                          <td width="28" height="28" align="center" valign="middle" style="width:28px;height:28px;border-radius:4px;background-color:${PALETTE.primary};text-align:center;font-family:${FONT_STACK};font-size:13px;font-weight:700;color:${PALETTE.white};">C</td>
+                          ${brandMark(appOrigin, 28)}
                           <td style="padding-left:9px;">
                             <p style="margin:0;font-family:${FONT_STACK};font-size:14px;line-height:16px;font-weight:700;letter-spacing:-0.02em;color:${PALETTE.white};">${escapeHtml(
                               company,

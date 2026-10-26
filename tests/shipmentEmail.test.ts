@@ -4,6 +4,7 @@ import {
   SHIPMENT_EMAIL_STATUSES,
 } from "../src/convex/vault/shipmentEmail";
 import { renderShipmentStatusEmail } from "../src/convex/lib/shipmentEmail";
+import { staticMapUrl } from "../src/convex/lib/staticMap";
 import { DEMO_MINERALS } from "../src/lib/vault/demoData";
 import {
   previewShipmentEmail,
@@ -129,6 +130,8 @@ describe("shipment update email", () => {
     const email = renderShipmentUpdateEmail({
       ...args,
       note: '<script>alert("xss")</script>',
+      originCity: '<img src=x onerror="alert(1)">',
+      destinationCity: "A & B",
       trackingUrl: "javascript:alert(1)",
       appOrigin: "javascript:alert(1)",
     });
@@ -136,6 +139,10 @@ describe("shipment update email", () => {
     expect(email.html).not.toContain("<script>");
     expect(email.html).toContain("&lt;script&gt;");
     expect(email.html).not.toContain("javascript:");
+    // The shared route rail escapes the place names it prints.
+    expect(email.html).not.toContain("<img src=x");
+    expect(email.html).toContain("&lt;img src=x onerror=");
+    expect(email.html).toContain("A &amp; B");
     // Plain text keeps the member's words verbatim - it is not HTML.
     expect(email.text).toContain('<script>alert("xss")</script>');
   });
@@ -298,6 +305,64 @@ describe("shipment update email", () => {
 
       expect(rail(vault.html)).toEqual(rail(convex.html));
     }
+  });
+
+  it("shows a real map when one was resolved, and the rail otherwise", () => {
+    const mineral = demoMineral("in_transit");
+    const args = shipmentEmailArgs(mineral, "in_transit", "")!;
+    const map = staticMapUrl({
+      origin: { lat: 51.5072, lon: -0.1276 },
+      destination: { lat: 51.4545, lon: -2.5879 },
+      token: "pk.test",
+    })!;
+
+    const mapped = previewShipmentEmail(args, {
+      appOrigin: ORIGIN,
+      mapUrl: map.url,
+    });
+    expect(mapped.html).toContain("api.mapbox.com");
+    expect(mapped.html).toContain("Map of the route from");
+    expect(mapped.html).toContain("OpenStreetMap contributors");
+    // The map takes the place of the rail, not a second copy of it: the
+    // station markers (the 30px discs) are gone. The consignment card below
+    // still lists Origin and Destination as rows, so those words remain.
+    expect(mapped.html).not.toContain(">Position<");
+    expect(mapped.html).not.toContain("border-radius:15px");
+
+    // Anything that is not a Mapbox image is refused and the rail is drawn.
+    const unsafe = previewShipmentEmail(args, {
+      appOrigin: ORIGIN,
+      mapUrl: "https://tracker.example/pixel.png",
+    });
+    expect(unsafe.html).not.toContain("tracker.example");
+    expect(unsafe.html).toContain(">Position<");
+
+    // The Convex-native email makes the same choice from the same URL.
+    const convexMapped = renderShipmentStatusEmail({
+      recipientName: "David Mensah",
+      companyName: "Cosmic Vault Insurance",
+      supportEmail: "concierge@cosmicvault.co",
+      appUrl: ORIGIN,
+      updatedAt: "24 Oct 2026",
+      status: "in_transit",
+      mapUrl: map.url,
+      mineral: {
+        name: args.mineralName,
+        reference: args.vaultId,
+        category: args.category,
+        quantity: args.weightLabel,
+        declaredValue: "",
+      },
+      shipment: {
+        reference: args.trackingNumber,
+        carrier: args.carrier,
+        trackingNumber: args.trackingNumber,
+        origin: args.originCity,
+        destination: args.destinationCity,
+      },
+    });
+    expect(convexMapped.html).toContain("api.mapbox.com");
+    expect(convexMapped.html).not.toContain(">Origin<");
   });
 
   it("returns nothing for a mineral that is still in the vault", () => {

@@ -37,6 +37,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
+import { resolveShipmentMapUrl } from "@/lib/shipmentMapUrl";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
   SHIPMENT_STATUSES,
@@ -1497,9 +1498,17 @@ function MineralDetailDialog({
             description={`${mineral.name} · ${mineral.reference}. The owner is emailed the route, carrier and dates as soon as it is booked.`}
             submitLabel="Book shipment"
             onSubmit={async (values) => {
+              /* Geocode here: the mutation renders the email and cannot call
+                 out. Without a map the email draws its rail instead. */
+              const mapUrl = await resolveShipmentMapUrl(
+                values.origin,
+                values.destination,
+                new AbortController().signal,
+              );
               await createShipment({
                 mineralId: mineral._id,
                 shipment: values,
+                mapUrl,
               });
               toast.success("Shipment booked.", {
                 description: assignee
