@@ -1,6 +1,7 @@
 import { api } from "@/convex/_generated/api";
+import { resolveShipmentMapUrl } from "@/lib/shipmentMapUrl";
 import { useAction } from "convex/react";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { shipmentEmailArgs, type ShipmentEmailDelivery } from "./shipmentEmail";
 import { updateShipmentStatus } from "./store";
 import type { Mineral, ShippingStatus, VaultActor } from "./types";
@@ -34,6 +35,33 @@ export function describeShipmentEmailOutcome(outcome: ShipmentEmailOutcome) {
   }
 }
 
+/**
+ * The route image for a consignment preview. It arrives a beat after the
+ * message does - geocoding is two network lookups - and until then the preview
+ * shows the rail, exactly as an unconfigured send would.
+ */
+export function useShipmentMapUrl(origin: string, destination: string) {
+  const key = `${origin}\u0000${destination}`;
+  const [resolved, setResolved] = useState<{
+    key: string;
+    url?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!origin.trim() || !destination.trim()) return;
+    const controller = new AbortController();
+    const current = key;
+    resolveShipmentMapUrl(origin, destination, controller.signal).then(
+      (url) => {
+        if (!controller.signal.aborted) setResolved({ key: current, url });
+      },
+    );
+    return () => controller.abort();
+  }, [origin, destination, key]);
+
+  return resolved?.key === key ? resolved.url : undefined;
+}
+
 export function useShipmentEmailSender() {
   const sendUpdate = useAction(api.shipmentEmailDelivery.sendUpdate);
 
@@ -45,7 +73,18 @@ export function useShipmentEmailSender() {
     ): Promise<ShipmentEmailDelivery> => {
       const args = shipmentEmailArgs(mineral, status, note);
       if (!args) throw new Error("No shipment exists for this consignment.");
-      const result = (await sendUpdate(args)) as ShipmentEmailDelivery;
+      /* The map is resolved here because the server side of the send renders
+         inside a mutation and cannot geocode. A missing map never blocks the
+         email: the template draws its rail instead. */
+      const mapUrl = await resolveShipmentMapUrl(
+        args.originCity,
+        args.destinationCity,
+        new AbortController().signal,
+      );
+      const result = (await sendUpdate({
+        ...args,
+        mapUrl,
+      })) as ShipmentEmailDelivery;
       return result;
     },
     [sendUpdate],

@@ -56,6 +56,8 @@ export const sendUpdate = action({
     note: v.optional(v.string()),
     updatedAt: v.number(),
     events: v.array(shipmentEventValidator),
+    /** A Mapbox route image, resolved in the staff browser. */
+    mapUrl: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<ShipmentEmailDeliveryResult> => {
     const gate = await ctx.runQuery(internal.shipmentEmails.sendGate, {});

@@ -1,3 +1,5 @@
+import { renderRouteRail } from "./routeRail";
+import { isStaticMapUrl } from "./staticMap";
 import {
   SHIPMENT_STAGES,
   SHIPMENT_STATUS_LABELS,
@@ -51,6 +53,8 @@ export type ShipmentEmailInput = {
   previousStatus?: ShipmentStatus;
   location?: string;
   note?: string;
+  /** A Mapbox static image of the route; the rail is drawn without one. */
+  mapUrl?: string;
   mineral: EmailMineral;
   policy?: EmailPolicy;
   shipment: EmailShipment;
@@ -151,53 +155,7 @@ function sectionTitle(title: string) {
 }
 
 const RAIL_TRACK = "#c3cddf";
-
-/** One hairline of the route: solid once passed, dashed while still ahead. */
-function railLine(filled: boolean, accent: string) {
-  const colour = filled ? accent : RAIL_TRACK;
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
-                    <tr><td height="2" style="height:2px;line-height:2px;font-size:0;border-top:${
-                      filled ? "2px solid" : "2px dashed"
-                    } ${colour};">&nbsp;</td></tr>
-                  </table>`;
-}
-
-/** The shipping desk's waypoint diamond, filled once the route passes it. */
-function railDiamond(filled: boolean, accent: string) {
-  return `<td width="9" align="center" valign="middle" style="width:9px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:8px;line-height:8px;color:${
-    filled ? accent : RAIL_TRACK
-  };">&#9670;</td>`;
-}
-
-/** A station marker: a pin at either end, the carrier's mode at the live one. */
-function railMarker({
-  background,
-  border,
-  icon,
-}: {
-  background: string;
-  border: string;
-  icon: string;
-}) {
-  return `<table role="presentation" width="30" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
-                  <tr>
-                    <td width="30" height="30" align="center" valign="middle" style="width:30px;height:30px;border-radius:15px;background-color:${background};border:${border};text-align:center;">
-                      <img src="${escapeHtml(icon)}" width="15" height="15" alt="" style="display:block;width:15px;height:15px;border:0;margin:0 auto;" />
-                    </td>
-                  </tr>
-                </table>`;
-}
-
-function railStation(kicker: string, title: string, attention = false) {
-  return `<p style="margin:10px 0 0;font-size:9px;line-height:12px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8b94a8;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;text-align:center;">${escapeHtml(
-    kicker,
-  )}</p>
-                <p style="margin:5px 0 0;font-size:13px;line-height:17px;font-weight:700;letter-spacing:-0.01em;color:${
-                  attention ? "#b45309" : INK
-                };font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;text-align:center;">${escapeHtml(
-                  title,
-                )}</p>`;
-}
+const RAIL_FONT = "'Helvetica Neue',Helvetica,Arial,sans-serif";
 
 /**
  * The consignment route: origin, live position and destination on one line,
@@ -205,116 +163,58 @@ function railStation(kicker: string, title: string, attention = false) {
  * The stage count decides how far the fill reaches, so the email agrees with
  * the dispatch board: preparing reaches the first waypoint, in transit the
  * truck, out for delivery the second, and only delivery reaches the
- * destination.
+ * destination. The drawing itself is shared with the vault email, so the two
+ * templates cannot drift apart.
  */
 function routeRail(input: ShipmentEmailInput) {
   const status = input.status;
-  const progress = shipmentStageCount(status) / SHIPMENT_STAGES.length;
   const needsAttention = shipmentNeedsAttention(status);
-  const delivered = status === "delivered";
   const accent = needsAttention ? "#b45309" : ELECTRIC;
-  const icon = (file: string) => `${input.appUrl}/email/${file}`;
 
-  // The vault record carries no position until staff record one; saying so is
-  // better than lending the status word as if it were a place.
-  const position = input.location ?? "No location recorded";
-
-  const originMarker = railMarker({
-    background: ELECTRIC,
-    border: `1px solid ${ELECTRIC}`,
-    icon: icon("route-pin-origin.png"),
-  });
-  const positionMarker = railMarker({
-    background: accent,
-    border: `1px solid ${accent}`,
-    icon: icon("route-truck.png"),
-  });
-  const destinationMarker = railMarker(
-    delivered
-      ? {
-          background: "#047857",
-          border: "1px solid #047857",
-          icon: icon("route-pin-origin.png"),
-        }
-      : {
-          background: "#ffffff",
-          border: "1px solid #c9d9f8",
-          icon: icon("route-pin-destination.png"),
+  const rail = isStaticMapUrl(input.mapUrl)
+    ? `<img src="${escapeHtml(
+        input.mapUrl,
+      )}" width="480" height="260" alt="Map of the route from ${escapeHtml(
+        input.shipment.origin,
+      )} to ${escapeHtml(
+        input.shipment.destination,
+      )}" style="display:block;width:100%;max-width:480px;height:auto;border:1px solid ${LINE};border-radius:4px;" />
+    <p style="margin:8px 0 0;font-size:9px;line-height:13px;letter-spacing:0.04em;color:${MUTED};font-family:${RAIL_FONT};">Mapbox &nbsp;&middot;&nbsp; &copy; OpenStreetMap contributors</p>`
+    : renderRouteRail({
+        origin: input.shipment.origin,
+        destination: input.shipment.destination,
+        position: input.location,
+        progress: shipmentStageCount(status) / SHIPMENT_STAGES.length,
+        attention: needsAttention,
+        delivered: status === "delivered",
+        iconBase: input.appUrl,
+        fontStack: RAIL_FONT,
+        tone: {
+          origin: ELECTRIC,
+          accent,
+          attention: "#b45309",
+          track: RAIL_TRACK,
+          ink: INK,
+          faint: "#8b94a8",
+          white: "#ffffff",
+          surface: "#ffffff",
+          outline: "#c9d9f8",
+          outlineInk: ELECTRIC,
+          emerald: "#047857",
         },
-  );
+      });
 
-  return `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;">
-      <tr>
-        <td width="33.33%" align="center" valign="top" style="padding:0;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-            <tr>
-              <td width="50%" style="padding:0;"></td>
-              <td width="30" valign="middle" style="width:30px;padding:0;">${originMarker}</td>
-              <td width="50%" valign="middle" style="padding:0;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                  <tr>
-                    <td valign="middle" style="padding:0;">${railLine(
-                      progress >= 0.25,
-                      accent,
-                    )}</td>
-                    ${railDiamond(progress >= 0.25, accent)}
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-          ${railStation("Origin", input.shipment.origin)}
-        </td>
-        <td width="33.33%" align="center" valign="top" style="padding:0;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-            <tr>
-              <td width="50%" valign="middle" style="padding:0;">${railLine(
-                progress >= 0.5,
-                accent,
-              )}</td>
-              <td width="30" valign="middle" style="width:30px;padding:0;">${positionMarker}</td>
-              <td width="50%" valign="middle" style="padding:0;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                  <tr>
-                    <td valign="middle" style="padding:0;">${railLine(
-                      progress >= 0.75,
-                      accent,
-                    )}</td>
-                    ${railDiamond(progress >= 0.75, accent)}
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-          ${railStation("Position", position, needsAttention)}
-        </td>
-        <td width="33.33%" align="center" valign="top" style="padding:0;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-            <tr>
-              <td width="50%" valign="middle" style="padding:0;">${railLine(
-                progress >= 1,
-                accent,
-              )}</td>
-              <td width="30" valign="middle" style="width:30px;padding:0;">${destinationMarker}</td>
-              <td width="50%" style="padding:0;"></td>
-            </tr>
-          </table>
-          ${railStation("Destination", input.shipment.destination)}
-        </td>
-      </tr>
-    </table>
-    ${
-      needsAttention
-        ? `<p style="margin:14px 0 0;font-size:11px;line-height:18px;color:${MUTED};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${
-            status === "customs_hold"
-              ? "Your shipment is paused at customs. We will notify you the moment it clears."
-              : status === "delayed"
-                ? "The carrier has flagged a delay. Revised timing appears below."
-                : "This shipment will not progress further. Our team is available if you need help."
-          }</p>`
-        : ""
-    }`;
+  if (!needsAttention) return rail;
+
+  const note =
+    status === "customs_hold"
+      ? "Your shipment is paused at customs. We will notify you the moment it clears."
+      : status === "delayed"
+        ? "The carrier has flagged a delay. Revised timing appears below."
+        : "This shipment will not progress further. Our team is available if you need help.";
+
+  return `${rail}
+    <p style="margin:14px 0 0;font-size:11px;line-height:18px;color:${MUTED};font-family:${RAIL_FONT};">${note}</p>`;
 }
 
 function shell({

@@ -8,7 +8,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatDateTime } from "@/lib/format";
-import { previewShipmentEmail, shipmentEmailArgs } from "@/lib/vault/shipmentEmail";
+import {
+  previewShipmentEmail,
+  shipmentEmailArgs,
+} from "@/lib/vault/shipmentEmail";
+import { useShipmentMapUrl } from "@/lib/vault/useShipmentEmail";
 import type { Mineral, ShippingStatus } from "@/lib/vault/types";
 import { SHIPPING_STATUS_META } from "@/lib/vault/types";
 import { useConvex } from "convex/react";
@@ -56,9 +60,13 @@ export function ShipmentEmailPreview({
     () => shipmentEmailArgs(mineral, status, note),
     [mineral, status, note],
   );
+  const mapUrl = useShipmentMapUrl(
+    args?.originCity ?? "",
+    args?.destinationCity ?? "",
+  );
   const email = useMemo(
-    () => (args ? previewShipmentEmail(args) : null),
-    [args],
+    () => (args ? previewShipmentEmail(args, { mapUrl }) : null),
+    [args, mapUrl],
   );
   // Read the latest delivery attempt imperatively: a deployment that has not
   // yet received the shipment-email functions must still preview the message

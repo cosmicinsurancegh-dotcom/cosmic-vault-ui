@@ -1,12 +1,14 @@
 import { v } from "convex/values";
+import { internalMutation, internalQuery, query } from "./_generated/server";
 import {
-  internalMutation,
-  internalQuery,
-  query,
-} from "./_generated/server";
-import { getViewer, isStaffRole, PERMISSIONS, requirePermission } from "./lib/authz";
+  getViewer,
+  isStaffRole,
+  PERMISSIONS,
+  requirePermission,
+} from "./lib/authz";
 import { enforceRateLimit, RATE_LIMITS } from "./lib/rateLimit";
 import { cleanText, isValidEmail, requiredText } from "./lib/refs";
+import { isStaticMapUrl } from "./lib/staticMap";
 import { getSettings } from "./lib/settings";
 import { renderShipmentUpdateEmail } from "./vault/shipmentEmail";
 
@@ -57,6 +59,8 @@ const sendArgs = {
   note: v.optional(v.string()),
   updatedAt: v.number(),
   events: v.array(shipmentEventValidator),
+  /** Only a Mapbox image URL reaches the email; anything else is dropped. */
+  mapUrl: v.optional(v.string()),
 };
 
 function requireTimestamp(value: number, field: string) {
@@ -83,8 +87,11 @@ export const queue = internalMutation({
   args: { ...sendArgs, sentBy: v.id("users") },
   handler: async (ctx, args) => {
     const memberName = requiredText(args.memberName, "Recipient name", 120);
-    const memberEmail = requiredText(args.memberEmail, "Recipient email", 254)
-      .toLowerCase();
+    const memberEmail = requiredText(
+      args.memberEmail,
+      "Recipient email",
+      254,
+    ).toLowerCase();
     if (!isValidEmail(memberEmail)) {
       throw new Error("Add a valid recipient email address.");
     }
@@ -97,13 +104,11 @@ export const queue = internalMutation({
 
     const settings = await getSettings(ctx);
     const siteUrl = (process.env.SITE_URL ?? "").trim().replace(/\/+$/, "");
-    const events = args.events
-      .slice(0, 12)
-      .map((event) => ({
-        status: event.status,
-        at: requireTimestamp(event.at, "Event time"),
-        note: event.note ? cleanText(event.note, "Event note", 600) : undefined,
-      }));
+    const events = args.events.slice(0, 12).map((event) => ({
+      status: event.status,
+      at: requireTimestamp(event.at, "Event time"),
+      note: event.note ? cleanText(event.note, "Event note", 600) : undefined,
+    }));
 
     const rendered = renderShipmentUpdateEmail({
       memberName,
@@ -122,7 +127,11 @@ export const queue = internalMutation({
       origin: requiredText(args.origin, "Origin", 400),
       destination: requiredText(args.destination, "Destination", 400),
       originCity: requiredText(args.originCity, "Origin city", 80),
-      destinationCity: requiredText(args.destinationCity, "Destination city", 80),
+      destinationCity: requiredText(
+        args.destinationCity,
+        "Destination city",
+        80,
+      ),
       estimatedDelivery: requireTimestamp(
         args.estimatedDelivery,
         "Estimated delivery",
@@ -131,6 +140,7 @@ export const queue = internalMutation({
       note: args.note ? cleanText(args.note, "Update note", 600) : undefined,
       updatedAt: requireTimestamp(args.updatedAt, "Update time"),
       events,
+      mapUrl: isStaticMapUrl(args.mapUrl) ? args.mapUrl : undefined,
       trackingUrl: siteUrl ? `${siteUrl}/dashboard/shipments` : "",
       appOrigin: siteUrl || undefined,
       companyName: settings.companyName,
@@ -213,4 +223,3 @@ export const lastForTracking = query({
     };
   },
 });
-

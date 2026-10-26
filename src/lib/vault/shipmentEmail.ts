@@ -35,6 +35,8 @@ export type ShipmentEmailActionArgs = {
   note?: string;
   updatedAt: number;
   events: ShipmentEmailEvent[];
+  /** The Mapbox route image, resolved where the two places can be geocoded. */
+  mapUrl?: string;
 };
 
 export type ShipmentEmailDelivery = {
@@ -100,7 +102,12 @@ export function shipmentEmailArgs(
 
 export function previewShipmentEmail(
   args: ShipmentEmailActionArgs,
-  options: { appOrigin?: string; companyName?: string; supportEmail?: string } = {},
+  options: {
+    appOrigin?: string;
+    companyName?: string;
+    supportEmail?: string;
+    mapUrl?: string;
+  } = {},
 ): RenderedShipmentEmail {
   const appOrigin =
     options.appOrigin ??
@@ -110,6 +117,7 @@ export function previewShipmentEmail(
     ...args,
     trackingUrl: appOrigin ? `${appOrigin}/dashboard/shipments` : "",
     appOrigin,
+    mapUrl: options.mapUrl ?? args.mapUrl,
     companyName: options.companyName,
     supportEmail: options.supportEmail,
   });

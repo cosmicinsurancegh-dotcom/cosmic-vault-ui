@@ -40,6 +40,7 @@ import {
   renderShipmentStatusEmail,
 } from "./lib/shipmentEmail";
 import { SHIPMENT_STATUS_LABELS, type ShipmentStatus } from "./lib/shipments";
+import { isStaticMapUrl } from "./lib/staticMap";
 import { getSettings } from "./lib/settings";
 import {
   mineralCoverageValidator,
@@ -224,6 +225,8 @@ async function insertShipment(
   mineral: Doc<"minerals">,
   input: ReturnType<typeof readShipmentDetails>,
   note: string,
+  /** The Mapbox route image, resolved in the staff browser. */
+  mapUrl?: string,
 ) {
   const now = Date.now();
   const shipmentReference = reference("SHP");
@@ -286,6 +289,7 @@ async function insertShipment(
         status: input.status,
         location: input.currentLocation,
         note: input.notes,
+        mapUrl: isStaticMapUrl(mapUrl) ? mapUrl : undefined,
         companyName: settings.companyName,
         supportEmail: settings.supportEmail,
         appUrl: appUrl(),
@@ -734,6 +738,8 @@ export const createShipment = mutation({
   args: {
     mineralId: v.id("minerals"),
     shipment: shipmentDetailsValidator,
+    /** A Mapbox route image; only a Mapbox URL is ever embedded. */
+    mapUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const viewer = await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
@@ -756,6 +762,7 @@ export const createShipment = mutation({
       mineral,
       input,
       "Shipment recorded by the logistics desk.",
+      isStaticMapUrl(args.mapUrl) ? args.mapUrl : undefined,
     );
 
     const pending = await openRequest(ctx, mineral._id);
@@ -1147,6 +1154,8 @@ export const updateShipmentStatus = mutation({
     note: v.optional(v.string()),
     /** A new delivery estimate; `null` clears it, omit it to leave it alone. */
     estimatedArrivalAt: v.optional(v.union(v.number(), v.null())),
+    /** A Mapbox route image; only a Mapbox URL is ever embedded. */
+    mapUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const viewer = await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
@@ -1249,6 +1258,7 @@ export const updateShipmentStatus = mutation({
           previousStatus: shipment.status as ShipmentStatus,
           location,
           note,
+          mapUrl: isStaticMapUrl(args.mapUrl) ? args.mapUrl : undefined,
           companyName: settings.companyName,
           supportEmail: settings.supportEmail,
           appUrl: appUrl(),
