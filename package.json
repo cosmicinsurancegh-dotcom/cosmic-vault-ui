@@ -11,6 +11,7 @@
     "@jridgewell/sourcemap-codec": "^1.6.0"
   },
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

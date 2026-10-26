@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+#
+# Vercel deploys this app through its Git integration, and it only builds a
+# commit when the commit *author* is the owner of the Vercel project. On the
+# Hobby plan there is exactly one member, so a commit authored by anyone else
+# is blocked before the build starts:
+#
+#   "Git author <login> must have access to the project on Vercel to create
+#    deployments."
+#
+# The push itself succeeds, which is what makes this easy to miss - the failure
+# only shows up in the Vercel dashboard and on the commit status. This hook
+# checks the commits a push would send and warns about any author that would
+# block the deployment. It never blocks the push.
+#
+# Installed by `bun install` (the `prepare` script sets
+# `core.hooksPath=.githooks`); run that by hand if the hook does not fire:
+#
+#   git config core.hooksPath .githooks
+#
+# The expected author defaults to the project owner's GitHub noreply address
+# and can be changed (repeatedly, or as a comma/space separated list) with:
+#
+#   git config --local --add vercel.projectOwnerEmail "someone@example.com"
+#
+set -u
+
+OWNER_DEFAULT="347948316+cosmicinsurancegh-dotcom@users.noreply.github.com"
+ZERO="0000000000000000000000000000000000000000"
+
+# Configured owners, one per line, normalised on the way in so that
+# "a@b.com, c@d.com" and repeated --add both work.
+configured="$(git config --get-all vercel.projectOwnerEmail 2>/dev/null || true)"
+if [ -n "$configured" ]; then
+  owners="$(printf '%s\n' "$configured" | tr ', ' '\n\n' | sed '/^[[:space:]]*$/d')"
+else
+  owners="$OWNER_DEFAULT"
+fi
+
+is_owner() {
+  printf '%s\n' "$owners" \
+    | tr '[:upper:]' '[:lower:]' \
+    | grep -Fxq "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+}
+
+# <local ref> <local sha> <remote ref> <remote sha>, one line per pushed ref.
+problems=""
+count=0
+
+while read -r local_ref local_sha _remote_ref remote_sha; do
+  [ -n "${local_sha:-}" ] || continue
+  # Deleting a remote branch sends no commits.
+  [ "$local_sha" = "$ZERO" ] && continue
+
+  if [ "${remote_sha:-$ZERO}" = "$ZERO" ]; then
+    # New branch: everything reachable here and not from any remote yet.
+    commits="$(git rev-list "$local_sha" --not --remotes 2>/dev/null || true)"
+  else
+    commits="$(git rev-list "$remote_sha..$local_sha" 2>/dev/null || true)"
+  fi
+
+  for sha in $commits; do
+    author_email="$(git log -1 --format='%ae' "$sha" 2>/dev/null)"
+    [ -n "$author_email" ] || continue
+    is_owner "$author_email" && continue
+
+    author_name="$(git log -1 --format='%an' "$sha")"
+    subject="$(git log -1 --format='%s' "$sha")"
+    problems="${problems}   $(printf '%s' "$sha" | cut -c1-7)  ${author_name} <${author_email}>
+             ${subject}
+"
+    count=$((count + 1))
+  done
+done
+
+if [ "$count" -gt 0 ]; then
+  owner_hint="$(printf '%s\n' "$owners" | head -n 1)"
+  {
+    echo ""
+    echo "! ${count} commit(s) in this push are not authored by the Vercel project owner."
+    echo "  Vercel will refuse to build them on the Hobby plan, so this push will"
+    echo "  land but the deployment will be blocked:"
+    echo ""
+    printf '%s' "$problems"
+    echo "  Expected author: ${owner_hint}"
+    echo "  Commit as the owner:  git config --local user.email \"${owner_hint}\""
+    echo "  Change expectation:   git config --local --add vercel.projectOwnerEmail \"<email>\""
+    echo "  Skip this warning:    git push --no-verify"
+    echo ""
+  } >&2
+fi
+
+# A warning, never a block.
+exit 0

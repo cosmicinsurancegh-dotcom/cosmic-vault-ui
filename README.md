@@ -93,6 +93,24 @@ to ship the backend.
   during the build with a warning in the build log, so the published bundle can
   reach a backend instead of rendering the configuration screen.
 
+### Which commits Vercel will build
+
+Vercel only builds a commit whose *author* is the owner of the Vercel project.
+That is the `cosmicinsurancegh-dotcom` account, and the Hobby plan has a single
+member, so a commit authored by anyone else is refused before the build starts:
+
+> Git author `<login>` must have access to the project on Vercel to create
+> deployments.
+
+The push itself still succeeds and only the deployment is blocked, which is easy
+to miss. `.githooks/pre-push` warns about it before the push lands, listing each
+commit whose author would block the build. `bun install` installs the hook by
+pointing `core.hooksPath` at `.githooks`; if a fresh clone does not fire it, run
+`git config core.hooksPath .githooks` once. This checkout commits as that
+account (`user.email` is the owner's GitHub noreply address). To accept a
+different author, `git config --local --add vercel.projectOwnerEmail <email>`;
+`git push --no-verify` skips the warning.
+
 The dashboard checks the deployment on load, independently of the Convex
 client: it fetches the public `setup:health` over the Convex HTTP API and, when
 the probe fails or the deployment is paused, shows a banner above the dashboard
