@@ -645,6 +645,109 @@ export const create = mutation({
 });
 
 /**
+ * Removes a mineral record that should never have been on the register: a test
+ * entry, a duplicate, or an asset recorded against the wrong member.
+ *
+ * The register is otherwise append-only - nothing else here deletes a mineral,
+ * and reassigning one moves it rather than removing it - so this is the one way
+ * out, and it is deliberately narrow. A consignment still in flight is refused,
+ * because the member is being told where their mineral is; close or cancel it
+ * first and the record can go. A reason is required, and the whole record is
+ * written to the audit trail before anything is deleted, so the facts outlive
+ * the row: who held it, what policy covered it, which consignments carried it.
+ *
+ * Notifications go with it. They are the member-facing copy of the same events
+ * and would otherwise point at a mineral that no longer exists; the audit entry
+ * is what staff read afterwards.
+ */
+export const remove = mutation({
+  args: { mineralId: v.id("minerals"), reason: v.string() },
+  handler: async (ctx, args) => {
+    const viewer = await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+    const mineral = await ctx.db.get(args.mineralId);
+    if (!mineral) throw new Error("Mineral not found.");
+    const reason = requiredText(args.reason, "Reason", 300);
+
+    const shipments = await ctx.db
+      .query("shipments")
+      .withIndex("by_mineral", (q) => q.eq("mineralId", mineral._id))
+      .collect();
+    const inFlight = shipments.find((shipment) =>
+      isOpenShipment(shipment.status),
+    );
+    if (inFlight) {
+      throw new Error(
+        `This mineral has a consignment still in flight (${SHIPMENT_STATUS_LABELS[
+          inFlight.status
+        ].toLowerCase()}). Close or cancel it before removing the record.`,
+      );
+    }
+
+    const policies = await ctx.db
+      .query("mineralPolicies")
+      .withIndex("by_mineral", (q) => q.eq("mineralId", mineral._id))
+      .collect();
+    const requests = await ctx.db
+      .query("shipmentRequests")
+      .withIndex("by_mineral", (q) => q.eq("mineralId", mineral._id))
+      .collect();
+    const events = await ctx.db
+      .query("shipmentEvents")
+      .withIndex("by_mineral", (q) => q.eq("mineralId", mineral._id))
+      .collect();
+    const assignee = mineral.assignedUserId
+      ? await ctx.db.get(mineral.assignedUserId)
+      : null;
+
+    /* Written before the deletes: a failed write stops the removal instead of
+       leaving nothing behind to say what was taken. */
+    await writeAudit(ctx, viewer, {
+      action: "mineral.removed",
+      entityType: "minerals",
+      entityId: mineral._id,
+      before: {
+        reference: mineral.reference,
+        name: mineral.name,
+        category: mineral.category,
+        declaredValue: mineral.declaredValue,
+        currency: mineral.currency,
+        assigneeEmail: assignee?.email ?? null,
+        policyNumbers: policies.map((policy) => policy.policyNumber),
+        shipmentReferences: shipments.map((shipment) => shipment.reference),
+      },
+      reason,
+    });
+
+    /* The member's copy of each event, including the ones about this mineral's
+       consignments rather than the mineral itself. */
+    for (const relatedId of [mineral._id, ...shipments.map((s) => s._id)]) {
+      const notifications = await ctx.db
+        .query("notifications")
+        .withIndex("by_related", (q) => q.eq("relatedId", relatedId))
+        .take(100);
+      for (const notification of notifications) {
+        await ctx.db.delete(notification._id);
+      }
+    }
+
+    for (const event of events) await ctx.db.delete(event._id);
+    for (const shipment of shipments) await ctx.db.delete(shipment._id);
+    for (const request of requests) await ctx.db.delete(request._id);
+    for (const policy of policies) await ctx.db.delete(policy._id);
+    await ctx.db.delete(mineral._id);
+
+    return {
+      removed: {
+        policies: policies.length,
+        shipments: shipments.length,
+        events: events.length,
+        requests: requests.length,
+      },
+    };
+  },
+});
+
+/**
  * A member asks for one of their minerals to be moved. The request is only a
  * request: staff still choose the carrier, route and dates in the shipment
  * form, so nothing moves until the logistics desk books it. One request at a
