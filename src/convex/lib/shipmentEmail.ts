@@ -1,4 +1,11 @@
-import { renderRouteRail } from "./routeRail";
+import { EMAIL_COLOURS } from "./emailPalette";
+import {
+  renderRouteRail,
+  renderStageLedger,
+  type LedgerStage,
+  type LedgerStageState,
+  type RouteRailTone,
+} from "./routeRail";
 import { isStaticMapUrl } from "./staticMap";
 import {
   SHIPMENT_STAGES,
@@ -12,9 +19,10 @@ import {
  * Branded transactional emails for mineral shipments.
  *
  * The layout follows the Cosmic Vault identity - deep navy header, electric
- * blue accents, hairline borders and the origin-to-destination route rail the
- * dashboard draws - and is built with tables and inline styles so it renders
- * consistently in Gmail, Outlook and Apple Mail.
+ * blue accents, hairline borders, the origin-to-destination route rail the
+ * dashboard draws and the stage ledger beneath it - and is built with tables
+ * and inline styles so it renders consistently in Gmail, Outlook and Apple
+ * Mail.
  */
 
 export type EmailMineral = {
@@ -71,12 +79,14 @@ export type AssignmentEmailInput = {
   shipment?: EmailShipment;
 };
 
-const NAVY = "#071227";
-const ELECTRIC = "#2f6bf0";
-const INK = "#0f172a";
-const MUTED = "#5b6478";
-const LINE = "#e4e9f3";
-const CANVAS = "#eef1f7";
+/* The project's colours, from the stylesheet's own tokens; nothing below is a
+   hand-picked hex. See `emailPalette`. */
+const NAVY = EMAIL_COLOURS.navy;
+const ELECTRIC = EMAIL_COLOURS.electric;
+const INK = EMAIL_COLOURS.ink;
+const MUTED = EMAIL_COLOURS.muted;
+const LINE = EMAIL_COLOURS.line;
+const CANVAS = EMAIL_COLOURS.canvas;
 
 function escapeHtml(value: string) {
   return value
@@ -131,15 +141,78 @@ const TONES: Record<
   string,
   { background: string; border: string; text: string }
 > = {
-  delivered: { background: "#ecfdf5", border: "#a7f3d0", text: "#047857" },
-  delayed: { background: "#fff7ed", border: "#fed7aa", text: "#b45309" },
-  customs_hold: { background: "#fffbeb", border: "#fde68a", text: "#92400e" },
-  cancelled: { background: "#fef2f2", border: "#fecaca", text: "#b91c1c" },
-  default: { background: "#eff4ff", border: "#d5e2ff", text: "#1d4ed8" },
+  delivered: {
+    background: EMAIL_COLOURS.emeraldTint,
+    border: EMAIL_COLOURS.emeraldLine,
+    text: EMAIL_COLOURS.emerald,
+  },
+  delayed: {
+    background: EMAIL_COLOURS.amberTint,
+    border: EMAIL_COLOURS.amberLine,
+    text: EMAIL_COLOURS.amber,
+  },
+  customs_hold: {
+    background: EMAIL_COLOURS.amberTint,
+    border: EMAIL_COLOURS.amberLine,
+    text: EMAIL_COLOURS.amber,
+  },
+  cancelled: {
+    background: EMAIL_COLOURS.dangerTint,
+    border: EMAIL_COLOURS.dangerLine,
+    text: EMAIL_COLOURS.danger,
+  },
+  default: {
+    background: EMAIL_COLOURS.electricTint,
+    border: EMAIL_COLOURS.electricLine,
+    text: EMAIL_COLOURS.electricDeep,
+  },
 };
 
 function toneFor(status: ShipmentStatus) {
   return TONES[status] ?? TONES.default;
+}
+
+/**
+ * The website's own mark in the navy header. It is the same PNG the vault email
+ * uses, served from the app origin the CTA already points at, so the two emails
+ * open with the same logo. Without a usable origin - a preview with no site
+ * configured - the header keeps the plain electric square instead of a broken
+ * image.
+ */
+function headerMark(appUrl: string, size = 22) {
+  const base = appUrl.trim().replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(base)) {
+    return `<span style="display:inline-block;width:${size}px;height:${size}px;background-color:${ELECTRIC};border-radius:4px;vertical-align:middle;font-size:0;line-height:0;">&nbsp;</span>`;
+  }
+
+  return `<img src="${escapeHtml(
+    `${base}/email/logo-mark.png`,
+  )}" width="${size}" height="${size}" alt="" style="display:inline-block;width:${size}px;height:${size}px;border:0;vertical-align:middle;" />`;
+}
+
+/**
+ * The status chip, drawn the way the vault email draws it: one compact pill,
+ * tinted by the status, and filled solid while the consignment is on the road
+ * so the live state reads first. The hero headline already says what happened,
+ * so the pill only carries the label it sits beside on the dispatch board.
+ */
+function statusPill(input: ShipmentEmailInput) {
+  const tone = toneFor(input.status);
+  const solid = input.status === "in_transit";
+  const border = solid ? ELECTRIC : tone.border;
+  const background = solid ? ELECTRIC : tone.background;
+  const colour = solid ? EMAIL_COLOURS.white : tone.text;
+
+  // Separate borders on both tables: a collapsed cell drops its radius.
+  return `<td style="padding:0 6px 0 0;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;mso-table-lspace:0;mso-table-rspace:0;">
+                    <tr>
+                      <td style="border:1px solid ${border};background-color:${background};border-radius:999px;padding:6px 11px;font-family:${RAIL_FONT};font-size:10px;line-height:12px;font-weight:700;color:${colour};white-space:nowrap;">${escapeHtml(
+                        SHIPMENT_STATUS_LABELS[input.status],
+                      )}</td>
+                    </tr>
+                  </table>
+                </td>`;
 }
 
 function detailRow(label: string, value: string, last = false) {
@@ -154,8 +227,72 @@ function sectionTitle(title: string) {
   return `<p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${MUTED};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${escapeHtml(title)}</p>`;
 }
 
-const RAIL_TRACK = "#c3cddf";
+const RAIL_TRACK = EMAIL_COLOURS.electricTrack;
 const RAIL_FONT = "'Helvetica Neue',Helvetica,Arial,sans-serif";
+
+/** The Convex palette, in the shape the shared rail and ledger draw with. */
+function railTone(input: ShipmentEmailInput): RouteRailTone {
+  return {
+    origin: ELECTRIC,
+    accent: shipmentNeedsAttention(input.status)
+      ? EMAIL_COLOURS.amber
+      : ELECTRIC,
+    attention: EMAIL_COLOURS.amber,
+    track: RAIL_TRACK,
+    ink: INK,
+    muted: MUTED,
+    faint: EMAIL_COLOURS.faint,
+    white: EMAIL_COLOURS.white,
+    surface: EMAIL_COLOURS.card,
+    outline: EMAIL_COLOURS.electricLine,
+    outlineInk: ELECTRIC,
+    emerald: EMAIL_COLOURS.emerald,
+  };
+}
+
+/**
+ * The four milestones, in the shipping desk's own vocabulary. The stamps only
+ * repeat what the desk knows: a completed stage is done, the current one carries
+ * the update's own timestamp, and the last carries the estimate when there is
+ * one. Nothing is invented for the stages in between.
+ */
+function journeyStages(input: ShipmentEmailInput): LedgerStage[] {
+  const reached = shipmentStageCount(input.status);
+  const attention = shipmentNeedsAttention(input.status);
+  /* A cancelled consignment is not waiting for its next milestone, so the
+     stages ahead are shown as stages that will never happen. */
+  const cancelled = input.status === "cancelled";
+
+  return SHIPMENT_STAGES.map((stage, index) => {
+    const position = index + 1;
+    const isCurrent = position === reached;
+    const complete = position < reached;
+    const state: LedgerStageState = complete
+      ? "complete"
+      : isCurrent
+        ? "active"
+        : cancelled
+          ? "skipped"
+          : "future";
+    const stamp = complete
+      ? "Complete"
+      : isCurrent
+        ? input.updatedAt
+        : cancelled
+          ? "Will not progress"
+          : stage.key === "delivered" && input.shipment.eta
+            ? `Expected ${input.shipment.eta}`
+            : "To come";
+
+    return {
+      label: stage.label,
+      state,
+      stamp,
+      attention: isCurrent && attention,
+      delivered: isCurrent && input.status === "delivered",
+    };
+  });
+}
 
 /**
  * The consignment route: origin, live position and destination on one line,
@@ -169,16 +306,15 @@ const RAIL_FONT = "'Helvetica Neue',Helvetica,Arial,sans-serif";
 function routeRail(input: ShipmentEmailInput) {
   const status = input.status;
   const needsAttention = shipmentNeedsAttention(status);
-  const accent = needsAttention ? "#b45309" : ELECTRIC;
 
   const rail = isStaticMapUrl(input.mapUrl)
     ? `<img src="${escapeHtml(
         input.mapUrl,
-      )}" width="480" height="260" alt="Map of the route from ${escapeHtml(
+      )}" width="494" height="317" alt="Map of the route from ${escapeHtml(
         input.shipment.origin,
       )} to ${escapeHtml(
         input.shipment.destination,
-      )}" style="display:block;width:100%;max-width:480px;height:auto;border:1px solid ${LINE};border-radius:4px;" />
+      )}" style="display:block;width:100%;max-width:100%;height:auto;border:1px solid ${LINE};border-radius:4px;" />
     <p style="margin:8px 0 0;font-size:9px;line-height:13px;letter-spacing:0.04em;color:${MUTED};font-family:${RAIL_FONT};">Mapbox &nbsp;&middot;&nbsp; &copy; OpenStreetMap contributors</p>`
     : renderRouteRail({
         origin: input.shipment.origin,
@@ -189,19 +325,7 @@ function routeRail(input: ShipmentEmailInput) {
         delivered: status === "delivered",
         iconBase: input.appUrl,
         fontStack: RAIL_FONT,
-        tone: {
-          origin: ELECTRIC,
-          accent,
-          attention: "#b45309",
-          track: RAIL_TRACK,
-          ink: INK,
-          faint: "#8b94a8",
-          white: "#ffffff",
-          surface: "#ffffff",
-          outline: "#c9d9f8",
-          outlineInk: ELECTRIC,
-          emerald: "#047857",
-        },
+        tone: railTone(input),
       });
 
   if (!needsAttention) return rail;
@@ -221,15 +345,27 @@ function shell({
   preheader,
   companyName,
   supportEmail,
+  appUrl,
   headerLabel,
+  reference,
   children,
 }: {
   preheader: string;
   companyName: string;
+  appUrl: string;
   supportEmail: string;
   headerLabel: string;
+  /** The consignment this message is about, printed in the footer. */
+  reference?: string;
   children: string;
 }) {
+  const footerLink = (path: string, label: string) =>
+    `<p style="margin:0 0 8px;font-family:${RAIL_FONT};font-size:10px;line-height:16px;"><a href="${escapeHtml(
+      `${appUrl.replace(/\/+$/, "")}${path}`,
+    )}" style="color:${EMAIL_COLOURS.navyMuted};text-decoration:none;">${escapeHtml(
+      label,
+    )}</a></p>`;
+
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -242,6 +378,8 @@ function shell({
     .cv-shell { width:100% !important; }
     .cv-pad { padding-left:20px !important; padding-right:20px !important; }
     .cv-headline { font-size:23px !important; }
+    /* The footer columns stack rather than squeeze three-across. */
+    .cv-foot-col { display:block !important; width:100% !important; padding:0 0 14px 0 !important; }
   }
 </style>
 </head>
@@ -250,17 +388,17 @@ function shell({
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${CANVAS};">
   <tr>
     <td align="center" style="padding:32px 12px;">
-      <table role="presentation" class="cv-shell" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background-color:#ffffff;border:1px solid ${LINE};border-radius:6px;overflow:hidden;">
+      <table role="presentation" class="cv-shell" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background-color:${EMAIL_COLOURS.card};border:1px solid ${LINE};border-radius:6px;overflow:hidden;">
         <tr>
           <td style="background-color:${NAVY};padding:26px 32px 22px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td align="left" style="vertical-align:middle;">
-                  <span style="display:inline-block;width:18px;height:18px;background-color:${ELECTRIC};border-radius:4px;vertical-align:middle;font-size:0;line-height:0;">&nbsp;</span>
-                  <span style="display:inline-block;margin-left:10px;font-size:12px;font-weight:700;letter-spacing:0.26em;text-transform:uppercase;color:#ffffff;vertical-align:middle;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${escapeHtml(companyName)}</span>
+                  ${headerMark(appUrl)}
+                  <span style="display:inline-block;margin-left:10px;font-size:12px;font-weight:700;letter-spacing:0.26em;text-transform:uppercase;color:${EMAIL_COLOURS.white};vertical-align:middle;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${escapeHtml(companyName)}</span>
                 </td>
                 <td align="right" style="vertical-align:middle;">
-                  <span style="display:inline-block;padding:5px 10px;border:1px solid rgba(255,255,255,0.22);border-radius:3px;font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#c9d6f2;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${escapeHtml(headerLabel)}</span>
+                  <span style="display:inline-block;padding:5px 10px;border:1px solid rgba(255,255,255,0.22);border-radius:3px;font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:${EMAIL_COLOURS.electricSoft};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${escapeHtml(headerLabel)}</span>
                 </td>
               </tr>
             </table>
@@ -268,15 +406,54 @@ function shell({
         </tr>
         ${children}
         <tr>
-          <td style="padding:22px 32px 26px;border-top:1px solid ${LINE};background-color:#f8fafd;">
-            <p style="margin:0;font-size:11px;line-height:18px;color:${MUTED};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-              ${escapeHtml(companyName)} · Mineral logistics desk<br />
-              Questions? Reply to this email or write to
-              <a href="mailto:${escapeHtml(supportEmail)}" style="color:${ELECTRIC};text-decoration:none;">${escapeHtml(supportEmail)}</a>.
-            </p>
-            <p style="margin:10px 0 0;font-size:10px;line-height:16px;color:#8b94a8;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-              You are receiving this because this mineral shipment is assigned to your account. This message does not change the terms of your cover.
-            </p>
+          <td bgcolor="${NAVY}" style="background-color:${NAVY};padding:26px 32px 22px;border-top:3px solid ${ELECTRIC};">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+              <tr>
+                <td class="cv-foot-col" valign="top" width="46%" style="padding:0 18px 18px 0;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                    <tr>
+                      <td width="26" valign="middle" style="width:26px;padding:0;">${headerMark(
+                        appUrl,
+                        26,
+                      )}</td>
+                      <td style="padding-left:9px;vertical-align:middle;">
+                        <p style="margin:0;font-family:${RAIL_FONT};font-size:13px;line-height:16px;font-weight:700;letter-spacing:-0.01em;color:${EMAIL_COLOURS.white};">${escapeHtml(
+                          companyName,
+                        )}</p>
+                        <p style="margin:4px 0 0;font-family:${RAIL_FONT};font-size:8px;line-height:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${EMAIL_COLOURS.navyMuted};">Mineral vault</p>
+                      </td>
+                    </tr>
+                  </table>
+                  <p style="margin:12px 0 0;font-family:${RAIL_FONT};font-size:10px;line-height:16px;color:${EMAIL_COLOURS.navyMuted};">Mineral logistics desk. Questions? Reply to this email or write to
+                    <a href="mailto:${escapeHtml(
+                      supportEmail,
+                    )}" style="color:${EMAIL_COLOURS.navyMuted};text-decoration:underline;">${escapeHtml(
+                      supportEmail,
+                    )}</a>.</p>
+                </td>
+                <td class="cv-foot-col" valign="top" width="27%" style="padding:0 10px 18px 0;">
+                  <p style="margin:0 0 10px;font-family:${RAIL_FONT};font-size:8px;line-height:12px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:${EMAIL_COLOURS.navyMuted};">Your vault</p>
+                  ${footerLink("/dashboard/shipments", "Shipment tracking")}
+                  ${footerLink("/dashboard/vault", "Mineral register")}
+                  ${footerLink("/dashboard/documents", "Documents")}
+                  ${footerLink("/dashboard/support", "Concierge")}
+                </td>
+                <td class="cv-foot-col" valign="top" width="27%" style="padding:0 0 18px;">
+                  <p style="margin:0 0 10px;font-family:${RAIL_FONT};font-size:8px;line-height:12px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:${EMAIL_COLOURS.navyMuted};">Small print</p>
+                  ${footerLink("/legal/terms", "Terms")}
+                  ${footerLink("/legal/privacy", "Privacy")}
+                  ${footerLink("/about", "About the vault")}
+                </td>
+              </tr>
+              <tr>
+                <td colspan="3" style="padding:14px 0 0;border-top:1px solid ${EMAIL_COLOURS.navyLine};font-family:${RAIL_FONT};font-size:9px;line-height:15px;color:${EMAIL_COLOURS.navyFaint};">
+                  &copy; ${new Date().getUTCFullYear()} ${escapeHtml(
+                    companyName,
+                  )}${reference ? ` &nbsp;&middot;&nbsp; ${escapeHtml(reference)}` : ""}<br />
+                  You are receiving this because this mineral shipment is assigned to your account. This message does not change the terms of your cover.
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
       </table>
@@ -289,12 +466,18 @@ function shell({
 
 export function renderShipmentStatusEmail(input: ShipmentEmailInput) {
   const headline = headlineFor(input.status);
-  const tone = toneFor(input.status);
   const previous = input.previousStatus
     ? SHIPMENT_STATUS_LABELS[input.previousStatus]
     : undefined;
   const statusLabel = SHIPMENT_STATUS_LABELS[input.status];
-  const where = input.location ? ` · ${input.location}` : "";
+  const arrivedOrCancelled =
+    input.status === "delivered" || input.status === "cancelled";
+  /* A resolved Mapbox image takes the rail's place, so the ledger has to carry
+     the place the drawing would have shown. */
+  const mapsInsteadOfRail = isStaticMapUrl(input.mapUrl);
+  /* An estimate only means something while the consignment is still ahead;
+     beside a delivered pill it would read as the delivery time. */
+  const showEta = Boolean(input.shipment.eta) && !arrivedOrCancelled;
   const subject = `${headline} - ${input.mineral.reference}`;
 
   const body = `
@@ -303,27 +486,54 @@ export function renderShipmentStatusEmail(input: ShipmentEmailInput) {
         <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${ELECTRIC};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Status update · ${escapeHtml(input.updatedAt)}</p>
         <h1 class="cv-headline" style="margin:10px 0 0;font-size:27px;line-height:1.18;font-weight:600;letter-spacing:-0.03em;color:${INK};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${escapeHtml(headline)}</h1>
         <p style="margin:12px 0 0;font-size:14px;line-height:23px;color:${MUTED};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Hello ${escapeHtml(input.recipientName)}, ${escapeHtml(sentenceFor(input))}</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;margin-top:16px;">
+          <tr>
+            ${statusPill(input)}
+            ${
+              showEta
+                ? `<td valign="middle" style="padding:0 0 0 11px;font-size:10px;line-height:15px;font-weight:600;letter-spacing:0.13em;text-transform:uppercase;color:${MUTED};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">ETA &nbsp;&middot;&nbsp; ${escapeHtml(
+                    input.shipment.eta!,
+                  )}</td>`
+                : ""
+            }
+          </tr>
+        </table>
+        ${
+          /* What the update replaced, kept as a caption under the chip: the
+             journey below shows where it has got to, not where it came from. */
+          previous
+            ? `<p style="margin:9px 0 0;font-size:11px;line-height:16px;color:${MUTED};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Previously ${escapeHtml(previous.toLowerCase())}</p>`
+            : ""
+        }
       </td>
     </tr>
     <tr>
-      <td class="cv-pad" style="padding:20px 32px 0;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${tone.background};border:1px solid ${tone.border};border-radius:4px;">
+      <td class="cv-pad" style="padding:26px 32px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${EMAIL_COLOURS.card};border:1px solid ${LINE};border-radius:4px;">
           <tr>
-            <td style="padding:14px 16px;">
-              <p style="margin:0;font-size:9px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${tone.text};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Current status</p>
-              <p style="margin:6px 0 0;font-size:15px;font-weight:700;color:${tone.text};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${escapeHtml(statusLabel)}${escapeHtml(where)}</p>
-              ${
-                previous
-                  ? `<p style="margin:4px 0 0;font-size:11px;color:${MUTED};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Previously ${escapeHtml(previous.toLowerCase())}</p>`
-                  : ""
-              }
+            <td style="padding:18px 20px;">
+              ${sectionTitle("Consignment route")}
+              ${routeRail(input)}
             </td>
           </tr>
         </table>
       </td>
     </tr>
     <tr>
-      <td class="cv-pad" style="padding:24px 32px 0;">${routeRail(input)}</td>
+      <td class="cv-pad" style="padding:16px 32px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${EMAIL_COLOURS.card};border:1px solid ${LINE};border-radius:4px;">
+          <tr>
+            <td style="padding:18px 20px 16px;">
+              ${sectionTitle("Journey")}
+              ${renderStageLedger({
+                stages: journeyStages(input),
+                tone: railTone(input),
+                fontStack: RAIL_FONT,
+              })}
+            </td>
+          </tr>
+        </table>
+      </td>
     </tr>
     <tr>
       <td class="cv-pad" style="padding:28px 32px 0;">
@@ -335,16 +545,27 @@ export function renderShipmentStatusEmail(input: ShipmentEmailInput) {
           ${detailRow("Route", `${input.shipment.origin} → ${input.shipment.destination}`)}
           ${input.shipment.departure ? detailRow("Departed", input.shipment.departure) : ""}
           ${
-            /* With no estimate the row falls back to where the consignment is;
+            showEta
+              ? detailRow(
+                  "Estimated arrival",
+                  input.shipment.eta!,
+                  !mapsInsteadOfRail,
+                )
+              : ""
+          }
+          ${
+            /* The rail already names the position, so repeating it here would
+               be the same fact twice. When a map image replaces the rail the
+               drawing is gone, and the ledger is where the place belongs - and
                an unrecorded place is said plainly rather than filled in with
-               the status, which is already named above. */
-            input.shipment.eta
-              ? detailRow("Estimated arrival", input.shipment.eta, true)
-              : detailRow(
+               the status, which the chip above already names. */
+            mapsInsteadOfRail
+              ? detailRow(
                   "Current location",
                   input.location ?? "Not recorded",
                   true,
                 )
+              : ""
           }
         </table>
       </td>
@@ -381,7 +602,7 @@ export function renderShipmentStatusEmail(input: ShipmentEmailInput) {
       input.note
         ? `<tr>
       <td class="cv-pad" style="padding:26px 32px 0;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f6f8fc;border:1px solid ${LINE};border-radius:4px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${CANVAS};border:1px solid ${LINE};border-radius:4px;">
           <tr>
             <td style="padding:14px 16px;">
               <p style="margin:0;font-size:9px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${MUTED};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Update from the logistics desk</p>
@@ -398,11 +619,11 @@ export function renderShipmentStatusEmail(input: ShipmentEmailInput) {
         <table role="presentation" cellpadding="0" cellspacing="0" border="0">
           <tr>
             <td align="center" style="background-color:${ELECTRIC};border-radius:4px;">
-              <a href="${escapeHtml(input.appUrl)}/dashboard/minerals" style="display:inline-block;padding:13px 26px;font-size:13px;font-weight:700;letter-spacing:0.01em;color:#ffffff;text-decoration:none;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Track this shipment</a>
+              <a href="${escapeHtml(input.appUrl)}/dashboard/minerals" style="display:inline-block;padding:13px 26px;font-size:13px;font-weight:700;letter-spacing:0.01em;color:${EMAIL_COLOURS.white};text-decoration:none;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Track this shipment</a>
             </td>
           </tr>
         </table>
-        <p style="margin:12px 0 0;font-size:10px;color:#8b94a8;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Sign in with your email address - no password needed.</p>
+        <p style="margin:12px 0 0;font-size:10px;color:${EMAIL_COLOURS.faint};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Sign in with your email address - no password needed.</p>
       </td>
     </tr>`;
 
@@ -411,13 +632,23 @@ export function renderShipmentStatusEmail(input: ShipmentEmailInput) {
     "",
     sentenceFor(input),
     "",
-    `Status: ${statusLabel}${where}`,
+    `Status: ${statusLabel}`,
+    previous ? `Previously: ${previous}` : "",
+    input.location || mapsInsteadOfRail
+      ? `Current location: ${input.location ?? "Not recorded"}`
+      : "",
+    "",
+    "Journey",
+    ...journeyStages(input).map(
+      (stage) => `  ${stage.label.padEnd(18, " ")} ${stage.stamp}`,
+    ),
+    "",
     `Shipment: ${input.shipment.reference} (${input.shipment.carrier})`,
     `Route: ${input.shipment.origin} to ${input.shipment.destination}`,
     input.shipment.trackingNumber
       ? `Tracking: ${input.shipment.trackingNumber}`
       : "",
-    input.shipment.eta ? `Estimated arrival: ${input.shipment.eta}` : "",
+    showEta ? `Estimated arrival: ${input.shipment.eta}` : "",
     "",
     `Mineral: ${input.mineral.name} (${input.mineral.reference})`,
     `Quantity: ${input.mineral.quantity}`,
@@ -439,7 +670,9 @@ export function renderShipmentStatusEmail(input: ShipmentEmailInput) {
       preheader: `${headline} - ${input.mineral.name} (${input.mineral.reference})`,
       companyName: input.companyName,
       supportEmail: input.supportEmail,
+      appUrl: input.appUrl,
       headerLabel: "Shipment update",
+      reference: input.shipment.reference,
       children: body,
     }),
     text: lines
@@ -514,13 +747,13 @@ export function renderAssignmentEmail(input: AssignmentEmailInput) {
         <table role="presentation" cellpadding="0" cellspacing="0" border="0">
           <tr>
             <td align="center" style="background-color:${ELECTRIC};border-radius:4px;">
-              <a href="${escapeHtml(input.appUrl)}/dashboard/minerals" style="display:inline-block;padding:13px 26px;font-size:13px;font-weight:700;color:#ffffff;text-decoration:none;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Open your vault</a>
+              <a href="${escapeHtml(input.appUrl)}/dashboard/minerals" style="display:inline-block;padding:13px 26px;font-size:13px;font-weight:700;color:${EMAIL_COLOURS.white};text-decoration:none;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Open your vault</a>
             </td>
           </tr>
         </table>
         ${
           input.isNewAccount
-            ? `<p style="margin:12px 0 0;font-size:10px;line-height:16px;color:#8b94a8;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Sign in at ${escapeHtml(input.appUrl)}/auth with this email address - we send a one-time code, so there is no password to set.</p>`
+            ? `<p style="margin:12px 0 0;font-size:10px;line-height:16px;color:${EMAIL_COLOURS.faint};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">Sign in at ${escapeHtml(input.appUrl)}/auth with this email address - we send a one-time code, so there is no password to set.</p>`
             : ""
         }
       </td>
@@ -557,7 +790,9 @@ export function renderAssignmentEmail(input: AssignmentEmailInput) {
       preheader: `${input.mineral.name} is now linked to your account.`,
       companyName: input.companyName,
       supportEmail: input.supportEmail,
+      appUrl: input.appUrl,
       headerLabel: "New mineral",
+      reference: input.shipment?.reference,
       children: body,
     }),
     text: lines

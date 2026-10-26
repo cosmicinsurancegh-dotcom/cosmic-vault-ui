@@ -12,14 +12,21 @@
  * for anything server-side, and scope it to the styles this file uses.
  */
 
+import { EMAIL_COLOURS } from "./emailPalette";
+
 export type GeoPoint = { lat: number; lon: number };
 
 const STATIC_API = "https://api.mapbox.com/styles/v1/mapbox/light-v11/static";
 
+/** Mapbox overlays want a bare hex, so the palette's `#` comes off here. */
+function bare(hex: string) {
+  return hex.replace("#", "").toLowerCase();
+}
+
 /** The dashboard's own markers: the route starts blue and lands deep blue. */
-const ORIGIN_PIN = "pin-s+1d74f5";
-const DESTINATION_PIN = "pin-s+0a3bcb";
-const ROUTE_LINE = "path-3+1d74f5-0.85";
+const ORIGIN_PIN = `pin-s+${bare(EMAIL_COLOURS.electric)}`;
+const DESTINATION_PIN = `pin-s+${bare(EMAIL_COLOURS.electricDeep)}`;
+const ROUTE_LINE = `path-3+${bare(EMAIL_COLOURS.electric)}-0.85`;
 
 export const MAP_SIZE = { width: 280, height: 180 } as const;
 

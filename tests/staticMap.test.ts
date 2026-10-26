@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EMAIL_COLOURS } from "../src/convex/lib/emailPalette";
 import {
   isStaticMapUrl,
   staticMapUrl,
@@ -21,12 +22,15 @@ describe("static route map", () => {
     expect(url.startsWith("https://api.mapbox.com/styles/v1/mapbox/")).toBe(
       true,
     );
-    // Mapbox takes longitude first, then latitude.
+    // Mapbox takes longitude first, then latitude. The pins and the line are
+    // the design system's blues, not map defaults.
+    const line = EMAIL_COLOURS.electric.replace("#", "").toLowerCase();
+    const land = EMAIL_COLOURS.electricDeep.replace("#", "").toLowerCase();
     expect(url).toContain(
-      "path-3+1d74f5-0.85(-0.12760,51.50720,-2.58790,51.45450)",
+      `path-3+${line}-0.85(-0.12760,51.50720,-2.58790,51.45450)`,
     );
-    expect(url).toContain("pin-s+1d74f5(-0.12760,51.50720)");
-    expect(url).toContain("pin-s+0a3bcb(-2.58790,51.45450)");
+    expect(url).toContain(`pin-s+${line}(-0.12760,51.50720)`);
+    expect(url).toContain(`pin-s+${land}(-2.58790,51.45450)`);
     // `auto` fits both ends in the frame, so no zoom arithmetic is needed.
     expect(url).toContain("/auto/280x180@2x");
     expect(url).toContain("access_token=pk.test-token");

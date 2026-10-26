@@ -1522,9 +1522,9 @@ describe("shipment status email", () => {
     expect(email.text).toContain("Route: Zurich, CH to London, GB");
 
     // The four progress bars are gone: origin, live position and destination
-    // sit on one line, the way the dispatch board draws the route.
+    // sit on one line, the way the dispatch board draws the route, and the
+    // milestones below are a ledger of rows rather than four bars.
     expect(email.html).not.toContain("height:4px");
-    expect(email.html).not.toContain("Out for delivery");
     expect(email.html).toContain(">Origin<");
     expect(email.html).toContain(">Position<");
     expect(email.html).toContain(">Destination<");
@@ -1544,6 +1544,14 @@ describe("shipment status email", () => {
     // In transit reaches the truck; the last leg is still dashed.
     expect(email.html).toContain("border-top:2px solid");
     expect(email.html).toContain("border-top:2px dashed");
+
+    // The milestones sit under the route as a ledger: one 22px marker per
+    // stage, the current one carrying the update's own timestamp.
+    expect(email.html).toContain("border-radius:11px");
+    expect(email.html).toContain("Out for delivery");
+    expect(email.html).toContain("Complete");
+    expect(email.html).toContain("To come");
+    expect(email.text).toContain("Journey");
   });
 
   it("fills the route to the destination only once it is delivered", () => {
@@ -1564,18 +1572,64 @@ describe("shipment status email", () => {
     expect(outForDelivery.html).toContain("border-top:2px dashed");
   });
 
+  it("closes on the dashboard's navy footer, the same bands as the vault email", () => {
+    const email = renderShipmentStatusEmail(base);
+
+    // The dark panel with its electric rule, rather than the old pale strip.
+    expect(email.html).toContain('bgcolor="#091430"');
+    expect(email.html).toContain("border-top:3px solid #2B61EB");
+
+    // The two link columns point at real console routes.
+    expect(email.html).toContain(
+      'href="https://vault.test/dashboard/shipments"',
+    );
+    expect(email.html).toContain('href="https://vault.test/dashboard/support"');
+    expect(email.html).toContain('href="https://vault.test/legal/terms"');
+    expect(email.html).toContain('href="mailto:concierge@cosmicvault.test"');
+
+    // The footer names the consignment the message is about.
+    expect(email.html).toContain("SHP-XY98Z");
+  });
+
+  it("opens with the site's own logo, and a plain mark without an origin", () => {
+    const email = renderShipmentStatusEmail(base);
+    // The same PNG the vault email uses, so both headers carry the brand.
+    expect(email.html).toContain("https://vault.test/email/logo-mark.png");
+    expect(email.html).toContain('width="22" height="22" alt=""');
+
+    // A preview with no site configured keeps the electric square rather than
+    // pointing at an image that will not load.
+    const preview = renderShipmentStatusEmail({ ...base, appUrl: "" });
+    expect(preview.html).not.toContain("logo-mark.png");
+    expect(preview.html).toContain(
+      "border-radius:4px;vertical-align:middle;font-size:0",
+    );
+  });
+
   it("never reports the status as the consignment's location", () => {
-    const email = renderShipmentStatusEmail({
+    const unknown = {
       ...base,
       location: undefined,
       shipment: { ...base.shipment, eta: undefined },
-    });
+    };
 
-    // Without an estimate the row falls back to the position, so an unrecorded
-    // one is said plainly instead of wearing the status word.
-    expect(email.html).toContain("Current location");
-    expect(email.html).toContain("Not recorded");
-    expect(email.html).toContain("No location recorded");
+    // The rail names the position, so an unrecorded one is said there and the
+    // ledger does not repeat it as a row of its own.
+    const railed = renderShipmentStatusEmail(unknown);
+    expect(railed.html).toContain("No location recorded");
+    expect(railed.html).not.toContain("Current location");
+    expect(railed.text).not.toContain("Current location");
+
+    // A map image replaces the rail, so the place moves into the ledger - and
+    // an unrecorded one is said plainly instead of wearing the status word.
+    const mapped = renderShipmentStatusEmail({
+      ...unknown,
+      mapUrl:
+        "https://api.mapbox.com/styles/v1/mapbox/light-v11/static/path/x/auto/494x317?access_token=pk.test",
+    });
+    expect(mapped.html).toContain("Current location");
+    expect(mapped.html).toContain(">Not recorded</td>");
+    expect(mapped.text).toContain("Current location: Not recorded");
   });
 
   it("escapes member-facing values instead of injecting markup", () => {
