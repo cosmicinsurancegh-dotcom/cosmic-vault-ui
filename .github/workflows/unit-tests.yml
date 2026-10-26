@@ -1,19 +1,37 @@
 name: Unit tests
 
-# Every push runs the Vitest suite. It takes seconds, and it is what keeps the
-# single-sign-in guard honest: tests/singleSignInPage.test.ts fails if a second
-# sign-in screen, an extra auth address, or an in-app sign-in link pointing
-# anywhere other than /auth, /login or /signup is introduced. Branches behind a
-# pull request are covered too, because their pushes run here as well.
+# One definition, three users. Every push runs this workflow directly, a pull
+# request into `dev` or `main` runs it on the merge ref, and the
+# `Deploy Convex functions` workflow calls it with `uses:` so its dev and prod
+# deploys are gated on exactly the same steps - there is no second copy to drift
+# out of date.
+#
+# What it runs is what keeps the single-sign-in guard honest:
+# tests/singleSignInPage.test.ts fails if a second sign-in screen, an extra auth
+# address, or an in-app sign-in link pointing anywhere other than /auth, /login
+# or /signup is introduced.
 on:
+  # Every branch, so a change carries a check wherever it lands.
   push:
+  # The branches that take merges, which is what a required status check is
+  # evaluated against. A push covers branches in this repository, but a pull
+  # request opened from a fork runs its push in the fork, so this trigger is the
+  # only way its check is reported here. Scoped to `dev` and `main` on purpose:
+  # a pull request into a scratch branch does not need to wait for it.
+  pull_request:
+    branches: [dev, main]
+  workflow_call:
 
 permissions:
   contents: read
 
-# A newer push to the same ref supersedes the run it replaced.
+# A newer push to the same ref supersedes the run it replaced. The group carries
+# `github.workflow`, which a called workflow resolves to the *caller's* name, so
+# the push-triggered run and the deploy workflow's gated run never share a group
+# and cannot cancel each other - the trap the reusing-workflows docs warn about
+# (docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations).
 concurrency:
-  group: unit-tests-${{ github.ref }}
+  group: unit-tests-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -27,6 +45,18 @@ jobs:
       # No version input: setup-bun reads `packageManager` from package.json,
       # so CI installs with the same Bun that wrote `bun.lock`.
       - uses: oven-sh/setup-bun@v2
+
+      # Bun's global package cache (~/.bun/install/cache). setup-bun caches the
+      # bun *executable*, not this, so the packages are cached here: a hit turns
+      # the install into a link from disk, and the restore-key lets a changed
+      # lockfile reuse everything it did not change.
+      - name: Cache Bun's package cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

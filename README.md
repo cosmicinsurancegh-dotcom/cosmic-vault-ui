@@ -45,6 +45,12 @@ resolve the same graph; npm, yarn and pnpm lockfiles are ignored so a stray
 install cannot commit a second one. If you edit `package.json`, re-run
 `bun install` in the same commit, otherwise CI's frozen install fails.
 
+CI also restores Bun's global package cache (`~/.bun/install/cache`), keyed on
+`bun.lock` with a prefix restore-key, so an install links the packages from disk
+instead of downloading them again - measured on this machine, 12s cold against
+0.5s warm for the same 421 packages, at the cost of restoring a ~50 MiB archive.
+A changed lockfile still reuses the previous cache through the prefix key.
+
 The `overrides` pin on `@jridgewell/sourcemap-codec` is load-bearing: Bun hoists
 that package where npm used to nest it, and without the pin Vitest's nested
 `magic-string` resolves a copy too old to start the runner.
@@ -71,11 +77,157 @@ that package where npm used to nest it, and without the pin Vitest's nested
 - GitHub Actions runs that suite on every push
   ([`unit-tests.yml`](.github/workflows/unit-tests.yml)). It needs no secrets or
   deployment, so a broken guard fails the commit's check rather than waiting to
-  be noticed locally. Making the check *required* before a merge is a branch
-  protection setting in the repository, not something the workflow can declare.
+  be noticed locally. Making the check *required* before a merge is a repository
+  setting the workflow cannot declare - [Merging into dev and
+  main](#merging-into-dev-and-main) has the steps, and what a required check
+  does and does not block. The Convex deploy workflow calls that same
+  workflow before it deploys - one
+  file defines the steps - and both of its deploy jobs wait on it, so a red
+  guard stops a deploy, production included, rather than only showing red on the
+  build.
 - `bun run test:load` / `bun run test:load:abuse` - k6 load and abuse profiles.
   They are opt-in, require `CONVEX_URL`, and must be pointed at staging; see
   [`loadtest/README.md`](loadtest/README.md).
+
+### Merging into dev and main
+
+The intended flow for these two branches: work happens on a branch, a pull
+request targets `dev` or `main`, `Vitest unit suite` has to be green, and the
+merge is what lands it. The merge is also what releases it - a merge into `dev`
+is the push that triggers `Deploy Convex functions`, and Vercel builds `main`
+from its push - while production functions stay a manual dispatch, because a
+merge to `main` is still not a release.
+
+GitHub reports the job as the check **`Vitest unit suite`** - read off the check
+runs of a pushed commit, not guessed. (`Live site smoke check` and `Supabase
+Preview` are the repository's other checks.) The ruleset that requires it is
+**active**: `dev-main-gate` (id `25890320`), applied 2026-10-26, with no branch
+protection alongside it. `unit-tests.yml` runs on `pull_request` against `dev`
+and `main` as well, which is what makes the check requireable at all: a push
+covers branches in this repository, but a pull request opened from a fork runs
+its push inside the fork and reports nothing here.
+
+Applying or changing it needs a repository **admin**: the API answers `404` for
+`/branches/<branch>/protection` and `/rulesets` to a push-only token rather than
+explaining itself. The commands below were run from the owner account
+(`cosmicinsurancegh-dotcom`, the active account on this machine's CLI); the other
+login on this machine, `xkobxx`, has push but not admin and cannot make this
+change. Both logins are stored, and the active one is what `gh` and HTTPS
+`git push` use - `gh auth switch --user xkobxx` returns to the non-admin account,
+`--user cosmicinsurancegh-dotcom` comes back.
+
+The configuration, decided explicitly rather than assumed: `dev` and `main` take
+changes only through a **pull request**, that pull request's `Vitest unit suite`
+check must pass, and there are **no bypass actors** - nobody, owner included, can
+update either branch outside a green check. That is the strict form on purpose:
+a bypass list is what would let the check be sidestepped, so the value of the
+rule depends on it being empty. The cost is that the direct push to `dev` and
+`main` is gone; every change arrives on a branch and merges through a pull
+request, which is how the release checklist below is written.
+
+**In the UI** - this is what `dev-main-gate` is, named the way GitHub names it:
+Settings → Rules → Rulesets, target `refs/heads/dev` and `refs/heads/main`, rules
+_Require a pull request before merging_ and _Require status checks to pass_,
+`Vitest unit suite` as the required check, Enforcement _Active_, bypass list
+empty. The approving-review count is zero: with two accounts, requiring a review
+would mean a second account has to approve every pull request, and the check is
+the gate wanted here.
+
+**To recreate or replace it** (the endpoint needs _Administration: write_):
+
+```bash
+gh api --method POST repos/cosmicinsurancegh-dotcom/cosmic-vault-ui/rulesets --input - <<'JSON'
+{
+  "name": "dev-main-gate",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": { "include": ["refs/heads/dev", "refs/heads/main"], "exclude": [] }
+  },
+  "rules": [
+    {
+      "type": "pull_request",
+      "parameters": {
+        "allowed_merge_methods": ["merge", "squash", "rebase"],
+        "dismiss_stale_reviews_on_push": false,
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
+        "required_approving_review_count": 0,
+        "required_review_thread_resolution": false
+      }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "required_status_checks": [
+          { "context": "Vitest unit suite", "integration_id": 15368 }
+        ]
+      }
+    }
+  ]
+}
+JSON
+```
+
+This body created the live ruleset: the same body extracted from this file was
+piped into `gh api` and returned id `25890320`. Three details are worth keeping:
+
+- It omits `bypass_actors` entirely. That field being absent is what makes the
+  rules universal, and adding an entry to it is the only way to loosen them.
+- `conditions.ref_name` needs `"exclude": []` even though every branch is
+  included. Without it the create call fails `422` with a message naming the
+  missing parameter (`exclude`); that is exactly how the first attempt failed
+  here.
+- `integration_id: 15368` is the GitHub Actions app, so only a check reported by
+  Actions satisfies the rule.
+
+GitHub stores more than the body sent: the live rules came back with
+`require_extra_approval_for_unattributed_changes: true` and
+`do_not_enforce_on_create: false` added to the parameters. Neither changes the
+gate as configured. The first only adds an approval when the configured count is
+already above zero; the [available
+rules](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)
+says it has "no effect if the ruleset requires zero approvals". The second is
+the documented default, and it is the one to know about if `dev` or `main` ever
+has to be recreated: the [REST
+reference](https://docs.github.com/en/rest/repos/rules) defines it as "Allow
+repositories and branches to be created if a check would otherwise prohibit
+it", so at `false` the check applies to a matching branch at creation, not only
+when one is updated.
+
+Verify it, from any account:
+
+```bash
+gh api repos/cosmicinsurancegh-dotcom/cosmic-vault-ui/rules/branches/dev \
+  --jq '.[] | .type'
+```
+
+Three things decide whether this does what you want:
+
+- With both rules active and no bypass, a direct push to either branch is
+  refused for every account: a ruleset does not exempt the owner unless a bypass
+  entry says so. A pull request is the only way in. If a direct push is ever
+  needed again, that is what `bypass_actors` is for - one entry restores it for
+  that actor alone, at the cost of the check no longer being absolute for them.
+  `.githooks/pre-push` warns before such a push leaves the machine: it names the
+  protected branch, the commit at its head and the `GH013` refusal to expect. It
+  warns rather than blocks because a push whose commits already carry passing
+  checks from another ref is accepted, so the refusal is not a certainty.
+- A required check gates an **update of the branch**, not the commit that first
+  introduces the problem: GitHub's own wording is that commits "must first be
+  pushed to another ref where the checks pass", and a push of a commit without
+  them is rejected (`GH013`, "... is expected"). This is why the check has to run
+  on `pull_request`: on a branch in this repository the push already reports it,
+  but a pull request from a fork only reports through that trigger.
+- Who the merge commit ends up authored by decides whether Vercel will build it,
+  because that is the only author its Hobby project accepts (see above), and
+  GitHub does not hand the authorship to whoever clicks merge - reports differ on
+  whether a squash merge carries the pull request's author or the merger's. If a
+  merged pull request lands a commit authored by another account, the release
+  check says so in Vercel's own words rather than failing quietly, so merge the
+  first pull request and read `bun run deploy:status` (the `Smoke the live site`
+  workflow already does) before assuming the branch reached production.
 
 Production-readiness findings, the capacity assessment, operational runbook
 and outstanding risks are in
@@ -92,7 +244,12 @@ the `Deploy Convex functions` workflow, so no one needs a local Convex login
 to ship the backend.
 
 - **Dev functions** - push to `dev`, or run the workflow manually with
-  `target: dev`. Authenticated by the `CONVEX_DEPLOY_KEY_DEV` secret.
+  `target: dev`. In the pull-request flow described under
+  [Merging into dev and main](#merging-into-dev-and-main), a merge is that push.
+  Authenticated by the `CONVEX_DEPLOY_KEY_DEV` secret. A `Vitest unit suite` job
+  runs first and both deploy jobs need it, so a failing test - the sign-in guard
+  included - stops the deploy instead of shipping functions alongside a red
+  check, dev and production alike.
 - **Production functions** - manual run only, from `main`, with `target: prod`
   and `confirm: deploy-prod`. A merge to `main` is not a release. Authenticated
   by the `CONVEX_DEPLOY_KEY_PROD` secret, held on the `convex-prod`
@@ -156,17 +313,21 @@ so they fail as `404` rather than returning `index.html` (a `.js` URL answering
 JavaScript MIME type" error), and the app reloads once when Vite reports a
 preload error.
 
-Both jobs install with `bun install --frozen-lockfile`, so `bun.lock` must be
-current before a deploy.
+Every job that installs uses `bun install --frozen-lockfile`, so `bun.lock`
+must be current before a deploy.
 
 ### Release checklist
 
-1. Land the backend change on `dev` (push or dispatch `target: dev`) and let
-   the dev job pass.
-2. From `main`, run the workflow with `target: prod` and
-   `confirm: deploy-prod`.
-3. Check the run: `Check production confirmation` and `Deploy functions` must
-   both be green. A dispatch without the phrase fails there by design.
+1. Open a pull request into `dev` and let `Vitest unit suite` pass; merging it
+   is what pushes to `dev` and starts the deploy job. A dispatch with
+   `target: dev` re-runs the deploy on its own when there is nothing to merge.
+2. Get the release commit onto `main` the same way - through a pull request
+   whose check is green - then from `main` run the workflow with `target: prod`
+   and `confirm: deploy-prod`.
+3. Check the run: `Vitest unit suite`, `Check production confirmation` and
+   `Deploy functions` must all be green. A dispatch without the phrase fails
+   there by design, and a red suite skips `Deploy functions` rather than
+   releasing to production.
 4. Confirm production is serving the code you pushed, not just answering.
    List what is deployed and grep for a function this release added or renamed:
    `bunx convex function-spec --prod | grep -q 'setup.js:seedDeployment' && echo live`.
