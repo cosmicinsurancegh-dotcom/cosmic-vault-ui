@@ -6,10 +6,16 @@ name: Smoke the live site
 # deployment to take over; the schedule catches drift between releases (a
 # paused deployment, an expired credential, a reverted build).
 #
-# Limitation: this checks that the live site is healthy, not which commit it was
-# built from. If Vercel has not finished building within the wait window, the
-# previous deployment can still satisfy every check - the scheduled run is the
-# backstop.
+# Before the smoke check, `scripts/deploy-status.mjs` confirms Vercel actually
+# built *this* commit. A build that never started - the Hobby plan refusing a
+# commit whose author does not own the project is the one that has happened -
+# leaves the previous deployment serving, which every smoke check passes. The
+# reason is written to the run summary, so the failure is readable on the run
+# page instead of only in the Vercel dashboard.
+#
+# Limitation: smoke checks the served site, not which commit it was built from.
+# The deploy-status step is what ties them together: a build still pending when
+# the wait runs out fails the run rather than vouching for the old deployment.
 on:
   push:
     branches: [main]
@@ -19,6 +25,8 @@ on:
 
 permissions:
   contents: read
+  # Reading the commit's Vercel status; nothing here writes a status.
+  statuses: read
 
 concurrency:
   group: smoke-live
@@ -28,18 +36,28 @@ jobs:
   smoke:
     name: Live site smoke check
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
-      # No dependency install and no Bun: the check uses only Node's fetch.
+      # No dependency install and no Bun: both checks use only Node's fetch.
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
 
+      - name: Check Vercel built this commit
+        env:
+          # `github.token` is enough: the status list is public on this repo, and
+          # `statuses: read` covers the authenticated case.
+          GITHUB_TOKEN: ${{ github.token }}
+          # Vercel needs a minute or two; the script polls until this budget
+          # runs out, then reports whatever the commit's status says.
+          VERCEL_WAIT_SECONDS: "600"
+        run: node scripts/deploy-status.mjs
+
       - name: Wait for the release, then check it
         env:
-          # Vercel needs a minute or two; the script retries until this budget
-          # runs out and only then reports the failures.
+          # The build has landed by now, but the deployment can take a moment
+          # longer to take over, so the smoke check still retries.
           SMOKE_WAIT_SECONDS: "600"
         run: node scripts/smoke-live.mjs

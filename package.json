@@ -23,6 +23,7 @@
     "format": "prettier --write .",
     "preview": "vite preview",
     "smoke:live": "node scripts/smoke-live.mjs",
+    "deploy:status": "node scripts/deploy-status.mjs",
     "deploy:vercel": "bunx vercel --prod --yes",
     "deploy:vercel:preview": "bunx vercel --yes",
     "vault-door": "node scripts/vault-door/build.mjs"

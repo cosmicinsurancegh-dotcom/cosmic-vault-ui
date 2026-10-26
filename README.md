@@ -129,6 +129,15 @@ for a deploy to land, and `SMOKE_BASE_URL` to check another origin. That origin
 must apply `vercel.json`'s rewrites - a plain static server answers a missing
 asset with `index.html` and fails that check by design.
 
+`bun run deploy:status` checks the other half: that Vercel actually built the
+commit being released. It reads the commit's `Vercel - ...` status, waiting up to
+`VERCEL_WAIT_SECONDS` for it to finish, and fails when the build was blocked,
+cancelled or never started, writing the reason - including Vercel's own wording -
+to the run summary. The `Smoke the live site` workflow runs it before the smoke
+check, so a release whose deployment never happened fails instead of passing
+against the previous deployment. `GITHUB_REPOSITORY` and `GITHUB_SHA` select the
+commit; `GITHUB_TOKEN` is optional for a public repository.
+
 Routes are code-split, so a tab left open across a deploy asks for a chunk the
 new build replaced. Missing `/assets/*` files are kept out of the SPA rewrite,
 so they fail as `404` rather than returning `index.html` (a `.js` URL answering
