@@ -11,6 +11,8 @@ pnpm-lock.yaml
 test-results
 playwright-report
 blob-report
+# Browser session dumps from the Playwright MCP tool, not project fixtures.
+.playwright-mcp/
 
 # Convex deploy keys for CI (never commit)
 .env.convex-prod
