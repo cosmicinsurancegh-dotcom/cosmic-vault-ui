@@ -1,0 +1,8 @@
+[   15829ms] [ERROR] [CONVEX A(auth:signIn)] [Request ID: 8739e7bc8d5f646d] Server Error @ https://cosmicinsurance2vaultgh.com/assets/index-mVc3BEGq.js:1
+[   15837ms] [ERROR] Email sign-in error: Error: [CONVEX A(auth:signIn)] [Request ID: 8739e7bc8d5f646d] Server Error
+  Called by client
+    at dk.action (https://cosmicinsurance2vaultgh.com/assets/index-mVc3BEGq.js:3:45234)
+    at async https://cosmicinsurance2vaultgh.com/assets/index-mVc3BEGq.js:3:70769 @ https://cosmicinsurance2vaultgh.com/assets/Auth-Dlk_NHnG.js:264
+[ 6911729ms] [LOG] WebSocket closed with code 1006 @ https://cosmicinsurance2vaultgh.com/assets/index-mVc3BEGq.js:1
+[ 6911742ms] [LOG] Attempting reconnect in 735ms @ https://cosmicinsurance2vaultgh.com/assets/index-mVc3BEGq.js:1
+[ 6912959ms] [LOG] WebSocket reconnected at t=6837.2s after disconnect due to closed with code 1006 @ https://cosmicinsurance2vaultgh.com/assets/index-mVc3BEGq.js:1
