@@ -1,11 +1,14 @@
 import { convexTest } from "convex-test";
 import { v } from "convex/values";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import schema from "../src/convex/schema";
 import { internalAction } from "../src/convex/_generated/server";
 import { api } from "../src/convex/_generated/api";
 import type { Id } from "../src/convex/_generated/dataModel";
-import { renderShipmentStatusEmail } from "../src/convex/lib/shipmentEmail";
+import {
+  renderAssignmentEmail,
+  renderShipmentStatusEmail,
+} from "../src/convex/lib/shipmentEmail";
 
 /**
  * The delivery adapter is an action that runs a mutation internally. convex-test
@@ -1604,6 +1607,16 @@ describe("shipment status email", () => {
     expect(preview.html).toContain(
       "border-radius:4px;vertical-align:middle;font-size:0",
     );
+
+    // The route pins are served from the same origin, so they go the same way:
+    // the rail is drawn instead, and no link is left pointing at a host.
+    expect(preview.html).not.toContain("/email/route-pin-origin.png");
+    expect(preview.html).not.toContain('href="/');
+    expect(preview.html).not.toContain("Track this shipment</a>");
+    expect(preview.html).toContain("border-top:2px dashed");
+    expect(preview.text).toContain(
+      "Track this shipment from your vault at your dashboard.",
+    );
   });
 
   it("never reports the status as the consignment's location", () => {
@@ -1763,5 +1776,107 @@ describe("removing a mineral record", () => {
       async (ctx) => await ctx.db.get(created.mineralId),
     );
     expect(left).not.toBeNull();
+  });
+});
+
+describe("mineral assignment email", () => {
+  const base = {
+    recipientName: "Casey",
+    companyName: "Cosmic Vault Insurance",
+    supportEmail: "concierge@cosmicvault.test",
+    appUrl: "https://vault.test",
+    isNewAccount: true,
+    mineral: {
+      name: "Gold bullion",
+      reference: "MIN-AB12C",
+      category: "Precious metals",
+      quantity: "12.5 kg",
+      declaredValue: "£250,000.00",
+    },
+  };
+
+  it("links the vault and the mark when the deployment knows its origin", () => {
+    const email = renderAssignmentEmail(base);
+
+    expect(email.html).toContain(
+      'href="https://vault.test/dashboard/minerals"',
+    );
+    expect(email.html).toContain("Sign in at https://vault.test/auth");
+    expect(email.html).toContain("https://vault.test/email/logo-mark.png");
+    expect(email.text).toContain(
+      "Open your vault: https://vault.test/dashboard/minerals",
+    );
+  });
+
+  it("says where to go, rather than linking a host, without one", () => {
+    const email = renderAssignmentEmail({ ...base, appUrl: "" });
+
+    // No href survives - a mail client cannot open a relative one - and the
+    // header falls back to the drawn mark rather than a broken image.
+    expect(email.html).not.toContain('href="/');
+    expect(email.html).not.toContain("logo-mark.png");
+    expect(email.text).not.toContain("http");
+    expect(email.text).toContain("Open your vault from your dashboard");
+    expect(email.text).toContain("Sign in with this email address");
+  });
+});
+
+describe("email origins", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  /** Queues the assignment email for a fresh mineral and returns the notice. */
+  async function queuedAssignment(
+    t: Test,
+    admin: Id<"users">,
+    client: Id<"users">,
+  ) {
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+    await t.finishAllScheduledFunctions(() => {});
+    return await t.run(async (ctx) => {
+      const rows = await ctx.db.query("notifications").collect();
+      return rows.find(
+        (row) => row.type === "mineral.assigned" && row.userId === client,
+      );
+    });
+  }
+
+  it("addresses every link and image at the deployment's own site URL", async () => {
+    vi.stubEnv("SITE_URL", "https://cosmicinsurance2vaultgh.com/");
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const notice = await queuedAssignment(t, admin, client);
+
+    expect(notice?.emailHtml).toContain(
+      "https://cosmicinsurance2vaultgh.com/email/logo-mark.png",
+    );
+    expect(notice?.emailHtml).toContain(
+      'href="https://cosmicinsurance2vaultgh.com/dashboard/minerals"',
+    );
+    expect(notice?.emailText).toContain(
+      "https://cosmicinsurance2vaultgh.com/dashboard/minerals",
+    );
+  });
+
+  it("falls back to the drawn mark instead of a host it may not serve", async () => {
+    vi.stubEnv("SITE_URL", "");
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const notice = await queuedAssignment(t, admin, client);
+
+    // The old fallback was cosmicvault.co, which does not serve the assets.
+    expect(notice?.emailHtml).not.toContain("logo-mark.png");
+    expect(notice?.emailHtml).not.toContain("cosmicvault.co/dashboard");
+    expect(notice?.emailHtml).not.toContain('href="/');
+    expect(notice?.emailText).toContain("Open your vault from your dashboard");
   });
 });

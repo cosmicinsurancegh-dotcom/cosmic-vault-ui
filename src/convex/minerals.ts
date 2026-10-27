@@ -89,9 +89,14 @@ function formatDateTime(value: number) {
   }).format(new Date(value));
 }
 
-/** Canonical origin for links in emails. */
+/**
+ * Canonical origin for links and images in emails, and empty when the
+ * deployment has no site URL configured. An unset origin is left unset: the
+ * templates fall back to the drawn mark and say where to go, rather than
+ * pointing at a host that may not be serving us.
+ */
 function appUrl() {
-  return (process.env.SITE_URL ?? "https://cosmicvault.co").replace(/\/+$/, "");
+  return (process.env.SITE_URL ?? "").trim().replace(/\/+$/, "");
 }
 
 async function assertCurrency(
