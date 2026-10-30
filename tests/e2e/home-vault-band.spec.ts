@@ -262,6 +262,47 @@ function renderedLines(node: Element) {
     .map(([, line]) => line);
 }
 
+/**
+ * A third currency on top of the mixed pair, to see whether the compact
+ * headline still holds together when the list keeps growing.
+ */
+const THREE_CURRENCY_ROWS = [
+  ...MIXED_CURRENCY_ROWS,
+  {
+    mineral: {
+      _id: "e2e-band-vault-eur",
+      name: "Rare earth lot",
+      reference: "CV-MIN-7006",
+      category: "Rare earth",
+      quantity: 40,
+      unit: "kg",
+      declaredValue: 120000000,
+      currency: "EUR",
+      status: "active",
+      assignedUserId: MEMBER_ID,
+      createdAt: CREATED_AT,
+      updatedAt: CREATED_AT,
+    },
+    policy: {
+      _id: "e2e-band-policy-eur",
+      mineralId: "e2e-band-vault-eur",
+      policyNumber: "POL-7006",
+      provider: "Lloyd's of London",
+      coverage: "all_risk",
+      coverageLimit: 120000000,
+      premium: 45000,
+      currency: "EUR",
+      startDate: CREATED_AT,
+      endDate: ENDS_AT,
+      status: "active",
+      createdAt: CREATED_AT,
+      updatedAt: CREATED_AT,
+    },
+    shipment: null,
+    events: [],
+  },
+];
+
 async function startSignedIn(page: Page, rows: unknown = ROWS) {
   await page.addInitScript(
     ({ session, fixtures }) => {
@@ -527,6 +568,32 @@ test.describe("member home vault band", () => {
       expect(text).toContain("£78k");
       expect(text).toContain("under cover.");
       expect(text).not.toContain("US$9,400,000.00");
+    });
+  }
+
+  for (const width of [320, 390]) {
+    test(`fits a three-currency compact heading (${width}px)`, async ({
+      page,
+    }) => {
+      await startSignedIn(page, THREE_CURRENCY_ROWS);
+      await page.setViewportSize({ width, height: 640 });
+      await page.goto("/dashboard");
+
+      const heading = page
+        .locator("section")
+        .filter({ hasText: "Vault holdings" })
+        .getByRole("heading", { level: 2 });
+      await expect(heading).toBeVisible();
+
+      const lines = await heading.evaluate(renderedLines);
+      const text = lines.join(" ");
+      // Measured: three at 320, two at 390. Three is the ceiling either way.
+      expect(lines.length).toBeLessThanOrEqual(3);
+      // Every currency is in the claim, not just the first two.
+      expect(text).toContain("US$9.4m");
+      expect(text).toContain("£78k");
+      expect(text).toContain("€1.2m");
+      expect(text).toContain("under cover.");
     });
   }
 
