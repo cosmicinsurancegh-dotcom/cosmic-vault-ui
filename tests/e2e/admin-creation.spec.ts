@@ -69,6 +69,7 @@ const FIXTURES: Record<string, unknown> = {
     commissionEnabled: false,
     renewalNoticeDays: 30,
     claimSlaDays: 10,
+    supportResponseHours: 24,
     bankAccountName: "",
     bankIban: "",
     bankSortCode: "",

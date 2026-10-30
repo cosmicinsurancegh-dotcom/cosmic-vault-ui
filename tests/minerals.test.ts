@@ -2472,6 +2472,7 @@ describe("member records for vault cover", () => {
       commissionEnabled: current.commissionEnabled,
       renewalNoticeDays: current.renewalNoticeDays,
       claimSlaDays: current.claimSlaDays,
+      supportResponseHours: current.supportResponseHours,
       premiumPaymentTermDays: 21,
       allowedCurrencies: ["GBP"],
       emailTemplates: current.emailTemplates,

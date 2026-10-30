@@ -277,6 +277,12 @@ const schema = defineSchema(
       renewalNoticeDays: v.number(),
       claimSlaDays: v.number(),
       /**
+       * The reply promise quoted in the receipt sent when a member opens a
+       * support ticket. Optional so settings saved before it existed still
+       * load; `getSettings` supplies the default.
+       */
+      supportResponseHours: v.optional(v.number()),
+      /**
        * How long a member has to pay a premium invoice before the daily job
        * treats it as overdue. Optional so settings saved before it existed
        * still load; `getSettings` supplies the default.

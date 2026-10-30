@@ -17,6 +17,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:ci": "playwright test --workers=1 --retries=1 --fail-on-flaky-tests",
     "test:e2e:types": "tsc -p tests/e2e/tsconfig.json",
     "test:load": "k6 run loadtest/public-read.js",
     "test:load:abuse": "k6 run loadtest/quote-rate-limit.js",

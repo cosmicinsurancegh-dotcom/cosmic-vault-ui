@@ -51,6 +51,7 @@ export const update = mutation({
     commissionEnabled: v.boolean(),
     renewalNoticeDays: v.number(),
     claimSlaDays: v.number(),
+    supportResponseHours: v.number(),
     premiumPaymentTermDays: v.number(),
     bankAccountName: v.optional(v.string()),
     bankIban: v.optional(v.string()),
@@ -114,6 +115,7 @@ export const update = mutation({
       commissionEnabled: settings.commissionEnabled,
       renewalNoticeDays: settings.renewalNoticeDays,
       claimSlaDays: settings.claimSlaDays,
+      supportResponseHours: settings.supportResponseHours,
       premiumPaymentTermDays: settings.premiumPaymentTermDays,
       allowedCurrencies: settings.allowedCurrencies,
     };
@@ -128,6 +130,10 @@ export const update = mutation({
         Math.min(180, Math.round(args.renewalNoticeDays)),
       ),
       claimSlaDays: Math.max(1, Math.min(90, Math.round(args.claimSlaDays))),
+      supportResponseHours: Math.max(
+        1,
+        Math.min(168, Math.round(args.supportResponseHours)),
+      ),
       premiumPaymentTermDays: Math.max(
         1,
         Math.min(120, Math.round(args.premiumPaymentTermDays)),
@@ -159,6 +165,10 @@ export const update = mutation({
         commissionEnabled: args.commissionEnabled,
         renewalNoticeDays: args.renewalNoticeDays,
         claimSlaDays: args.claimSlaDays,
+        supportResponseHours: Math.max(
+          1,
+          Math.min(168, Math.round(args.supportResponseHours)),
+        ),
         premiumPaymentTermDays: Math.max(
           1,
           Math.min(120, Math.round(args.premiumPaymentTermDays)),

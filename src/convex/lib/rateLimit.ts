@@ -83,6 +83,9 @@ export const RATE_LIMITS = {
   quotePerUser: { limit: 10, windowMs: 10 * 60_000 },
   /** Upload URLs are cheap to mint; cap how many a member can create per hour. */
   uploadUrlPerUser: { limit: 60, windowMs: 60 * 60_000 },
+  /** Every ticket pages the support queue, so one member cannot open an
+   *  unlimited number of them in an hour. */
+  ticketPerUser: { limit: 10, windowMs: 60 * 60_000 },
   /** One operator can move many consignments in a session, so the ceiling is
    *  generous - it exists to bound a stuck client, not to pace real work. */
   shipmentEmailPerUser: { limit: 40, windowMs: 10 * 60_000 },

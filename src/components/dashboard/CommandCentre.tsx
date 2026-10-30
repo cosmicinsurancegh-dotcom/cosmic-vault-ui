@@ -4,7 +4,7 @@ import {
   PortfolioChart,
 } from "@/components/dashboard/BoardCharts";
 import { ChartEmptyState } from "@/components/dashboard/ChartEmptyState";
-import { StatusPill } from "@/components/dashboard/PlatformUI";
+import { Callout, StatusPill } from "@/components/dashboard/PlatformUI";
 import { CountUp } from "@/components/landing/CountUp";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
@@ -122,6 +122,7 @@ export function CommandCentre({
   onMonthsChange,
   userName,
   canManageMinerals,
+  supportAlert,
 }: {
   board: Board;
   months: number;
@@ -130,6 +131,13 @@ export function CommandCentre({
   /* Adding a mineral is the staff console's most used write, so it belongs on
      the dashboard itself rather than only behind the sidebar's Minerals link. */
   canManageMinerals?: boolean;
+  /* Unassigned support tickets, when the viewer may read the queue. */
+  supportAlert?: {
+    unassigned: number;
+    highPriority: number;
+    oldestUnassignedAt: number | null;
+    oldestUnassignedDays: number | null;
+  };
 }) {
   const navigate = useNavigate();
   const reduceMotion = useReducedMotion();
@@ -241,6 +249,8 @@ export function CommandCentre({
       ? "/dashboard/admin/applications"
       : "/dashboard/catalogue";
 
+  const oldestWaitDays = supportAlert?.oldestUnassignedDays ?? null;
+
   return (
     <div className="space-y-5">
       <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -326,6 +336,39 @@ export function CommandCentre({
           </Button>
         </div>
       </header>
+
+      {/* Support queue alert: work that nobody has picked up yet. */}
+      {supportAlert && supportAlert.unassigned > 0 && (
+        <Callout
+          tone="warning"
+          title={`${supportAlert.unassigned} support ${
+            supportAlert.unassigned === 1 ? "ticket is" : "tickets are"
+          } waiting without an owner`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>
+              {supportAlert.highPriority > 0 &&
+                `${supportAlert.highPriority} of them ${
+                  supportAlert.highPriority === 1 ? "is" : "are"
+                } high priority. `}
+              {oldestWaitDays === null
+                ? ""
+                : oldestWaitDays === 0
+                  ? "The oldest arrived today. "
+                  : `The oldest has waited ${oldestWaitDays} ${
+                      oldestWaitDays === 1 ? "day" : "days"
+                    }. `}
+              Take one from the queue so it is not missed.
+            </span>
+            <Link
+              to="/dashboard/admin/support"
+              className="inline-flex shrink-0 items-center gap-1 font-medium text-primary hover:underline"
+            >
+              Open support queue <ArrowUpRight className="size-3" />
+            </Link>
+          </div>
+        </Callout>
+      )}
 
       {/* Portfolio pulse */}
       <div className="grid overflow-hidden rounded-2xl border border-line bg-card/70 sm:grid-cols-2 sm:divide-x sm:divide-line lg:grid-cols-4">

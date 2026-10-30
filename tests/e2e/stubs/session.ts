@@ -25,7 +25,8 @@ declare global {
     /**
      * Canned query results, keyed by the reference name (`table.fn`). A spec
      * opts in per test, so the default "still loading" behaviour stays intact
-     * for every other screen.
+     * for every other screen. The stub reads this once into its own store, so a
+     * write can replace an entry without a reload - see `getFixtures`.
      */
     __E2E_FIXTURES__?: Record<string, unknown> | null;
     /**
@@ -97,4 +98,38 @@ export function subscribeToSession(listener: () => void): () => void {
 export function setSession(next: E2ESession | null): void {
   session = next;
   for (const listener of listeners) listener();
+}
+
+/**
+ * Canned query results, as a store rather than a constant.
+ *
+ * The page seeds `window.__E2E_FIXTURES__` from an init script, so that is the
+ * starting value; `tests/e2e/stubs/writes.ts` then replaces entries as the
+ * screen mutates them. Queries subscribe here, which is what lets a dialog show
+ * the record it just changed instead of waiting for a reload. `null` and
+ * `undefined` stay distinct on purpose: `undefined` means "not read yet".
+ */
+let fixtures: Record<string, unknown> | null | undefined;
+const fixtureListeners = new Set<() => void>();
+
+export function getFixtures(): Record<string, unknown> | null {
+  if (fixtures === undefined) {
+    fixtures =
+      typeof window === "undefined" ? null : (window.__E2E_FIXTURES__ ?? null);
+  }
+  return fixtures;
+}
+
+export function subscribeToFixtures(listener: () => void): () => void {
+  fixtureListeners.add(listener);
+  return () => {
+    fixtureListeners.delete(listener);
+  };
+}
+
+/** Replaces the whole map; callers build a new object so subscribers see a
+ *  new snapshot reference and re-render. */
+export function setFixtures(next: Record<string, unknown> | null): void {
+  fixtures = next;
+  for (const listener of fixtureListeners) listener();
 }

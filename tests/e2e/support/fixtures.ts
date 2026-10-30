@@ -31,6 +31,49 @@ const CONSENT_RECORD = {
 };
 
 /**
+ * A minimal staff snapshot for `reports.board`: enough shape for the Command
+ * Centre to render its header, pulse and empty line cards. Without it the
+ * overview stops at its skeleton and the header never mounts.
+ */
+export const STAFF_BOARD: Record<string, unknown> = {
+  scope: "company",
+  currency: "GBP",
+  months: 12,
+  asOf: Date.UTC(2026, 9, 25),
+  canSeeMoney: true,
+  otherCurrencies: 0,
+  kpis: {
+    premiumInForce: 120000,
+    activePolicies: 24,
+    openClaims: 2,
+    renewalsDue: 3,
+    pendingApplications: 1,
+    customers: 40,
+    collected: 90000,
+    newBusiness: 15000,
+    claimsInWindow: 8000,
+    lossRatio: 12,
+    avgPremium: 5000,
+    newBusinessChange: 10,
+    claimsChange: -4,
+  },
+  monthly: Array.from({ length: 12 }, (_, index) => ({
+    label: `${index + 1}/2026`,
+    premium: 10000,
+    claims: 500,
+    collected: 7500,
+    newBusiness: 1200,
+    policies: 2,
+    ratio: 5,
+  })),
+  lines: [],
+  claimsMix: [],
+  plans: [],
+  recentClaims: [],
+  alerts: [],
+};
+
+/**
  * Console errors the app logs deliberately. A rejected sign-in is part of the
  * flow the suite drives, and `Auth.tsx` reports it with `console.error`. Every
  * other console error still fails the test.

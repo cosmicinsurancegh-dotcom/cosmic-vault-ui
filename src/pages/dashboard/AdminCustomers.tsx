@@ -1367,6 +1367,17 @@ export function AdminSupportPage() {
                     <Td>
                       <p className="text-xs font-medium text-ink">{ticket.subject}</p>
                       <p className="text-[0.62rem] text-muted-foreground">{ticket.reference}</p>
+                      <p
+                        className={
+                          ticket.assigneeName
+                            ? "text-[0.62rem] text-muted-foreground"
+                            : "text-[0.62rem] font-medium text-amber-700 dark:text-amber-400"
+                        }
+                      >
+                        {ticket.assigneeName
+                          ? `Owner: ${ticket.assigneeName}`
+                          : "Unassigned"}
+                      </p>
                     </Td>
                     <Td>{ticket.customerName}</Td>
                     <Td className="capitalize">{ticket.category}</Td>

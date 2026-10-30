@@ -97,6 +97,17 @@ export default function Home() {
   );
   // One snapshot serves both ranges, so 6M/12M switches without a refetch.
   const board = useQuery(api.reports.board, staff ? { months: 12 } : "skip");
+  /* Reading the support queue needs the permission that opens it; the alert is
+     simply absent for staff without it, rather than a failed query. */
+  const canViewSupport = can(
+    user?.role,
+    user?.permissions,
+    STAFF_PERMISSIONS.CUSTOMERS_VIEW,
+  );
+  const supportQueue = useQuery(
+    api.tickets.queueSummary,
+    staff && canViewSupport ? {} : "skip",
+  );
 
   if (demoOperations) return <OperationsOverview />;
 
@@ -109,6 +120,7 @@ export default function Home() {
         onMonthsChange={setMonths}
         userName={user?.name}
         canManageMinerals={canManageMinerals}
+        supportAlert={supportQueue}
       />
     );
   }

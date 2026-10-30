@@ -1,0 +1,71 @@
+name: End-to-end suite
+
+# The browser suite on its own, in its strictest configuration: a single worker,
+# so two specs cannot hide a shared-state bug behind each other's parallelism,
+# and `--fail-on-flaky-tests`, so a spec that only passes on its retry turns the
+# run red instead of being reported as "1 flaky" and ignored.
+#
+# Nothing here touches a deployment or needs a secret: the app runs under Vite
+# with Convex replaced by the doubles in `tests/e2e/stubs`.
+on:
+  # Every branch, so a change carries the check wherever it lands.
+  push:
+  # A pull request opened from a fork runs its push in the fork, so this is the
+  # only way its check is reported on the pull request itself.
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A newer push to the same ref supersedes the run it replaced.
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright (one worker, no flakes)
+    runs-on: ubuntu-latest
+    # The suite takes a couple of minutes locally on two workers; one worker on
+    # a cold runner still finishes well inside this.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # No version input: setup-bun reads `packageManager` from package.json,
+      # so CI installs with the same Bun that wrote `bun.lock`.
+      - uses: oven-sh/setup-bun@v2
+
+      # Bun's global package cache (~/.bun/install/cache). setup-bun caches the
+      # bun executable, not this, so the packages are cached here.
+      - name: Cache Bun's package cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # The suite only drives Chromium; --with-deps adds the system libraries
+      # the browser needs on a bare runner.
+      - name: Install Chromium
+        run: bunx playwright install --with-deps chromium
+
+      # The script carries --workers=1, --retries=1 and --fail-on-flaky-tests,
+      # so this exact command can be run locally to reproduce a red run.
+      - name: Run the end-to-end suite
+        run: bun run test:e2e:ci
+
+      # Traces and screenshots are kept on failure, and they are the only way
+      # to see what a flaky spec saw on the attempt that failed.
+      - name: Upload the failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results
+          retention-days: 7

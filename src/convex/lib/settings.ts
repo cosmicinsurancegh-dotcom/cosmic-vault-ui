@@ -85,6 +85,8 @@ export const DEFAULT_SETTINGS = {
   commissionEnabled: false,
   renewalNoticeDays: 30,
   claimSlaDays: 10,
+  /** Quoted in the ticket receipt: "we aim to reply within N hours". */
+  supportResponseHours: 24,
   /** Days a premium invoice stays current. Matches the old hard-coded term. */
   premiumPaymentTermDays: 7,
   bankAccountName: "Cosmic Vault Insurance Ltd",

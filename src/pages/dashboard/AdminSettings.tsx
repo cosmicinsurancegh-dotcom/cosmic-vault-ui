@@ -41,6 +41,7 @@ type SettingsForm = {
   commissionEnabled: boolean;
   renewalNoticeDays: string;
   claimSlaDays: string;
+  supportResponseHours: string;
   premiumPaymentTermDays: string;
   bankAccountName: string;
   bankIban: string;
@@ -57,6 +58,7 @@ const EMPTY_SETTINGS_FORM: SettingsForm = {
   commissionEnabled: false,
   renewalNoticeDays: "30",
   claimSlaDays: "10",
+  supportResponseHours: "24",
   premiumPaymentTermDays: "7",
   bankAccountName: "",
   bankIban: "",
@@ -74,6 +76,7 @@ function settingsForm(settings: {
   commissionEnabled: boolean;
   renewalNoticeDays: number;
   claimSlaDays: number;
+  supportResponseHours: number;
   premiumPaymentTermDays: number;
   bankAccountName?: string;
   bankIban?: string;
@@ -89,6 +92,7 @@ function settingsForm(settings: {
     commissionEnabled: settings.commissionEnabled,
     renewalNoticeDays: String(settings.renewalNoticeDays),
     claimSlaDays: String(settings.claimSlaDays),
+    supportResponseHours: String(settings.supportResponseHours),
     premiumPaymentTermDays: String(settings.premiumPaymentTermDays),
     bankAccountName: settings.bankAccountName ?? "",
     bankIban: settings.bankIban ?? "",
@@ -193,6 +197,7 @@ export default function AdminSettingsPage() {
         commissionEnabled: form.commissionEnabled,
         renewalNoticeDays: Number(form.renewalNoticeDays),
         claimSlaDays: Number(form.claimSlaDays),
+        supportResponseHours: Number(form.supportResponseHours),
         premiumPaymentTermDays: Number(form.premiumPaymentTermDays),
         bankAccountName: form.bankAccountName || undefined,
         bankIban: form.bankIban || undefined,
@@ -333,6 +338,25 @@ export default function AdminSettingsPage() {
                 }
                 className="h-9 rounded-lg bg-card"
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="s-support-sla">Support reply target (hours)</Label>
+              <Input
+                id="s-support-sla"
+                inputMode="numeric"
+                value={form.supportResponseHours}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    supportResponseHours: event.target.value,
+                  })
+                }
+                className="h-9 rounded-lg bg-card"
+              />
+              <p className="text-[0.62rem] leading-4 text-muted-foreground">
+                Quoted in the receipt a member gets when they open a support
+                request.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="s-payment-term">Premium payment term (days)</Label>
