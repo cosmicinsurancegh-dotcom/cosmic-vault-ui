@@ -78,9 +78,9 @@ that package where npm used to nest it, and without the pin Vitest's nested
   ([`unit-tests.yml`](.github/workflows/unit-tests.yml)). It needs no secrets or
   deployment, so a broken guard fails the commit's check rather than waiting to
   be noticed locally. Making the check *required* before a merge is a repository
-  setting the workflow cannot declare - [Merging into dev and
-  main](#merging-into-dev-and-main) has the steps, and what a required check
-  does and does not block. The Convex deploy workflow calls that same
+  setting the workflow cannot declare - [Merging into
+  main](#merging-into-main) has the current arrangement and the gate that used
+  to enforce it, and what a required check does and does not block. The Convex deploy workflow calls that same
   workflow before it deploys - one
   file defines the steps - and both of its deploy jobs wait on it, so a red
   guard stops a deploy, production included, rather than only showing red on the
@@ -89,20 +89,27 @@ that package where npm used to nest it, and without the pin Vitest's nested
   They are opt-in, require `CONVEX_URL`, and must be pointed at staging; see
   [`loadtest/README.md`](loadtest/README.md).
 
-### Merging into dev and main
+### Merging into main
 
-The intended flow for these two branches: work happens on a branch, a pull
-request targets `dev` or `main`, `Vitest unit suite` has to be green, and the
-merge is what lands it. The merge is also what releases it - a merge into `dev`
-is the push that triggers `Deploy Convex functions`, and Vercel builds `main`
-from its push - while production functions stay a manual dispatch, because a
-merge to `main` is still not a release.
+**Current arrangement (2026-10-30): `main` is the only branch, and it takes
+direct pushes.** `dev` was deleted, and the `dev-main-gate` ruleset described
+below still exists but is set to `enforcement: disabled`, so `git push origin
+main` is the flow: commit, push, and Vercel builds the app from that push.
+`Vitest unit suite` still runs on every push (and on a pull request, if one is
+ever opened), but it no longer blocks anything - it is a check to read before
+moving on. Deleting `dev` also removed the push trigger for `Deploy Convex
+functions`, so dev functions now go out by manual dispatch with `target: dev`.
+Production functions were already a manual dispatch and still are, because a
+push to `main` is not a release.
+
+Everything from here to the end of this section records the gate as it was
+configured on 2026-10-26 and how to switch it back on.
 
 GitHub reports the job as the check **`Vitest unit suite`** - read off the check
 runs of a pushed commit, not guessed. (`Live site smoke check` and `Supabase
-Preview` are the repository's other checks.) The ruleset that requires it is
-**active**: `dev-main-gate` (id `25890320`), applied 2026-10-26, with no branch
-protection alongside it. `unit-tests.yml` runs on `pull_request` against `dev`
+Preview` are the repository's other checks.) The ruleset that required it was
+**`dev-main-gate`** (id `25890320`), applied 2026-10-26 and disabled 2026-10-30,
+with no branch protection alongside it. `unit-tests.yml` runs on `pull_request` against `dev`
 and `main` as well, which is what makes the check requireable at all: a push
 covers branches in this repository, but a pull request opened from a fork runs
 its push inside the fork and reports nothing here.
@@ -116,15 +123,16 @@ change. Both logins are stored, and the active one is what `gh` and HTTPS
 `git push` use - `gh auth switch --user xkobxx` returns to the non-admin account,
 `--user cosmicinsurancegh-dotcom` comes back.
 
-The configuration, decided explicitly rather than assumed: `dev` and `main` take
+The configuration, decided explicitly rather than assumed: `dev` and `main` took
 changes only through a **pull request**, that pull request's `Vitest unit suite`
-check must pass, **no one may delete either branch**, and there are **no bypass
-actors** - nobody, owner included, can update or delete them outside a green
-check. That is the strict form on purpose: a bypass list is what would let the
-check be sidestepped, so the value of the rule depends on it being empty. The
-cost is that the direct push to `dev` and `main` is gone; every change arrives on
-a branch and merges through a pull request, which is how the release checklist
-below is written.
+check had to pass, **no one could delete either branch**, and there were **no
+bypass actors** - nobody, owner included, could update or delete them outside a
+green check. That was the strict form on purpose: a bypass list is what would let
+the check be sidestepped, so the value of the rule depended on it being empty.
+The cost was that the direct push to `dev` and `main` was gone; every change
+arrived on a branch and merged through a pull request. The release checklist
+below was written that way and now assumes direct pushes; the ruleset was
+disabled rather than edited so that this section stays reproducible.
 
 The deletion rule is not decoration. The repository has _Automatically delete
 head branches_ turned on (`delete_branch_on_merge`), which is what keeps merged
@@ -216,13 +224,19 @@ repositories and branches to be created if a check would otherwise prohibit
 it", so at `false` the check applies to a matching branch at creation, not only
 when one is updated.
 
-Verify it, from any account - three rules on each branch, and automatic deletion
-on:
+Verify it, from any account - while it was active that was three rules on each
+branch; today the enforcement field is the thing to read, because a disabled
+ruleset still lists its rules but applies none of them:
 
 ```bash
-gh api repos/cosmicinsurancegh-dotcom/cosmic-vault-ui/rules/branches/dev \
+gh api repos/cosmicinsurancegh-dotcom/cosmic-vault-ui/rulesets/25890320 \
+  --jq '.enforcement'
+# -> disabled   (it read "active" between 2026-10-26 and 2026-10-30)
+
+gh api repos/cosmicinsurancegh-dotcom/cosmic-vault-ui/rules/branches/main \
   --jq '[.[] | .type] | sort | join(", ")'
-# -> deletion, pull_request, required_status_checks
+# -> empty while disabled; "deletion, pull_request, required_status_checks"
+#    when the ruleset was active
 
 gh api repos/cosmicinsurancegh-dotcom/cosmic-vault-ui \
   --jq '"delete_branch_on_merge=\(.delete_branch_on_merge)"'
@@ -231,18 +245,12 @@ gh api repos/cosmicinsurancegh-dotcom/cosmic-vault-ui \
 
 Three things decide whether this does what you want:
 
-- With these rules active and no bypass, a direct push to either branch is
+- With these rules active and no bypass, a direct push to either branch was
   refused for every account: a ruleset does not exempt the owner unless a bypass
-  entry says so. A pull request is the only way in. If a direct push is ever
-  needed again, that is what `bypass_actors` is for - one entry restores it for
-  that actor alone, at the cost of the check no longer being absolute for them.
-  `.githooks/pre-push` warns before such a push leaves the machine: it names the
-  protected branch, the commit at its head and the `GH013` refusal to expect.
-  This notice stays a warning - unlike the author check in the same hook, which
-  does refuse the push - because the outcome is not locally knowable: the check
-  rule on its own accepts a push whose commits already passed the check on
-  another ref, and the `pull_request` rule alongside it is what requires the
-  branch to move through a merge.
+  entry says so. A pull request was the only way in, and that is what the
+  `GH013` refusal in the transcript further up was. The ruleset is disabled
+  today, so a direct push to `main` lands; re-enabling it (`enforcement:
+  active`) restores the block for every account at once.
 - A required check gates an **update of the branch**, not the commit that first
   introduces the problem: GitHub's own wording is that commits "must first be
   pushed to another ref where the checks pass", and a push of a commit without
@@ -276,9 +284,9 @@ site talks to) and `avid-camel-675` (development). Functions are published by
 the `Deploy Convex functions` workflow, so no one needs a local Convex login
 to ship the backend.
 
-- **Dev functions** - push to `dev`, or run the workflow manually with
-  `target: dev`. In the pull-request flow described under
-  [Merging into dev and main](#merging-into-dev-and-main), a merge is that push.
+- **Dev functions** - run the workflow manually with `target: dev`; `dev` was
+  deleted on 2026-10-30, so no push triggers them any more (see
+  [Merging into main](#merging-into-main)).
   Authenticated by the `CONVEX_DEPLOY_KEY_DEV` secret. A `Vitest unit suite` job
   runs first and both deploy jobs need it, so a failing test - the sign-in guard
   included - stops the deploy instead of shipping functions alongside a red
@@ -359,12 +367,11 @@ must be current before a deploy.
 
 ### Release checklist
 
-1. Open a pull request into `dev` and let `Vitest unit suite` pass; merging it
-   is what pushes to `dev` and starts the deploy job. A dispatch with
-   `target: dev` re-runs the deploy on its own when there is nothing to merge.
-2. Get the release commit onto `main` the same way - through a pull request
-   whose check is green - then from `main` run the workflow with `target: prod`
-   and `confirm: deploy-prod`.
+1. Commit on `main` and push. Vercel builds from that push, and `Vitest unit
+   suite` runs alongside it - read the run before moving on. Dev functions take
+   a manual dispatch with `target: dev`, which is the only trigger they have
+   left.
+2. From `main` run the workflow with `target: prod` and `confirm: deploy-prod`.
 3. Check the run: `Vitest unit suite`, `Check production confirmation` and
    `Deploy functions` must all be green. A dispatch without the phrase fails
    there by design, and a red suite skips `Deploy functions` rather than

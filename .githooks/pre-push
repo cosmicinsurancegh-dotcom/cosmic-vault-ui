@@ -21,21 +21,13 @@
 # existing history to a new remote is the case that needs it, because every
 # commit in it is new there.
 #
-# The second thing it watches is the `dev`/`main` ruleset documented in the
-# README ("Merging into dev and main"), live since 2026-10-26 as `dev-main-gate`.
-# GitHub refuses a push that moves one of those branches unless the pushed
-# commits' `Vitest unit suite` checks already passed on another ref, and answers
-# with
-#
-#   remote: error: GH013: Repository rule violations found for refs/heads/dev
-#
-# A push like that is refused outright rather than landing and failing later, so
-# the hook says which ref a push is about to update and leaves the choice - pull
-# request, or `--no-verify` - to the person pushing. This notice stays a warning,
-# unlike the author check above, because the outcome is not locally knowable: the
-# check rule on its own accepts a push whose commits already passed the check on
-# another ref, and it is the `pull_request` rule alongside it that requires the
-# branch to move through a merge.
+# This hook used to add a second, non-blocking notice whenever a push moved
+# `dev` or `main`, because the `dev-main-gate` ruleset refused those pushes with
+# `GH013` unless the commits' `Vitest unit suite` checks had already passed on
+# another ref. That ruleset was disabled on 2026-10-30, when the repository went
+# to `main` only and a direct push to `main` became the flow (README, "Merging
+# into main"), so the notice is gone rather than warning every push about a
+# refusal that no longer happens.
 #
 # Installed by `bun install` (the `prepare` script sets
 # `core.hooksPath=.githooks`); run that by hand if the hook does not fire:
@@ -53,18 +45,6 @@ set -u
 
 OWNER_DEFAULT="347948316+cosmicinsurancegh-dotcom@users.noreply.github.com"
 ZERO="0000000000000000000000000000000000000000"
-# Branches the ruleset protects. Compared against the *remote* ref, because that
-# is the ref GitHub decides on. Keep in step with the ruleset's conditions in
-# README.md if the protected branches ever change.
-GATED_REFS="refs/heads/dev refs/heads/main"
-
-is_gated() {
-  case " $GATED_REFS " in
-    *" $1 "*) return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
 # Configured owners, one per line, normalised on the way in so that
 # "a@b.com, c@d.com" and repeated --add both work.
 configured="$(git config --get-all vercel.projectOwnerEmail 2>/dev/null || true)"
@@ -83,20 +63,11 @@ is_owner() {
 # <local ref> <local sha> <remote ref> <remote sha>, one line per pushed ref.
 problems=""
 count=0
-gated=""
-gated_count=0
 
 while read -r local_ref local_sha remote_ref remote_sha; do
   [ -n "${local_sha:-}" ] || continue
   # Deleting a remote branch sends no commits.
   [ "$local_sha" = "$ZERO" ] && continue
-
-  if is_gated "${remote_ref:-}"; then
-    branch="${remote_ref#refs/heads/}"
-    gated="${gated}   ${branch}  $(git log -1 --format='%h %s' "$local_sha" 2>/dev/null || printf '%s' "$local_sha")
-"
-    gated_count=$((gated_count + 1))
-  fi
 
   if [ "${remote_sha:-$ZERO}" = "$ZERO" ]; then
     # New branch: everything reachable here and not from any remote yet.
@@ -136,27 +107,8 @@ if [ "$count" -gt 0 ]; then
   } >&2
 fi
 
-if [ "$gated_count" -gt 0 ]; then
-  {
-    echo ""
-    echo "! This push updates a branch protected by the dev/main ruleset:"
-    echo ""
-    printf '%s' "$gated"
-    echo "  GitHub refuses a direct push to the branch unless the pushed commits'"
-    echo "  Vitest unit suite checks already passed on another ref (the ruleset is"
-    echo "  dev-main-gate; see README.md, \"Merging into dev and main\"). Expect:"
-    echo ""
-    echo "    remote: error: GH013: Repository rule violations found"
-    echo ""
-    echo "  Push a work branch and open a pull request into it instead."
-    echo "  Skip this warning:  git push --no-verify"
-    echo ""
-  } >&2
-fi
-
-# The author check above is the block: it is the one failure that would otherwise
-# land and quietly never deploy. The gated-ref notice is not - a push whose commits
-# already passed the check on another ref is legitimate.
+# The author check is the block: it is the one failure that would otherwise land
+# and quietly never deploy.
 if [ "$count" -gt 0 ]; then
   exit 1
 fi
