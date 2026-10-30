@@ -15,14 +15,25 @@ import {
   StatusPill,
 } from "@/components/dashboard/PlatformUI";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { OperationsOverview } from "@/components/vault/OperationsOverview";
 import { VaultHomeBand } from "@/components/vault/VaultHomeBand";
 import { useAuth } from "@/hooks/use-auth";
 import { useVaultActor } from "@/lib/vault/useVault";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
+import { toast } from "sonner";
 import { formatMoney, formatMoneyList, formatDate, daysUntil } from "@/lib/format";
 import {
   STAFF_PERMISSIONS,
@@ -38,7 +49,9 @@ import {
   FileWarning,
   Headset,
   LifeBuoy,
+  Loader2,
   PackageSearch,
+  ShieldAlert,
   ShieldCheck,
   Store,
   Users,
@@ -62,6 +75,11 @@ export default function Home() {
   const ensureBasics = useMutation(api.setup.ensureBasics);
   const [days] = useState(30);
   const [months, setMonths] = useState(6);
+  const [renewalFor, setRenewalFor] = useState<{
+    id: Id<"policies">;
+    policyNumber: string;
+    productName: string;
+  } | null>(null);
 
   useEffect(() => {
     ensureBasics().catch(() => {
@@ -181,6 +199,77 @@ export default function Home() {
             to="/dashboard/payments"
           />
         </div>
+
+        {overview.lapsedCover.length > 0 && (
+          <Panel>
+            <PanelHeader
+              title="Cover no longer in force"
+              description="Expired, suspended, or cancelled cover. Renewal never happens automatically - ask us before you rely on this protection."
+              action={
+                <Link
+                  to="/dashboard/policies"
+                  className="text-xs font-medium text-primary"
+                >
+                  Review policies
+                </Link>
+              }
+            />
+            <ul className="divide-y divide-line">
+              {overview.lapsedCover.map((policy) => (
+                <li
+                  key={policy._id}
+                  className="flex items-center gap-3 px-5 py-3.5"
+                >
+                  <span className="grid size-9 shrink-0 place-items-center rounded-[4px] bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                    <ShieldAlert className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-ink">
+                      {policy.productName}
+                    </p>
+                    <p className="mt-0.5 text-[0.65rem] text-muted-foreground">
+                      {policy.categoryKey === "mineral" ? "Vault cover · " : ""}
+                      {policy.policyNumber} · term to {formatDate(policy.endDate)}
+                      {policy.suspensionReason
+                        ? ` · ${policy.suspensionReason}`
+                        : ""}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <StatusPill status={policy.status} />
+                    {policy.renewalRequested ? (
+                      <span className="text-[0.62rem] font-medium text-muted-foreground">
+                        Renewal requested
+                      </span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 rounded-[4px] bg-transparent text-xs"
+                        onClick={() =>
+                          setRenewalFor({
+                            id: policy._id,
+                            policyNumber: policy.policyNumber,
+                            productName: policy.productName,
+                          })
+                        }
+                      >
+                        Request renewal
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        )}
+
+        {renewalFor && (
+          <RenewalDialog
+            policy={renewalFor}
+            onClose={() => setRenewalFor(null)}
+          />
+        )}
 
         <div className="grid gap-5 lg:grid-cols-[1.25fr_1fr]">
           <Panel>
@@ -529,4 +618,83 @@ export default function Home() {
   }
 
   return <LoadingState label="Loading your dashboard" />;
+}
+
+/** Asks the servicing team to put lapsed cover back in force. Nothing is
+ *  reinstated until a person approves it, so the wording never promises it. */
+function RenewalDialog({
+  policy,
+  onClose,
+}: {
+  policy: { id: Id<"policies">; policyNumber: string; productName: string };
+  onClose: () => void;
+}) {
+  const requestChange = useMutation(api.policies.requestChange);
+  const [details, setDetails] = useState(
+    `Please renew my ${policy.productName} cover for a further 12 months.`,
+  );
+  const [pending, setPending] = useState(false);
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="rounded-[4px] border-line bg-background">
+        <DialogHeader>
+          <DialogTitle className="tracking-[-0.02em]">Request renewal</DialogTitle>
+          <DialogDescription>
+            {policy.productName} · {policy.policyNumber}. A person reviews this
+            request - cover is not reinstated automatically, and a renewal
+            premium only becomes due if it is approved.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Label htmlFor="renewal-details" className="text-[0.65rem]">
+            Anything the team should know?
+          </Label>
+          <Textarea
+            id="renewal-details"
+            value={details}
+            onChange={(event) => setDetails(event.target.value)}
+            className="min-h-24 rounded-xl bg-card"
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              className="rounded-[4px] bg-transparent"
+              disabled={pending}
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-[4px]"
+              disabled={pending || details.trim().length < 5}
+              onClick={async () => {
+                setPending(true);
+                try {
+                  await requestChange({
+                    policyId: policy.id,
+                    kind: "renewal",
+                    details,
+                  });
+                  toast.success("Renewal request sent to the servicing team.");
+                  onClose();
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : "Could not send the request.",
+                  );
+                } finally {
+                  setPending(false);
+                }
+              }}
+            >
+              {pending && <Loader2 className="size-3.5 animate-spin" />}
+              Send request
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }

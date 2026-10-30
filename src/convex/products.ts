@@ -168,8 +168,15 @@ export const catalogue = query({
     products = products.filter(
       (product) =>
         product.effectiveFrom <= now &&
+        /* A product with no markets is not for sale anywhere. The cover anchor
+           the vault issues against is exactly that, so it must never reach the
+           catalogue the member browses - including when no country is asked
+           for, which is how the page opens. */
+        product.countries.length > 0 &&
         (!args.country || product.countries.includes(args.country)) &&
-        (!args.category || args.category === "all" || product.categoryKey === args.category),
+        (!args.category ||
+          args.category === "all" ||
+          product.categoryKey === args.category),
     );
     products.sort((a, b) => a.name.localeCompare(b.name));
     const categories = await ctx.db.query("categories").take(50);

@@ -94,35 +94,83 @@ export const overview = query({
     const from = args.from ?? now - 30 * DAY;
     const to = args.to ?? now;
     const settings = await getSettings(ctx);
-    const snapshot = await loadSnapshot(ctx);
-    const names = new Map(
-      snapshot.users.map((user) => [user._id, user.name ?? user.email ?? "Customer"]),
-    );
 
     if (viewer.role === "customer") {
-      const myPolicies = snapshot.policies.filter(
-        (row) => row.customerUserId === viewer.user._id,
-      );
-      const myApps = snapshot.applications.filter(
-        (row) => row.customerUserId === viewer.user._id,
-      );
-      const myClaims = snapshot.claims.filter(
-        (row) => row.customerUserId === viewer.user._id,
-      );
-      const myTransactions = snapshot.transactions.filter(
-        (row) => row.customerUserId === viewer.user._id,
-      );
-      const myDocs = snapshot.documents.filter(
-        (doc) => doc.ownerUserId === viewer.user._id,
-      );
-      const myNotifications = snapshot.notifications
-        .filter((item) => item.userId === viewer.user._id)
-        .sort((a, b) => b.createdAt - a.createdAt);
-      const myRequests = snapshot.requests.filter(
-        (request) => request.customerUserId === viewer.user._id,
-      );
+      /* Read the member's own rows by index rather than filtering a capped
+         snapshot of the whole tables. The snapshot is loaded in creation
+         order, so once the deployment holds more rows than it loads, a newly
+         issued policy, invoice or document falls outside it and the member's
+         own dashboard hides their own cover: the tile reads zero while the
+         Policies page lists the policy. */
+      const [
+        myPolicies,
+        myApps,
+        myClaims,
+        myTransactions,
+        myDocs,
+        myNotifications,
+        myRequests,
+      ] = await Promise.all([
+        ctx.db
+          .query("policies")
+          .withIndex("by_customer", (q) =>
+            q.eq("customerUserId", viewer.user._id),
+          )
+          .order("desc")
+          .take(100),
+        ctx.db
+          .query("applications")
+          .withIndex("by_customer", (q) =>
+            q.eq("customerUserId", viewer.user._id),
+          )
+          .order("desc")
+          .take(100),
+        ctx.db
+          .query("claims")
+          .withIndex("by_customer", (q) =>
+            q.eq("customerUserId", viewer.user._id),
+          )
+          .order("desc")
+          .take(100),
+        ctx.db
+          .query("transactions")
+          .withIndex("by_customer", (q) =>
+            q.eq("customerUserId", viewer.user._id),
+          )
+          .order("desc")
+          .take(200),
+        ctx.db
+          .query("documents")
+          .withIndex("by_owner", (q) =>
+            q.eq("ownerUserId", viewer.user._id),
+          )
+          .order("desc")
+          .take(100),
+        ctx.db
+          .query("notifications")
+          .withIndex("by_user", (q) => q.eq("userId", viewer.user._id))
+          .order("desc")
+          .take(50),
+        ctx.db
+          .query("policyRequests")
+          .withIndex("by_customer", (q) =>
+            q.eq("customerUserId", viewer.user._id),
+          )
+          .order("desc")
+          .take(50),
+      ]);
       const outstanding = myTransactions.filter(
         (tx) => tx.type === "premium" && tx.status === "pending",
+      );
+      /* A cover the member has already asked us to renew says so on the card
+         instead of offering the same request twice. */
+      const pendingRenewals = new Set(
+        myRequests
+          .filter(
+            (request) =>
+              request.status === "pending" && request.kind === "renewal",
+          )
+          .map((request) => request.policyId),
       );
       return {
         kind: "customer" as const,
@@ -151,6 +199,29 @@ export const overview = query({
         recentPolicies: myPolicies
           .sort((a, b) => b.createdAt - a.createdAt)
           .slice(0, 5),
+        /* Cover that is no longer in force. It leaves the active count, which
+           is correct - and without somewhere to land, a lapsed vault policy
+           would disappear from the overview entirely and be findable only two
+           pages away. */
+        lapsedCover: myPolicies
+          .filter(
+            (policy) =>
+              policy.status === "expired" ||
+              policy.status === "suspended" ||
+              policy.status === "cancelled",
+          )
+          .sort((a, b) => b.endDate - a.endDate)
+          .slice(0, 5)
+          .map((policy) => ({
+            _id: policy._id,
+            policyNumber: policy.policyNumber,
+            productName: policy.productName,
+            categoryKey: policy.categoryKey,
+            status: policy.status,
+            endDate: policy.endDate,
+            suspensionReason: policy.suspensionReason ?? null,
+            renewalRequested: pendingRenewals.has(policy._id),
+          })),
         infoRequests: [
           ...myApps.filter((app) => app.status === "additional_info_required"),
           ...myClaims.filter((claim) => claim.status === "additional_info_required"),
@@ -164,6 +235,11 @@ export const overview = query({
           .slice(0, 5),
       };
     }
+
+    const snapshot = await loadSnapshot(ctx);
+    const names = new Map(
+      snapshot.users.map((user) => [user._id, user.name ?? user.email ?? "Customer"]),
+    );
 
     if (viewer.role === "broker") {
       const profile = snapshot.brokers.find(

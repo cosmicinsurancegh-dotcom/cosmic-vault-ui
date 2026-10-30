@@ -352,9 +352,43 @@ function PolicyDialog({
                 <span className="text-muted-foreground">“{pendingRequest.details}”</span>
               </p>
             ) : policy.status === "cancelled" || policy.status === "expired" ? (
-              <p className="mt-3 text-xs text-muted-foreground">
-                This policy can no longer be changed. Contact support for help.
-              </p>
+              /* The term has ended, so there is nothing left to endorse - but
+                 a renewal is still a decision the member can ask for. */
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  This cover has lapsed, so its terms can no longer be changed.
+                  You can ask for it to be renewed.
+                </p>
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    className="rounded-[4px]"
+                    disabled={pending}
+                    onClick={async () => {
+                      setPending(true);
+                      try {
+                        await requestChange({
+                          policyId,
+                          kind: "renewal",
+                          details: `Please renew my ${policy.productName} cover for a further 12 months.`,
+                        });
+                        toast.success("Renewal request sent to the servicing team.");
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Could not submit the request.",
+                        );
+                      } finally {
+                        setPending(false);
+                      }
+                    }}
+                  >
+                    {pending && <Loader2 className="size-3.5 animate-spin" />}
+                    Request renewal
+                  </Button>
+                </div>
+              </div>
             ) : (
               <div className="mt-3 space-y-2">
                 <div className="flex flex-wrap gap-2">

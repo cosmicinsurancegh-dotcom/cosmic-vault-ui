@@ -85,6 +85,8 @@ export const DEFAULT_SETTINGS = {
   commissionEnabled: false,
   renewalNoticeDays: 30,
   claimSlaDays: 10,
+  /** Days a premium invoice stays current. Matches the old hard-coded term. */
+  premiumPaymentTermDays: 7,
   bankAccountName: "Cosmic Vault Insurance Ltd",
   bankIban: "GB00 VAUL 0000 0000 0000 00",
   bankSortCode: "00-00-00",

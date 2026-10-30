@@ -30,6 +30,18 @@ export const daily = internalMutation({
           updatedAt: now,
         });
         expired += 1;
+
+        /* A policy issued from a mineral's cover is the member's view of that
+           cover, and the cover is the source of truth. Expiring only the
+           policy would leave `/dashboard/vault` promising cover that ended, so
+           the cover behind it lapses in the same run. */
+        const cover = await ctx.db
+          .query("mineralPolicies")
+          .withIndex("by_policy", (q) => q.eq("policyId", policy._id))
+          .first();
+        if (cover && cover.status === "active") {
+          await ctx.db.patch(cover._id, { status: "expired", updatedAt: now });
+        }
         await notifyUser(ctx, {
           userId: policy.customerUserId,
           type: "policy.changed",

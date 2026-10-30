@@ -124,6 +124,12 @@ It does not wait for a payment, so it is gated on `policies.manage` alone.
 (endorsement, cancellation, renewal, suspension). Staff decide; approval patches
 the policy, appends an endorsement record and issues an endorsement document. A
 renewal creates a pending renewal premium rather than duplicating the policy.
+Once cover has lapsed (expired or cancelled) a renewal is the only request the
+member can still raise; approval reinstates the policy with a fresh term from
+today, clears the suspension/cancellation markers and raises the premium. The
+member overview lists that cover under `lapsedCover` (with `renewalRequested`
+once asked) so lapsed protection is visible on the dashboard rather than
+disappearing from the active count.
 
 **Claims** - `claims.submit` validates policy ownership, active status, incident
 date inside the policy term, amount ≤ coverage limit and requires evidence.
@@ -153,6 +159,16 @@ fallback. Delivery state is recorded on the notification exactly like every
 other email, so staff can retry failures. Members see their minerals, policy and
 shipment timeline at `/dashboard/minerals`; the staff register is
 `/dashboard/admin/minerals`.
+
+A member also reads that cover from the standard records every other page uses:
+`lib/mineralPolicyRecords` issues an approved application, an active policy, the
+schedule and certificate documents and a pending premium invoice from the cover,
+and links the cover to the policy (`mineralPolicies.policyId`). The cover stays
+the source of truth - `reassign` moves the policy, its documents and any
+outstanding invoice to the new holder, `detach` suspends the policy, `remove`
+takes the member records with the mineral, and the daily job expires the cover
+with the policy it closes. `minerals.repairMemberRecords` backfills covers
+recorded before that link existed.
 
 **Accounts** - staff create accounts without a password hand-off.
 `customers.invite` (`customers.manage`) writes the customer record, profile and
@@ -268,7 +284,11 @@ premium marking and stale draft cleanup (`maintenance.ts`).
 - All amounts carry a currency code and are formatted with `Intl.NumberFormat`.
 - Dates use UTC storage and locale-aware rendering (`src/lib/format.ts`).
 - Customer profiles store country, timezone, language and preferred currency.
-- Settings hold default currency, allowed currencies and company/support details.
+- Settings hold default currency, allowed currencies, company/support details and
+  the premium payment term (`premiumPaymentTermDays`, 7 by default) that sets how
+  long a premium invoice stays current before the daily job marks it overdue.
+  Every invoice source reads it - quote premium, renewal offer and approved
+  renewal request - so finance changes one number rather than three call sites.
 - Policy wording and disclosures are per product version, so market-specific
   wording is configurable. Local legal review per market remains a business task.
 

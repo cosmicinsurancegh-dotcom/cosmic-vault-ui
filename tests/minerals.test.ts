@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import schema from "../src/convex/schema";
 import { internalAction } from "../src/convex/_generated/server";
-import { api } from "../src/convex/_generated/api";
+import { api, internal } from "../src/convex/_generated/api";
 import type { Id } from "../src/convex/_generated/dataModel";
 import {
   renderAssignmentEmail,
@@ -34,6 +34,17 @@ const modules = {
     import("../src/convex/_generated/api.js"),
   "../src/convex/minerals.ts": () => import("../src/convex/minerals"),
   "../src/convex/email.ts": () => Promise.resolve(emailStub),
+  /* The member-facing records a mineral issues are only meaningful if the
+     dashboard pages that read them can see them, so the queries they use are
+     part of this suite. */
+  "../src/convex/applications.ts": () => import("../src/convex/applications"),
+  "../src/convex/documents.ts": () => import("../src/convex/documents"),
+  "../src/convex/maintenance.ts": () => import("../src/convex/maintenance"),
+  "../src/convex/payments.ts": () => import("../src/convex/payments"),
+  "../src/convex/policies.ts": () => import("../src/convex/policies"),
+  "../src/convex/products.ts": () => import("../src/convex/products"),
+  "../src/convex/reports.ts": () => import("../src/convex/reports"),
+  "../src/convex/settings.ts": () => import("../src/convex/settings"),
 };
 
 const test = () => convexTest(schema, modules);
@@ -142,7 +153,7 @@ describe("minerals and shipments", () => {
 
     const stored = await t.run(async (ctx) => ({
       mineral: await ctx.db.get(result.mineralId),
-      policy: await ctx.db.get(result.policyId),
+      cover: await ctx.db.get(result.coverId),
       shipments: await ctx.db.query("shipments").collect(),
       events: await ctx.db.query("shipmentEvents").collect(),
       notifications: await ctx.db.query("notifications").collect(),
@@ -157,7 +168,7 @@ describe("minerals and shipments", () => {
       status: "active",
     });
     expect(stored.mineral?.reference).toMatch(/^MIN-/);
-    expect(stored.policy).toMatchObject({
+    expect(stored.cover).toMatchObject({
       policyNumber: "CV-MIN-2026-014",
       coverage: "cargo_transit",
       coverageLimit: 30_000_000,
@@ -1693,6 +1704,10 @@ describe("removing a mineral record", () => {
       shipments: 1,
       events: 2,
       requests: 0,
+      memberPolicies: 1,
+      memberDocuments: 2,
+      memberTransactions: 1,
+      memberApplicationEvents: 1,
     });
 
     const left = await t.run(async (ctx) => ({
@@ -1878,5 +1893,671 @@ describe("email origins", () => {
     expect(notice?.emailHtml).not.toContain("cosmicvault.co/dashboard");
     expect(notice?.emailHtml).not.toContain('href="/');
     expect(notice?.emailText).toContain("Open your vault from your dashboard");
+  });
+});
+
+/**
+ * A member holding an insured mineral reads that cover from the same places as
+ * any other policy. These tests go through the member queries themselves, not
+ * just the rows, because the bug they cover was that the pages could not see
+ * records that existed.
+ */
+describe("member records for vault cover", () => {
+  async function issued() {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+    await t.finishAllScheduledFunctions(() => {});
+    return { t, admin, client, created };
+  }
+
+  it("shows the cover on the member's policies, payments, documents and applications pages", async () => {
+    const { t, client, created } = await issued();
+
+    const policies = await t
+      .withIdentity({ subject: client })
+      .query(api.policies.mine, {});
+    expect(policies).toHaveLength(1);
+    expect(policies[0]).toMatchObject({
+      policyNumber: "CV-MIN-2026-014",
+      status: "active",
+      premium: 45_000,
+      coverageLimit: 30_000_000,
+      currency: "GBP",
+      customerUserId: client,
+    });
+
+    const transactions = await t
+      .withIdentity({ subject: client })
+      .query(api.payments.mine, {});
+    expect(transactions).toHaveLength(1);
+    expect(transactions[0]).toMatchObject({
+      type: "premium",
+      status: "pending",
+      amount: 45_000,
+      currency: "GBP",
+      policyId: created.policyId,
+    });
+
+    const documents = await t
+      .withIdentity({ subject: client })
+      .query(api.documents.mine, {});
+    expect(documents).toHaveLength(2);
+    expect(documents.every((document) => document.category === "policy")).toBe(
+      true,
+    );
+    expect(
+      documents.some((document) =>
+        document.name.includes("policy schedule"),
+      ),
+    ).toBe(true);
+
+    const applications = await t
+      .withIdentity({ subject: client })
+      .query(api.applications.mine, {});
+    expect(applications).toHaveLength(1);
+    expect(applications[0]).toMatchObject({
+      status: "approved",
+      customerUserId: client,
+      policyId: created.policyId,
+    });
+
+    // The cover stays the vault's own record, linked from the policy it issued.
+    const cover = await t.run(async (ctx) => ctx.db.get(created.coverId));
+    expect(cover?.policyId).toBe(created.policyId);
+  });
+
+  it("raises no invoice when the cover carries no premium", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+    const base = payload(client);
+
+    await t.withIdentity({ subject: admin }).mutation(api.minerals.create, {
+      ...base,
+      policy: { ...base.policy, premium: 0 },
+    });
+    await t.finishAllScheduledFunctions(() => {});
+
+    const transactions = await t
+      .withIdentity({ subject: client })
+      .query(api.payments.mine, {});
+    expect(transactions).toHaveLength(0);
+  });
+
+  it("moves the policy, documents and outstanding invoice with the mineral", async () => {
+    const { t, admin, client, created } = await issued();
+    const other = await seedCustomer(t, "second@cosmicvault.test");
+
+    await t.withIdentity({ subject: admin }).mutation(api.minerals.reassign, {
+      mineralId: created.mineralId,
+      assignment: { mode: "existing" as const, userId: other },
+    });
+    await t.finishAllScheduledFunctions(() => {});
+
+    const before = await t
+      .withIdentity({ subject: client })
+      .query(api.policies.mine, {});
+    expect(before).toHaveLength(0);
+
+    const after = await t
+      .withIdentity({ subject: other })
+      .query(api.policies.mine, {});
+    expect(after).toHaveLength(1);
+    expect(after[0].policyNumber).toBe("CV-MIN-2026-014");
+
+    const documents = await t
+      .withIdentity({ subject: other })
+      .query(api.documents.mine, {});
+    expect(documents).toHaveLength(2);
+
+    const invoices = await t
+      .withIdentity({ subject: other })
+      .query(api.payments.mine, {});
+    expect(invoices).toHaveLength(1);
+    expect(invoices[0].status).toBe("pending");
+  });
+
+  it("suspends the member's policy when the mineral leaves their vault", async () => {
+    const { t, admin, client, created } = await issued();
+
+    await t.withIdentity({ subject: admin }).mutation(api.minerals.detach, {
+      mineralId: created.mineralId,
+      note: "Returned to the pool.",
+    });
+    await t.finishAllScheduledFunctions(() => {});
+
+    const policies = await t
+      .withIdentity({ subject: client })
+      .query(api.policies.mine, {});
+    expect(policies).toHaveLength(1);
+    expect(policies[0].status).toBe("suspended");
+    expect(policies[0].suspensionReason).toContain("vault desk");
+  });
+
+  it("takes the member records with a mineral recorded in error", async () => {
+    const { t, admin, client, created } = await issued();
+
+    const removed = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.remove, {
+        mineralId: created.mineralId,
+        reason: "Test record created in error.",
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    expect(removed.removed).toMatchObject({
+      memberPolicies: 1,
+      memberDocuments: 2,
+      memberTransactions: 1,
+      memberApplicationEvents: 1,
+    });
+
+    const [policies, transactions, documents, applications] = await Promise.all(
+      [
+        t.withIdentity({ subject: client }).query(api.policies.mine, {}),
+        t.withIdentity({ subject: client }).query(api.payments.mine, {}),
+        t.withIdentity({ subject: client }).query(api.documents.mine, {}),
+        t.withIdentity({ subject: client }).query(api.applications.mine, {}),
+      ],
+    );
+    expect(policies).toHaveLength(0);
+    expect(transactions).toHaveLength(0);
+    expect(documents).toHaveLength(0);
+    expect(applications).toHaveLength(0);
+  });
+
+  it("backfills a cover recorded before the member records existed", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+    const now = Date.now();
+
+    const mineralId = await t.run(
+      async (ctx) =>
+        await ctx.db.insert("minerals", {
+          reference: "MIN-LEGACY",
+          name: "Silver bars",
+          category: "Precious metals",
+          quantity: 40,
+          unit: "kg",
+          declaredValue: 3_000_000,
+          currency: "GBP",
+          status: "active",
+          assignedUserId: client,
+          assignedAt: now,
+          assignedBy: admin,
+          createdBy: admin,
+          createdAt: now,
+          updatedAt: now,
+        }),
+    );
+    await t.run(
+      async (ctx) =>
+        await ctx.db.insert("mineralPolicies", {
+          mineralId,
+          policyNumber: "CV-MIN-LEGACY-1",
+          provider: "Cosmic Vault Insurance",
+          coverage: "storage",
+          coverageLimit: 5_000_000,
+          premium: 12_000,
+          currency: "GBP",
+          startDate: now - 86_400_000,
+          endDate: now + 300 * 86_400_000,
+          status: "active",
+          createdBy: admin,
+          createdAt: now,
+          updatedAt: now,
+        }),
+    );
+
+    // The operator command, which attributes each issuance to the staff
+    // account that recorded the cover rather than to a session.
+    const first = await t.mutation(internal.minerals.backfillMemberRecords, {});
+    expect(first).toMatchObject({ repaired: 1, remaining: 0 });
+
+    const policies = await t
+      .withIdentity({ subject: client })
+      .query(api.policies.mine, {});
+    expect(policies).toHaveLength(1);
+    expect(policies[0].policyNumber).toBe("CV-MIN-LEGACY-1");
+
+    // Idempotent: a second run finds nothing left to issue.
+    const second = await t.mutation(internal.minerals.backfillMemberRecords, {});
+    expect(second).toMatchObject({ repaired: 0 });
+  });
+
+  it("expires the cover with the policy the daily job closes", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+    const base = payload(client);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, {
+        ...base,
+        policy: {
+          ...base.policy,
+          startDate: "2020-01-01",
+          endDate: "2021-01-01",
+        },
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    await t.mutation(internal.maintenance.daily, {});
+    await t.finishAllScheduledFunctions(() => {});
+
+    const [cover, policy] = await t.run(async (ctx) => [
+      await ctx.db.get(created.coverId),
+      await ctx.db.get(created.policyId),
+    ]);
+    expect(policy?.status).toBe("expired");
+    expect(cover?.status).toBe("expired");
+  });
+
+  it("shows the cover on the member's dashboard metrics", async () => {
+    const { t, client } = await issued();
+
+    const overview = await t
+      .withIdentity({ subject: client })
+      .query(api.reports.overview, {});
+    if (overview.kind !== "customer") {
+      throw new Error("Expected the member overview.");
+    }
+
+    expect(overview.metrics.activePolicies).toBe(1);
+    expect(overview.recentPolicies).toHaveLength(1);
+    expect(overview.recentPolicies[0].policyNumber).toBe("CV-MIN-2026-014");
+    expect(overview.recentDocuments).toHaveLength(2);
+    expect(overview.outstanding).toEqual([{ currency: "GBP", amount: 45_000 }]);
+    // Cover in force is not lapsed cover.
+    expect(overview.lapsedCover).toHaveLength(0);
+  });
+
+  it("backfills the paperwork for a lapsed cover without billing it", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+    const now = Date.now();
+
+    const mineralId = await t.run(
+      async (ctx) =>
+        await ctx.db.insert("minerals", {
+          reference: "MIN-LAPSED",
+          name: "Sapphire parcel",
+          category: "Precious stones",
+          quantity: 3,
+          unit: "ct",
+          declaredValue: 2_000_000,
+          currency: "GBP",
+          status: "active",
+          assignedUserId: client,
+          assignedAt: now,
+          assignedBy: admin,
+          createdBy: admin,
+          createdAt: now,
+          updatedAt: now,
+        }),
+    );
+    await t.run(
+      async (ctx) =>
+        await ctx.db.insert("mineralPolicies", {
+          mineralId,
+          policyNumber: "CV-MIN-LAPSED-1",
+          provider: "Cosmic Vault Insurance",
+          coverage: "all_risk",
+          coverageLimit: 4_000_000,
+          premium: 90_000,
+          currency: "GBP",
+          startDate: now - 400 * 86_400_000,
+          endDate: now - 35 * 86_400_000,
+          status: "expired",
+          createdBy: admin,
+          createdAt: now,
+          updatedAt: now,
+        }),
+    );
+
+    const result = await t.mutation(internal.minerals.backfillMemberRecords, {});
+    expect(result).toMatchObject({ repaired: 1 });
+
+    const policies = await t
+      .withIdentity({ subject: client })
+      .query(api.policies.mine, {});
+    expect(policies).toHaveLength(1);
+    expect(policies[0].status).toBe("expired");
+
+    /* Lapsed cover leaves the active count but not the dashboard: it is listed
+       as cover that has ended, so a member whose vault cover lapsed is told. */
+    const overview = await t
+      .withIdentity({ subject: client })
+      .query(api.reports.overview, {});
+    if (overview.kind !== "customer") {
+      throw new Error("Expected the member overview.");
+    }
+    expect(overview.metrics.activePolicies).toBe(0);
+    expect(overview.lapsedCover).toHaveLength(1);
+    expect(overview.lapsedCover[0]).toMatchObject({
+      policyNumber: "CV-MIN-LAPSED-1",
+      status: "expired",
+      categoryKey: "mineral",
+    });
+
+    const documents = await t
+      .withIdentity({ subject: client })
+      .query(api.documents.mine, {});
+    expect(documents).toHaveLength(2);
+
+    // History is reconstructed, not billed: no invoice, so no overdue notice.
+    const transactions = await t
+      .withIdentity({ subject: client })
+      .query(api.payments.mine, {});
+    expect(transactions).toHaveLength(0);
+  });
+
+  it("lets a member ask to renew cover that has lapsed", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+    const now = Date.now();
+
+    const mineralId = await t.run(
+      async (ctx) =>
+        await ctx.db.insert("minerals", {
+          reference: "MIN-RENEW",
+          name: "Opal parcel",
+          category: "Precious stones",
+          quantity: 2,
+          unit: "ct",
+          declaredValue: 900_000,
+          currency: "GBP",
+          status: "active",
+          assignedUserId: client,
+          assignedAt: now,
+          assignedBy: admin,
+          createdBy: admin,
+          createdAt: now,
+          updatedAt: now,
+        }),
+    );
+    await t.run(
+      async (ctx) =>
+        await ctx.db.insert("mineralPolicies", {
+          mineralId,
+          policyNumber: "CV-MIN-RENEW-1",
+          provider: "Cosmic Vault Insurance",
+          coverage: "storage",
+          coverageLimit: 1_500_000,
+          premium: 30_000,
+          currency: "GBP",
+          startDate: now - 400 * 86_400_000,
+          endDate: now - 30 * 86_400_000,
+          status: "expired",
+          createdBy: admin,
+          createdAt: now,
+          updatedAt: now,
+        }),
+    );
+    await t.mutation(internal.minerals.backfillMemberRecords, {});
+
+    const [policy] = await t
+      .withIdentity({ subject: client })
+      .query(api.policies.mine, {});
+    expect(policy.status).toBe("expired");
+
+    /* Lapsed cover refuses every other change but takes a renewal: the card
+       that surfaces it exists precisely so the member can act on it. */
+    await expect(
+      t.withIdentity({ subject: client }).mutation(api.policies.requestChange, {
+        policyId: policy._id,
+        kind: "endorsement",
+        details: "Please add extra cover.",
+      }),
+    ).rejects.toThrow(/no longer in force/i);
+
+    const { requestId } = await t
+      .withIdentity({ subject: client })
+      .mutation(api.policies.requestChange, {
+        policyId: policy._id,
+        kind: "renewal",
+        details: "Please renew my vault cover.",
+      });
+
+    // One request per kind is already awaiting a decision.
+    await expect(
+      t.withIdentity({ subject: client }).mutation(api.policies.requestChange, {
+        policyId: policy._id,
+        kind: "renewal",
+        details: "Please renew again.",
+      }),
+    ).rejects.toThrow(/awaiting a decision/i);
+
+    const overview = await t
+      .withIdentity({ subject: client })
+      .query(api.reports.overview, {});
+    if (overview.kind !== "customer") {
+      throw new Error("Expected the member overview.");
+    }
+    expect(overview.lapsedCover[0].renewalRequested).toBe(true);
+
+    /* Staff approval puts cover back in force with a fresh term, and the
+       pending status pill on the card is no longer offered a second time. */
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.policies.decideRequest, {
+        requestId,
+        decision: "approved",
+        note: "Renewed after review.",
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    const renewed = await t
+      .withIdentity({ subject: client })
+      .query(api.policies.mine, {});
+    expect(renewed[0].status).toBe("active");
+    expect(renewed[0].endDate).toBeGreaterThan(now);
+
+    const after = await t
+      .withIdentity({ subject: client })
+      .query(api.reports.overview, {});
+    if (after.kind !== "customer") {
+      throw new Error("Expected the member overview.");
+    }
+    expect(after.metrics.activePolicies).toBe(1);
+    expect(after.lapsedCover).toHaveLength(0);
+
+    // The renewal premium is real money, unlike the backfilled history.
+    const transactions = await t
+      .withIdentity({ subject: client })
+      .query(api.payments.mine, {});
+    expect(transactions).toHaveLength(1);
+    expect(transactions[0]).toMatchObject({ type: "premium", status: "pending" });
+    /* Due on renewal, not when the new term ends: a date 12 months out would
+       hide the receivable from the overdue job for a year. */
+    expect(transactions[0].dueDate).toBeGreaterThan(now);
+    expect(transactions[0].dueDate).toBeLessThan(now + 8 * 86_400_000);
+  });
+
+  it("clears the lapse markers when a suspended cover is renewed", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+    const base = payload(client);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, {
+        ...base,
+        policy: { ...base.policy, startDate: "2026-01-01", endDate: "2027-01-01" },
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    await t.run(
+      async (ctx) =>
+        await ctx.db.patch(created.policyId, {
+          status: "suspended",
+          suspendedAt: Date.now(),
+          suspensionReason: "The mineral left custody.",
+        }),
+    );
+
+    const { requestId } = await t
+      .withIdentity({ subject: client })
+      .mutation(api.policies.requestChange, {
+        policyId: created.policyId,
+        kind: "renewal",
+        details: "Please renew my vault cover.",
+      });
+
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.policies.decideRequest, {
+        requestId,
+        decision: "approved",
+        note: "Renewed after review.",
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    const policy = await t.run(async (ctx) => await ctx.db.get(created.policyId));
+    expect(policy?.status).toBe("active");
+    // A reinstated policy must not still read as suspended on the dashboard.
+    expect(policy?.suspensionReason).toBeUndefined();
+    expect(policy?.suspendedAt).toBeUndefined();
+  });
+
+  it("uses the configured premium payment term for renewal invoices", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+    const base = payload(client);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, {
+        ...base,
+        policy: { ...base.policy, startDate: "2026-01-01", endDate: "2027-01-01" },
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    // Finance asks for a longer window than the seven-day default.
+    const owner = await t.run(
+      async (ctx) =>
+        await ctx.db.insert("users", {
+          name: "Sam Super",
+          email: "super@cosmicvault.test",
+          role: "super_admin",
+          status: "active",
+        }),
+    );
+    const current = await t
+      .withIdentity({ subject: owner })
+      .query(api.settings.get, {});
+    await t.withIdentity({ subject: owner }).mutation(api.settings.update, {
+      companyName: current.companyName,
+      supportEmail: current.supportEmail,
+      emailFromAddress: current.emailFromAddress,
+      defaultCurrency: "GBP",
+      commissionEnabled: current.commissionEnabled,
+      renewalNoticeDays: current.renewalNoticeDays,
+      claimSlaDays: current.claimSlaDays,
+      premiumPaymentTermDays: 21,
+      allowedCurrencies: ["GBP"],
+      emailTemplates: current.emailTemplates,
+    });
+
+    const { requestId } = await t
+      .withIdentity({ subject: client })
+      .mutation(api.policies.requestChange, {
+        policyId: created.policyId,
+        kind: "renewal",
+        details: "Please renew my vault cover.",
+      });
+
+    const now = Date.now();
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.policies.decideRequest, {
+        requestId,
+        decision: "approved",
+        note: "Renewed after review.",
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    const transactions = await t
+      .withIdentity({ subject: client })
+      .query(api.payments.mine, {});
+    const renewal = transactions.find((row) =>
+      row.note?.startsWith("Renewal premium"),
+    );
+    if (!renewal) throw new Error("Expected the renewal premium invoice.");
+    expect(renewal.dueDate).toBeGreaterThan(now + 20 * 86_400_000);
+    expect(renewal.dueDate).toBeLessThan(now + 22 * 86_400_000);
+  });
+
+  it("keeps the cover anchor out of the member catalogue", async () => {
+    const { t, client } = await issued();
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      const anchor = await ctx.db
+        .query("products")
+        .withIndex("by_code", (q) => q.eq("code", "MIN-CUSTODY-01"))
+        .first();
+      if (!anchor) throw new Error("Expected the cover anchor product.");
+
+      /* A deployment that recorded minerals before the anchor was archived
+         still holds it as published. The empty market list is what keeps it
+         out of the catalogue the member browses. */
+      await ctx.db.patch(anchor._id, { status: "published" });
+
+      await ctx.db.insert("products", {
+        code: "MOT-COMP-99",
+        name: "Retail motor cover",
+        categoryKey: "motor",
+        description: "A product the catalogue should list.",
+        targetCustomer: "Private car owners.",
+        countries: ["GB"],
+        currency: "GBP",
+        basePremium: 48_000,
+        termMonths: 12,
+        excess: 25_000,
+        coverageLimit: 2_000_000,
+        exclusions: [],
+        benefits: [],
+        ratingFactors: [],
+        questions: [],
+        requiredDocuments: [],
+        wordingVersion: "1.0",
+        wording: "Wording for the retail product the catalogue lists.",
+        disclosures: "Not financial advice.",
+        status: "published",
+        version: 1,
+        effectiveFrom: now - 86_400_000,
+        renewalNoticeDays: 30,
+        cancellationNoticeDays: 14,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const catalogue = await t
+      .withIdentity({ subject: client })
+      .query(api.products.catalogue, {});
+
+    expect(catalogue.products.map((product) => product.code)).toEqual([
+      "MOT-COMP-99",
+    ]);
   });
 });

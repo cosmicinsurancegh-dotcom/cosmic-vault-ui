@@ -308,18 +308,23 @@ function ApplicationDialog({
                 {application.assignedTo ? "Assigned" : "Awaiting assignment"}
               </Detail>
             </div>
-            <dl className="mt-4 divide-y divide-line rounded-xl border border-line">
-              {product?.questions.map((question) => (
-                <div key={question.key} className="flex flex-col gap-1 px-4 py-2.5 sm:flex-row sm:justify-between sm:gap-4">
-                  <dt className="text-[0.68rem] text-muted-foreground">{question.label}</dt>
-                  <dd className="text-xs text-ink sm:text-right">
-                    {String(
-                      (application.answers as Record<string, string | number>)?.[question.key] ?? "-",
-                    )}
-                  </dd>
-                </div>
-              ))}
-            </dl>
+            {/* A cover recorded by the vault desk is filed as an approved
+                application, but it answers no product questions - an empty
+                bordered table would only look like missing data. */}
+            {(product?.questions.length ?? 0) > 0 && (
+              <dl className="mt-4 divide-y divide-line rounded-xl border border-line">
+                {product?.questions.map((question) => (
+                  <div key={question.key} className="flex flex-col gap-1 px-4 py-2.5 sm:flex-row sm:justify-between sm:gap-4">
+                    <dt className="text-[0.68rem] text-muted-foreground">{question.label}</dt>
+                    <dd className="text-xs text-ink sm:text-right">
+                      {String(
+                        (application.answers as Record<string, string | number>)?.[question.key] ?? "-",
+                      )}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
           </section>
 
           <section>

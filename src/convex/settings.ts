@@ -51,6 +51,7 @@ export const update = mutation({
     commissionEnabled: v.boolean(),
     renewalNoticeDays: v.number(),
     claimSlaDays: v.number(),
+    premiumPaymentTermDays: v.number(),
     bankAccountName: v.optional(v.string()),
     bankIban: v.optional(v.string()),
     bankSortCode: v.optional(v.string()),
@@ -113,6 +114,7 @@ export const update = mutation({
       commissionEnabled: settings.commissionEnabled,
       renewalNoticeDays: settings.renewalNoticeDays,
       claimSlaDays: settings.claimSlaDays,
+      premiumPaymentTermDays: settings.premiumPaymentTermDays,
       allowedCurrencies: settings.allowedCurrencies,
     };
     await ctx.db.patch(settings._id, {
@@ -126,6 +128,10 @@ export const update = mutation({
         Math.min(180, Math.round(args.renewalNoticeDays)),
       ),
       claimSlaDays: Math.max(1, Math.min(90, Math.round(args.claimSlaDays))),
+      premiumPaymentTermDays: Math.max(
+        1,
+        Math.min(120, Math.round(args.premiumPaymentTermDays)),
+      ),
       bankAccountName:
         cleanText(args.bankAccountName, "Bank account name", 160) || undefined,
       bankIban: cleanText(args.bankIban, "IBAN", 64) || undefined,
@@ -153,6 +159,10 @@ export const update = mutation({
         commissionEnabled: args.commissionEnabled,
         renewalNoticeDays: args.renewalNoticeDays,
         claimSlaDays: args.claimSlaDays,
+        premiumPaymentTermDays: Math.max(
+          1,
+          Math.min(120, Math.round(args.premiumPaymentTermDays)),
+        ),
         allowedCurrencies: args.allowedCurrencies,
       },
     });
