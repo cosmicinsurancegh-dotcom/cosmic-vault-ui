@@ -140,7 +140,6 @@ const CUSTOMER_NAV: NavGroup[] = [
         Icon: ClipboardList,
       },
       { to: "/dashboard/policies", label: "Policies", Icon: ScrollText },
-      { to: "/dashboard/minerals", label: "Minerals", Icon: Gem },
       { to: "/dashboard/claims", label: "Claims", Icon: LifeBuoy },
     ],
   },

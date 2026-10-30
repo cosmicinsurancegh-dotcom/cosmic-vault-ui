@@ -281,6 +281,12 @@
     background-size: 100% 1px;
   }
 
+  /* A one-shot lift for panels that replace a loading state. Transform and
+     opacity only, so it cannot shift layout or cost a repaint. */
+  .rise-in {
+    animation: rise-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
   /* A deliberate, short press response for buttons. */
   .press {
     transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
@@ -303,6 +309,17 @@
       black 94%,
       transparent
     );
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

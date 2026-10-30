@@ -103,6 +103,9 @@ export const mine = query({
         .filter(
           (application) =>
             application.brokerUserId === viewer.user._id ||
+            // A mineral assigned to a broker account records the cover in the
+            // broker's own name, with no customer behind it.
+            application.customerUserId === viewer.user._id ||
             customerIds.has(application.customerUserId),
         )
         .slice(0, 150);

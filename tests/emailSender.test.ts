@@ -34,6 +34,7 @@ const SETTINGS_ARGS = {
   commissionEnabled: false,
   renewalNoticeDays: 30,
   claimSlaDays: 10,
+  premiumPaymentTermDays: 7,
   allowedCurrencies: ["GBP"],
   emailTemplates: [],
 };

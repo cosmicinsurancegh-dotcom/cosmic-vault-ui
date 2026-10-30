@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
+  internalMutation,
   mutation,
   query,
   type MutationCtx,
@@ -11,6 +12,7 @@ import {
   requirePermission,
   requireSelfServiceRole,
   requireViewer,
+  viewerForUser,
   type Viewer,
 } from "./lib/authz";
 import { writeAudit } from "./lib/audit";
@@ -19,6 +21,11 @@ import {
   normalizeInviteEmail,
   normalizeInviteName,
 } from "./lib/invite";
+import {
+  COVERAGE_LABELS,
+  removeMemberPolicyRecords,
+  syncMemberPolicy,
+} from "./lib/mineralPolicyRecords";
 import {
   notifyStaff,
   notifyUser,
@@ -47,13 +54,6 @@ import {
   mineralPolicyStatusValidator,
   shipmentStatusValidator,
 } from "./schema";
-
-const COVERAGE_LABELS: Record<string, string> = {
-  all_risk: "All risk",
-  cargo_transit: "Cargo & transit",
-  storage: "Storage",
-  liability: "Liability",
-};
 
 function formatMoney(minorUnits: number, currency: string) {
   try {
@@ -406,7 +406,7 @@ function toEmailPolicy(policy: Doc<"mineralPolicies">) {
   return {
     policyNumber: policy.policyNumber,
     provider: policy.provider,
-    coverage: COVERAGE_LABELS[policy.coverage] ?? policy.coverage,
+    coverage: COVERAGE_LABELS[policy.coverage],
     coverageLimit: formatMoney(policy.coverageLimit, policy.currency),
     endDate: formatDate(policy.endDate),
   };
@@ -572,7 +572,7 @@ export const create = mutation({
       updatedAt: now,
     });
 
-    const policyId = await ctx.db.insert("mineralPolicies", {
+    const coverId = await ctx.db.insert("mineralPolicies", {
       mineralId,
       policyNumber,
       provider,
@@ -589,6 +589,21 @@ export const create = mutation({
       updatedAt: now,
     });
 
+    const mineral = (await ctx.db.get(mineralId))!;
+    const cover = (await ctx.db.get(coverId))!;
+
+    /* The member reads this cover through the same records every other page
+       uses - an issued policy, its schedule, its certificate and the premium
+       invoice - so Policies, Payments, Documents and Applications show the
+       cover `/dashboard/vault` already shows, and a claim can reach it. */
+    const issued = await syncMemberPolicy(ctx, {
+      viewer,
+      mineral,
+      cover,
+      ownerUserId: userId,
+      now,
+    });
+
     await writeAudit(ctx, viewer, {
       action: "mineral.created",
       entityType: "minerals",
@@ -603,17 +618,15 @@ export const create = mutation({
         policyNumber,
         assignedUserId: userId,
         newAccount: isNewAccount,
+        memberPolicyId: issued.policyId,
+        memberApplicationId: issued.applicationId,
       },
     });
 
-    const [mineral, policy] = await Promise.all([
-      ctx.db.get(mineralId),
-      ctx.db.get(policyId),
-    ]);
     const assignedUser = await ctx.db.get(userId);
     const settings = await getSettings(ctx);
 
-    if (mineral && assignedUser) {
+    if (assignedUser) {
       const email = renderAssignmentEmail({
         recipientName: (assignedUser.name ?? displayName(assignedUser)).split(
           " ",
@@ -623,13 +636,13 @@ export const create = mutation({
         supportEmail: settings.supportEmail,
         appUrl: appUrl(),
         mineral: toEmailMineral(mineral),
-        policy: policy ? toEmailPolicy(policy) : undefined,
+        policy: toEmailPolicy(cover),
       });
       await notifyUser(ctx, {
         userId,
         type: "mineral.assigned",
         title: `${name} has been added to your vault`,
-        body: `${name} (${mineral.reference}) was assigned to you by ${settings.companyName}.${policy ? ` Policy ${policy.policyNumber} is recorded with it.` : ""} You can request a shipment whenever you need it moved.`,
+        body: `${name} (${mineral.reference}) was assigned to you by ${settings.companyName}. Policy ${cover.policyNumber} is recorded with it. You can request a shipment whenever you need it moved.`,
         href: "/dashboard/minerals",
         relatedType: "minerals",
         relatedId: mineralId,
@@ -642,7 +655,9 @@ export const create = mutation({
 
     return {
       mineralId,
-      policyId,
+      coverId,
+      policyId: issued.policyId,
+      applicationId: issued.applicationId,
       assignedUserId: userId,
       isNewAccount,
     };
@@ -688,7 +703,7 @@ export const remove = mutation({
       );
     }
 
-    const policies = await ctx.db
+    const covers = await ctx.db
       .query("mineralPolicies")
       .withIndex("by_mineral", (q) => q.eq("mineralId", mineral._id))
       .collect();
@@ -704,6 +719,18 @@ export const remove = mutation({
       ? await ctx.db.get(mineral.assignedUserId)
       : null;
 
+    /* The member-facing records issued from these covers go with them: they
+       are the same cover seen from the dashboard, and leaving them behind
+       would keep a deleted record on the member's Policies page forever. */
+    const memberPolicies = (
+      await Promise.all(
+        covers
+          .map((cover) => cover.policyId)
+          .filter((policyId): policyId is Id<"policies"> => Boolean(policyId))
+          .map((policyId) => ctx.db.get(policyId)),
+      )
+    ).filter((policy): policy is Doc<"policies"> => policy !== null);
+
     /* Written before the deletes: a failed write stops the removal instead of
        leaving nothing behind to say what was taken. */
     await writeAudit(ctx, viewer, {
@@ -717,15 +744,24 @@ export const remove = mutation({
         declaredValue: mineral.declaredValue,
         currency: mineral.currency,
         assigneeEmail: assignee?.email ?? null,
-        policyNumbers: policies.map((policy) => policy.policyNumber),
+        policyNumbers: covers.map((cover) => cover.policyNumber),
+        memberPolicyNumbers: memberPolicies.map(
+          (policy) => policy.policyNumber,
+        ),
         shipmentReferences: shipments.map((shipment) => shipment.reference),
       },
       reason,
     });
 
-    /* The member's copy of each event, including the ones about this mineral's
-       consignments rather than the mineral itself. */
-    for (const relatedId of [mineral._id, ...shipments.map((s) => s._id)]) {
+    /* The member's copy of each event: the ones about the mineral itself, about
+       its consignments, and the ones filed against the policy issued from it. */
+    const relatedIds = [
+      mineral._id,
+      ...shipments.map((shipment) => shipment._id),
+      ...memberPolicies.map((policy) => policy._id),
+      ...memberPolicies.map((policy) => policy.applicationId),
+    ];
+    for (const relatedId of relatedIds) {
       const notifications = await ctx.db
         .query("notifications")
         .withIndex("by_related", (q) => q.eq("relatedId", relatedId))
@@ -735,18 +771,39 @@ export const remove = mutation({
       }
     }
 
+    const memberRecords = {
+      policies: 0,
+      documents: 0,
+      transactions: 0,
+      applicationEvents: 0,
+    };
+    for (const policy of memberPolicies) {
+      const taken = await removeMemberPolicyRecords(ctx, {
+        policyId: policy._id,
+        applicationId: policy.applicationId,
+      });
+      memberRecords.policies += 1;
+      memberRecords.documents += taken.documents;
+      memberRecords.transactions += taken.transactions;
+      memberRecords.applicationEvents += taken.applicationEvents;
+    }
+
     for (const event of events) await ctx.db.delete(event._id);
     for (const shipment of shipments) await ctx.db.delete(shipment._id);
     for (const request of requests) await ctx.db.delete(request._id);
-    for (const policy of policies) await ctx.db.delete(policy._id);
+    for (const cover of covers) await ctx.db.delete(cover._id);
     await ctx.db.delete(mineral._id);
 
     return {
       removed: {
-        policies: policies.length,
+        policies: covers.length,
         shipments: shipments.length,
         events: events.length,
         requests: requests.length,
+        memberPolicies: memberRecords.policies,
+        memberDocuments: memberRecords.documents,
+        memberTransactions: memberRecords.transactions,
+        memberApplicationEvents: memberRecords.applicationEvents,
       },
     };
   },
@@ -1059,6 +1116,41 @@ export const reassign = mutation({
       });
     }
 
+    const updatedMineral: Doc<"minerals"> = {
+      ...mineral,
+      assignedUserId: userId,
+      assignedAt: now,
+      assignedBy: viewer.user._id,
+      updatedAt: now,
+    };
+
+    /* The policy, its documents and any outstanding premium invoice follow the
+       mineral to the new account: it is the same cover, held by someone else.
+       Invoices finance has already settled stay with the account that paid. */
+    const covers = await ctx.db
+      .query("mineralPolicies")
+      .withIndex("by_mineral", (q) => q.eq("mineralId", mineral._id))
+      .collect();
+    const memberRecords: {
+      policyId: Id<"policies">;
+      applicationId: Id<"applications">;
+      created: boolean;
+    }[] = [];
+    for (const cover of covers) {
+      const synced = await syncMemberPolicy(ctx, {
+        viewer,
+        mineral: updatedMineral,
+        cover,
+        ownerUserId: userId,
+        now,
+      });
+      memberRecords.push({
+        policyId: synced.policyId,
+        applicationId: synced.applicationId,
+        created: synced.created,
+      });
+    }
+
     const assignedUser = await ctx.db.get(userId);
     await writeAudit(ctx, viewer, {
       action: "mineral.reassigned",
@@ -1074,6 +1166,7 @@ export const reassign = mutation({
         ownerName: assignedUser ? displayName(assignedUser) : null,
         ownerEmail: assignedUser?.email ?? null,
         shipments: shipments.map((shipment) => shipment._id),
+        memberPolicies: memberRecords.map((record) => record.policyId),
         newAccount: isNewAccount,
       },
       reason: note,
@@ -1083,13 +1176,6 @@ export const reassign = mutation({
     const policy = await latestPolicy(ctx, mineral._id);
     const latestShipment =
       [...shipments].sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
-    const updated: Doc<"minerals"> = {
-      ...mineral,
-      assignedUserId: userId,
-      assignedAt: now,
-      assignedBy: viewer.user._id,
-      updatedAt: now,
-    };
 
     if (assignedUser) {
       const email = renderAssignmentEmail({
@@ -1100,7 +1186,7 @@ export const reassign = mutation({
         companyName: settings.companyName,
         supportEmail: settings.supportEmail,
         appUrl: appUrl(),
-        mineral: toEmailMineral(updated),
+        mineral: toEmailMineral(updatedMineral),
         policy: policy ? toEmailPolicy(policy) : undefined,
         shipment: latestShipment ? toEmailShipment(latestShipment) : undefined,
       });
@@ -1141,6 +1227,7 @@ export const reassign = mutation({
       assignedUserId: userId,
       previousUserId: previousUserId ?? null,
       shipmentIds: shipments.map((shipment) => shipment._id),
+      memberPolicyIds: memberRecords.map((record) => record.policyId),
       isNewAccount,
       notified: Boolean(assignedUser?.email) && !assignedUser?.isAnonymous,
     };
@@ -1197,6 +1284,34 @@ export const detach = mutation({
       });
     }
 
+    /* Cover for a holding the member no longer has must not stay active: the
+       policy is suspended with the reason, so it cannot support a claim and
+       still says on their Policies page why it stopped. */
+    const detachedMineral: Doc<"minerals"> = {
+      ...mineral,
+      assignedUserId: undefined,
+      assignedAt: undefined,
+      assignedBy: undefined,
+      updatedAt: now,
+    };
+    const covers = await ctx.db
+      .query("mineralPolicies")
+      .withIndex("by_mineral", (q) => q.eq("mineralId", mineral._id))
+      .collect();
+    const suspendedPolicies: Id<"policies">[] = [];
+    for (const cover of covers) {
+      const synced = await syncMemberPolicy(ctx, {
+        viewer,
+        mineral: detachedMineral,
+        cover,
+        ownerUserId: previousUserId,
+        now,
+        overrideStatus: "suspended",
+        reason: "The vault desk removed this mineral from your vault.",
+      });
+      suspendedPolicies.push(synced.policyId);
+    }
+
     await writeAudit(ctx, viewer, {
       action: "mineral.detached",
       entityType: "minerals",
@@ -1209,6 +1324,7 @@ export const detach = mutation({
       after: {
         assignedUserId: null,
         shipments: shipments.map((shipment) => shipment._id),
+        memberPolicies: suspendedPolicies,
       },
       reason: note,
     });
@@ -1233,6 +1349,7 @@ export const detach = mutation({
       mineralId: mineral._id,
       previousUserId,
       shipmentIds: shipments.map((shipment) => shipment._id),
+      memberPolicyIds: suspendedPolicies,
     };
   },
 });
@@ -1823,5 +1940,126 @@ export const assigneeOptions = query({
         status: user.status ?? "active",
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
+  },
+});
+
+/**
+ * Issues the member-facing records for covers that predate that link: a member
+ * holding an insured mineral whose dashboard says "No policies yet" is a
+ * reporting gap, not a decision, because the cover exists.
+ *
+ * Each issuance is attributed to the staff account that recorded the cover -
+ * the actor the audit trail already names for it - so the operator command and
+ * the staff button produce the same records with the same provenance. Both are
+ * capped per run, so one call cannot turn six hundred covers into a single
+ * transaction the database has to refuse.
+ */
+type RepairActor = (cover: Doc<"mineralPolicies">) => Promise<Viewer | null>;
+
+async function repairMemberRecordsFor(
+  ctx: MutationCtx,
+  actor: RepairActor,
+  maxPerRun: number,
+) {
+  const [minerals, covers] = await Promise.all([
+    ctx.db.query("minerals").take(300),
+    ctx.db.query("mineralPolicies").take(600),
+  ]);
+  const mineralMap = new Map(minerals.map((mineral) => [mineral._id, mineral]));
+
+  const now = Date.now();
+  let repaired = 0;
+  let skipped = 0;
+  let remaining = 0;
+
+  for (const cover of covers) {
+    const mineral = mineralMap.get(cover.mineralId);
+    const ownerUserId = mineral?.assignedUserId;
+    // A cover with no mineral or no holder has nobody to issue records to;
+    // a detached mineral leaves its cover on file in exactly that state.
+    if (!mineral || !ownerUserId) {
+      skipped += 1;
+      continue;
+    }
+
+    if (cover.policyId) {
+      const existing = await ctx.db.get(cover.policyId);
+      if (existing && existing.customerUserId === ownerUserId) {
+        skipped += 1;
+        continue;
+      }
+    }
+
+    if (repaired >= maxPerRun) {
+      remaining += 1;
+      continue;
+    }
+
+    const viewer = await actor(cover);
+    if (!viewer) {
+      skipped += 1;
+      continue;
+    }
+
+    const synced = await syncMemberPolicy(ctx, {
+      viewer,
+      mineral,
+      cover,
+      ownerUserId,
+      now,
+      // A repair reconstructs the paperwork, not the billing: raising a
+      // receivable for a cover issued long ago would post an invoice that is
+      // already overdue and notice the member for money nobody asked for.
+      raiseInvoice: false,
+    });
+    repaired += 1;
+
+    await writeAudit(ctx, viewer, {
+      action: "mineral.member_records_repaired",
+      entityType: "mineralPolicies",
+      entityId: cover._id,
+      after: {
+        mineralId: mineral._id,
+        policyId: synced.policyId,
+        applicationId: synced.applicationId,
+        ownerUserId,
+        created: synced.created,
+      },
+    });
+  }
+
+  return { repaired, skipped, remaining };
+}
+
+/** The staff button: issues the records as the administrator who pressed it. */
+export const repairMemberRecords = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const viewer = await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+    return await repairMemberRecordsFor(ctx, async () => viewer, 40);
+  },
+});
+
+/**
+ * The operator command, for a deployment whose covers were recorded before the
+ * link existed:
+ *
+ *   bunx convex run minerals:backfillMemberRecords
+ *
+ * Internal, so no browser can reach it, and idempotent, so running it again
+ * after a partial backfill only picks up what is still missing.
+ */
+export const backfillMemberRecords = internalMutation({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const limit = Math.min(200, Math.max(1, Math.round(args.limit ?? 100)));
+    return await repairMemberRecordsFor(
+      ctx,
+      async (cover) => {
+        const issuer = await ctx.db.get(cover.createdBy);
+        return issuer ? viewerForUser(issuer) : null;
+      },
+      limit,
+    );
   },
 });

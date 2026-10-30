@@ -17,6 +17,7 @@ import {
   buildPolicyDocuments,
   writePolicyDocuments,
 } from "./lib/policyDocuments";
+import { getSettings } from "./lib/settings";
 import {
   addMonths,
   DAY,
@@ -362,6 +363,10 @@ export const mine = query({
         .filter(
           (policy) =>
             policy.brokerUserId === viewer.user._id ||
+            // Cover can be assigned to a broker account directly when the
+            // vault desk records a mineral against it, so a broker is also a
+            // policyholder in their own right.
+            policy.customerUserId === viewer.user._id ||
             customerIds.has(policy.customerUserId),
         )
         .slice(0, 150);
@@ -543,8 +548,14 @@ export const requestChange = mutation({
     const policy = await ctx.db.get(args.policyId);
     if (!policy) throw new Error("Policy not found.");
     await assertPolicyAccess(ctx, viewer, policy);
-    if (policy.status === "cancelled" || policy.status === "expired") {
-      throw new Error("This policy is no longer active.");
+    /* Renewal is the one thing a member can still ask for once cover has
+       lapsed - it is the whole reason the lapsed cover is shown to them.
+       Everything else would rewrite a term that has already ended. */
+    const lapsed = policy.status === "cancelled" || policy.status === "expired";
+    if (lapsed && args.kind !== "renewal") {
+      throw new Error(
+        "This policy is no longer in force. You can request a renewal, or contact support about anything else.",
+      );
     }
     const details = requiredText(args.details, "Request details", 2000);
     const existing = await ctx.db
@@ -600,6 +611,7 @@ export const decideRequest = mutation({
     if (!policy) throw new Error("Policy not found.");
     const note = requiredText(args.note, "Decision note", 2000);
     const now = Date.now();
+    const settings = await getSettings(ctx);
 
     await ctx.db.patch(request._id, {
       status: args.decision,
@@ -635,15 +647,29 @@ export const decideRequest = mutation({
         });
         summary = `Policy ${policy.policyNumber} suspended. ${request.details}`;
       } else if (request.kind === "renewal") {
+        /* Renewing lapsed cover reinstates it: the term restarts from today
+           rather than from the date the old cover ran out. */
+        const reinstated = policy.status !== "active";
         const newEnd = addMonths(Math.max(policy.endDate, now), 12);
         await ctx.db.patch(policy._id, {
           status: "active",
           endDate: newEnd,
           renewalDate: newEnd - 30 * DAY,
+          /* Cover put back in force must not keep the suspension or
+             cancellation markers: they would still read as lapsed. */
+          suspendedAt: undefined,
+          suspensionReason: undefined,
+          cancelledAt: undefined,
+          cancelReason: undefined,
           updatedAt: now,
           endorsements: [
             ...policy.endorsements,
-            { summary: `Renewed to ${new Date(newEnd).toISOString().slice(0, 10)}`, at: now, by: viewer.user._id, requestId: request._id },
+            {
+              summary: `${reinstated ? "Reinstated and renewed" : "Renewed"} to ${new Date(newEnd).toISOString().slice(0, 10)}`,
+              at: now,
+              by: viewer.user._id,
+              requestId: request._id,
+            },
           ],
         });
         await ctx.db.insert("transactions", {
@@ -659,7 +685,11 @@ export const decideRequest = mutation({
           idempotencyKey: `renewal:${request._id}`,
           note: `Renewal premium for ${policy.policyNumber}`,
           reconciled: false,
-          dueDate: newEnd,
+          /* The premium is money due now, not at the end of the term it pays
+             for. The window is the platform's premium payment term; a due
+             date of today would have the daily job sending an overdue notice
+             the morning after the member asked to renew. */
+          dueDate: now + settings.premiumPaymentTermDays * DAY,
           createdAt: now,
           updatedAt: now,
         });

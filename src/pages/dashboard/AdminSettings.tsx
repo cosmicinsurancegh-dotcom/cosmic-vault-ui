@@ -41,6 +41,7 @@ type SettingsForm = {
   commissionEnabled: boolean;
   renewalNoticeDays: string;
   claimSlaDays: string;
+  premiumPaymentTermDays: string;
   bankAccountName: string;
   bankIban: string;
   bankSortCode: string;
@@ -56,6 +57,7 @@ const EMPTY_SETTINGS_FORM: SettingsForm = {
   commissionEnabled: false,
   renewalNoticeDays: "30",
   claimSlaDays: "10",
+  premiumPaymentTermDays: "7",
   bankAccountName: "",
   bankIban: "",
   bankSortCode: "",
@@ -72,6 +74,7 @@ function settingsForm(settings: {
   commissionEnabled: boolean;
   renewalNoticeDays: number;
   claimSlaDays: number;
+  premiumPaymentTermDays: number;
   bankAccountName?: string;
   bankIban?: string;
   bankSortCode?: string;
@@ -86,6 +89,7 @@ function settingsForm(settings: {
     commissionEnabled: settings.commissionEnabled,
     renewalNoticeDays: String(settings.renewalNoticeDays),
     claimSlaDays: String(settings.claimSlaDays),
+    premiumPaymentTermDays: String(settings.premiumPaymentTermDays),
     bankAccountName: settings.bankAccountName ?? "",
     bankIban: settings.bankIban ?? "",
     bankSortCode: settings.bankSortCode ?? "",
@@ -189,6 +193,7 @@ export default function AdminSettingsPage() {
         commissionEnabled: form.commissionEnabled,
         renewalNoticeDays: Number(form.renewalNoticeDays),
         claimSlaDays: Number(form.claimSlaDays),
+        premiumPaymentTermDays: Number(form.premiumPaymentTermDays),
         bankAccountName: form.bankAccountName || undefined,
         bankIban: form.bankIban || undefined,
         bankSortCode: form.bankSortCode || undefined,
@@ -328,6 +333,25 @@ export default function AdminSettingsPage() {
                 }
                 className="h-9 rounded-lg bg-card"
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="s-payment-term">Premium payment term (days)</Label>
+              <Input
+                id="s-payment-term"
+                inputMode="numeric"
+                value={form.premiumPaymentTermDays}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    premiumPaymentTermDays: event.target.value,
+                  })
+                }
+                className="h-9 rounded-lg bg-card"
+              />
+              <p className="text-[0.62rem] leading-4 text-muted-foreground">
+                How long a premium invoice stays current before the daily job
+                chases it.
+              </p>
             </div>
             <label className="flex items-center gap-2 text-xs text-muted-foreground sm:col-span-2">
               <input

@@ -276,6 +276,12 @@ const schema = defineSchema(
       commissionEnabled: v.boolean(),
       renewalNoticeDays: v.number(),
       claimSlaDays: v.number(),
+      /**
+       * How long a member has to pay a premium invoice before the daily job
+       * treats it as overdue. Optional so settings saved before it existed
+       * still load; `getSettings` supplies the default.
+       */
+      premiumPaymentTermDays: v.optional(v.number()),
       bankAccountName: v.optional(v.string()),
       bankIban: v.optional(v.string()),
       bankSortCode: v.optional(v.string()),
@@ -874,6 +880,14 @@ const schema = defineSchema(
       endDate: v.number(),
       status: mineralPolicyStatusValidator,
       notes: v.optional(v.string()),
+      /**
+       * The member-facing policy issued from this cover. A mineral record and
+       * the cover against it are the vault's own paperwork; the member reads
+       * their cover, documents and premium from the standard records, so this
+       * is the link between the two. Absent on covers recorded before that
+       * link existed, and read by `minerals.repairMemberRecords` to fill it in.
+       */
+      policyId: v.optional(v.id("policies")),
       createdBy: v.id("users"),
       createdAt: v.number(),
       updatedAt: v.number(),
@@ -881,6 +895,9 @@ const schema = defineSchema(
     })
       .index("by_mineral", ["mineralId"])
       .index("by_number", ["policyNumber"])
+      // The daily maintenance job resolves a lapsed member policy back to the
+      // cover behind it through this index.
+      .index("by_policy", ["policyId"])
       .index("by_status", ["status"]),
 
     /**

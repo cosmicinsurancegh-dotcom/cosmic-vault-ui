@@ -11,6 +11,7 @@ import {
 import { writeAudit } from "./lib/audit";
 import { notifyStaff, notifyUser } from "./lib/notify";
 import { reference, requiredText } from "./lib/refs";
+import { getSettings } from "./lib/settings";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -97,6 +98,9 @@ export const initiatePremium = mutation({
     }
 
     const now = Date.now();
+    // The payment window is a platform setting, not a constant: finance can
+    // decide how long a premium stays current before it is chased.
+    const settings = await getSettings(ctx);
     const id = await ctx.db.insert("transactions", {
       reference: reference("PAY"),
       customerUserId,
@@ -111,7 +115,7 @@ export const initiatePremium = mutation({
       idempotencyKey,
       note: label,
       reconciled: false,
-      dueDate: now + 7 * DAY,
+      dueDate: now + settings.premiumPaymentTermDays * DAY,
       createdAt: now,
       updatedAt: now,
     });
@@ -167,6 +171,7 @@ export const initiatePolicyRenewal = mutation({
       .first();
     if (existing) return { transactionId: existing._id, reference: existing.reference };
     const now = Date.now();
+    const settings = await getSettings(ctx);
     const id = await ctx.db.insert("transactions", {
       reference: reference("PAY"),
       customerUserId: policy.customerUserId,
@@ -180,7 +185,7 @@ export const initiatePolicyRenewal = mutation({
       idempotencyKey: `renewal:${renewal._id}`,
       note: `Renewal premium for ${policy.policyNumber}`,
       reconciled: false,
-      dueDate: now + 7 * DAY,
+      dueDate: now + settings.premiumPaymentTermDays * DAY,
       createdAt: now,
       updatedAt: now,
     });

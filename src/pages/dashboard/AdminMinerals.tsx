@@ -57,6 +57,7 @@ import {
   Plus,
   Search,
   Trash2,
+  RefreshCw,
   Truck,
   UserRoundPlus,
 } from "lucide-react";
@@ -132,6 +133,8 @@ export default function AdminMineralsPage() {
   const reference = useQuery(api.setup.referenceData);
   const [createOpen, setCreateOpen] = useState(false);
   const [detailId, setDetailId] = useState<Id<"minerals"> | null>(null);
+  const repair = useMutation(api.minerals.repairMemberRecords);
+  const [repairing, setRepairing] = useState(false);
 
   const stats = useMemo(() => {
     const list = rows ?? [];
@@ -151,6 +154,16 @@ export default function AdminMineralsPage() {
     return <LoadingState label="Loading minerals" />;
   }
 
+  /* A cover recorded before the member records existed leaves the holder's
+     dashboard empty: their Policies, Payments and Documents pages cannot see
+     it. Surface the fix where the gap is, not in a console somewhere else. */
+  const needsRepair = rows.some(
+    (row) =>
+      Boolean(row.mineral.assignedUserId) &&
+      Boolean(row.policy) &&
+      !row.policy?.policyId,
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -159,12 +172,52 @@ export default function AdminMineralsPage() {
         description="Record a mineral, bind its policy and shipment, and assign it to the member who owns it. Every shipment status change emails that member automatically."
         actions={
           canManage ? (
-            <Button
-              className="h-10 rounded-[4px] px-5"
-              onClick={() => setCreateOpen(true)}
-            >
-              <Plus className="size-4" /> Add mineral
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {needsRepair && (
+                <Button
+                  variant="outline"
+                  className="h-10 rounded-[4px] bg-transparent px-4"
+                  disabled={repairing}
+                  onClick={async () => {
+                    setRepairing(true);
+                    try {
+                      const result = await repair({});
+                      toast.success(
+                        result.repaired === 0
+                          ? "Nothing to repair."
+                          : `${result.repaired} member record${result.repaired === 1 ? "" : "s"} issued.`,
+                        {
+                          description: result.remaining
+                            ? `${result.remaining} cover${result.remaining === 1 ? "" : "s"} still to go - run it again.`
+                            : "The member dashboards now show this cover.",
+                        },
+                      );
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "Could not repair the member records.",
+                      );
+                    } finally {
+                      setRepairing(false);
+                    }
+                  }}
+                >
+                  {repairing ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="size-4" />
+                  )}
+                  Repair member records
+                </Button>
+              )}
+              <Button
+                className="h-10 rounded-[4px] px-5"
+                onClick={() => setCreateOpen(true)}
+              >
+                <Plus className="size-4" /> Add mineral
+              </Button>
+            </div>
           ) : undefined
         }
       />
