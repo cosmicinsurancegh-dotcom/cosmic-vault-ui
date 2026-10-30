@@ -1,11 +1,18 @@
 name: Deploy Convex functions
 
 # Gating:
-#   push to `dev`    -> avid-camel-675
+#   push to `main`   -> avid-camel-675
 #   manual, dev      -> avid-camel-675
 #   manual, prod     -> descriptive-ferret-801, only from `main` and only when
 #                       `confirm` is typed as deploy-prod.
-# No push ever reaches production: a merge to `main` is not a deploy.
+# No push ever reaches production: a push to `main` deploys the dev functions,
+# and production stays a dispatch that needs the confirmation phrase.
+#
+# The push trigger moved from `dev` to `main` on 2026-10-30, when `dev` was
+# deleted and `main` became the only branch (README, "Merging into main"). The
+# concurrency group below is keyed on the deployment being written rather than
+# on the ref, so a push-triggered dev deploy and a production dispatch never
+# wait on, or cancel, each other's lock.
 #
 # Both deploys are also gated on the unit suite (`unit` job below): a failing
 # guard, or any other red test, stops the deploy instead of shipping next to a
@@ -14,7 +21,7 @@ name: Deploy Convex functions
 # gate and the push check cannot drift apart.
 on:
   push:
-    branches: [dev]
+    branches: [main]
     paths:
       - "src/convex/**"
       - "convex.json"
@@ -37,8 +44,15 @@ permissions:
   contents: read
 
 # One deploy at a time per deployment, so two pushes cannot interleave.
+#
+# The group names the deployment, not the ref: a dispatch uses the target it was
+# given, and a push always writes dev functions, so it takes `convex-dev` even
+# though it runs from `main`. Keying on the ref would have put push runs in
+# `convex-prod` - the ref is `main` for both - and a push would then queue
+# against, or be cancelled by, a real production dispatch. `cancel-in-progress`
+# stays false: racing deployments of the same functions is what this prevents.
 concurrency:
-  group: convex-${{ github.event_name == 'workflow_dispatch' && inputs.target || (github.ref == 'refs/heads/main' && 'prod' || 'dev') }}
+  group: convex-${{ github.event_name == 'workflow_dispatch' && inputs.target || 'dev' }}
   cancel-in-progress: false
 
 jobs:
@@ -57,7 +71,7 @@ jobs:
     # functions keep whatever version is currently deployed.
     needs: unit
     if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && inputs.target == 'dev')
     runs-on: ubuntu-latest
     environment: convex-dev
@@ -104,7 +118,8 @@ jobs:
     # red tree: fix the test, or the code, and let the suite go green.
     needs: unit
     # Dispatch runs from whichever branch was selected, so prod also requires
-    # main. Pushes never qualify.
+    # main. A push to `main` never qualifies: `event_name` is `push`, and the
+    # dev job above is the only one that accepts one.
     if: |
       github.event_name == 'workflow_dispatch' &&
       inputs.target == 'prod' &&

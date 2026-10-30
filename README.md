@@ -97,10 +97,10 @@ below still exists but is set to `enforcement: disabled`, so `git push origin
 main` is the flow: commit, push, and Vercel builds the app from that push.
 `Vitest unit suite` still runs on every push (and on a pull request, if one is
 ever opened), but it no longer blocks anything - it is a check to read before
-moving on. Deleting `dev` also removed the push trigger for `Deploy Convex
-functions`, so dev functions now go out by manual dispatch with `target: dev`.
-Production functions were already a manual dispatch and still are, because a
-push to `main` is not a release.
+moving on. The push trigger for `Deploy Convex functions` moved from `dev` to
+`main` with it, so a push to `main` still deploys the dev functions. Production
+functions were already a manual dispatch and still are, because a push to `main`
+is not a release.
 
 Everything from here to the end of this section records the gate as it was
 configured on 2026-10-26 and how to switch it back on.
@@ -284,8 +284,9 @@ site talks to) and `avid-camel-675` (development). Functions are published by
 the `Deploy Convex functions` workflow, so no one needs a local Convex login
 to ship the backend.
 
-- **Dev functions** - run the workflow manually with `target: dev`; `dev` was
-  deleted on 2026-10-30, so no push triggers them any more (see
+- **Dev functions** - a push to `main` that touches `src/convex/**` deploys
+  them, or run the workflow manually with `target: dev`. The push trigger moved
+  off the deleted `dev` branch on 2026-10-30 (see
   [Merging into main](#merging-into-main)).
   Authenticated by the `CONVEX_DEPLOY_KEY_DEV` secret. A `Vitest unit suite` job
   runs first and both deploy jobs need it, so a failing test - the sign-in guard
@@ -367,10 +368,9 @@ must be current before a deploy.
 
 ### Release checklist
 
-1. Commit on `main` and push. Vercel builds from that push, and `Vitest unit
-   suite` runs alongside it - read the run before moving on. Dev functions take
-   a manual dispatch with `target: dev`, which is the only trigger they have
-   left.
+1. Commit on `main` and push. Vercel builds from that push, `Vitest unit suite`
+   runs alongside it, and a push that touches `src/convex/**` also deploys the
+   dev functions - read both runs before moving on.
 2. From `main` run the workflow with `target: prod` and `confirm: deploy-prod`.
 3. Check the run: `Vitest unit suite`, `Check production confirmation` and
    `Deploy functions` must all be green. A dispatch without the phrase fails
