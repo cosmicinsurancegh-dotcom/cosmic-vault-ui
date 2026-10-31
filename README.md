@@ -295,13 +295,94 @@ to ship the backend.
 - **Production functions** - manual run only, from `main`, with `target: prod`
   and `confirm: deploy-prod`. A merge to `main` is not a release. Authenticated
   by the `CONVEX_DEPLOY_KEY_PROD` secret, held on the `convex-prod`
-  environment.
+  environment. A successful deploy is stamped: the workflow reads the functions
+  the deployment serves back from it (`convex function-spec`), stores them as
+  `APP_FUNCTIONS`, and `setup:release` returns them, which is what lets the site
+  build check itself against production (below).
 - **Frontend** - Vercel builds `main` on push. The browser's Convex URL is
   `DEFAULT_CONVEX_URL` in `src/lib/convexUrl.ts` (production) unless the Vercel
   project sets a `VITE_CONVEX_URL` that really is a Convex deployment. A value
   that is not - the site's own origin, say - is swapped for `DEFAULT_CONVEX_URL`
   during the build with a warning in the build log, so the published bundle can
   reach a backend instead of rendering the configuration screen.
+
+### The site cannot publish ahead of its functions
+
+`bun run build` starts with `scripts/check-backend-release.mjs`, so a Vercel
+production build refuses to publish when the production deployment does not
+serve a function the bundle calls. This is not hypothetical: on 2026-10-30 a
+commit added `tickets.queueSummary`, Vercel published the bundle that calls it
+about a minute later, and the production deployment still ran the previous
+functions - every staff dashboard load died on a masked `Server Error`. The site
+is built by Vercel on push, while production functions are only published by a
+manual dispatch, so nothing else stopped the frontend from getting there first.
+
+On a production build the check collects every `api.<module>.<function>` the
+site's own source calls (`src`, minus the backend, codegen and tests) and
+compares that list with the functions production says it serves. When one is
+missing it fails the build and names it:
+
+```
+[release] Refusing to publish the site: The production deployment does not
+serve 1 function this build calls: tickets:queueSummary.
+```
+
+Comparing names instead of a fingerprint of `src/convex` is the point: the log
+says what to publish, and a backend change that adds no function the site calls
+- a comment, an index, a helper - no longer holds back a release. Comments are
+stripped before the scan, so prose that mentions `api.x.y` is not a dependency.
+
+A name is not enough on its own. A commit can add an argument to a function the
+site already calls and update the site to send it: the name still matches, and
+the published bundle would then fail validation at runtime with the same masked
+`Server Error`. So every function also carries a digest of its argument and
+return validators. The deploy step reads them from the deployment's own
+`convex function-spec`; the build reads them from the source, by running the
+validators - `scripts/convex-signatures.mjs` bundles each module under
+`src/convex` and digests the `exportArgs()`/`exportReturns()` that Convex
+attaches. Both sides digest the same serialized shapes, so a difference means
+the shapes really differ. A function the site calls whose shape changed fails
+the build and is named:
+
+```
+[release] Refusing to publish the site: The production deployment validates 1
+function this build calls differently: tickets:queueSummary.
+```
+
+A shape change to a function the site never calls passes, which keeps the gate
+as narrow as the risk. If a module cannot be loaded the gate fails instead of
+skipping it: a capture that quietly dropped functions would compare nothing and
+call it success.
+
+The deployment carries that list and those digests. After a successful push the
+`Deploy Convex functions` workflow reads `convex function-spec` back from the
+deployment - what is actually running, not what the job meant to ship - and
+stores `{ "module:function": digest }` as `APP_FUNCTIONS`; `setup:release`
+returns it over the public HTTP API and needs no credential
+(`src/convex/setup.ts`). The build cannot probe the
+functions one by one because the deployment redacts every failure to
+`Server Error`, which makes a missing function and a throwing one
+indistinguishable from outside. An unstamped deployment, an unreachable one, and
+a source file that indexes the api object instead of naming a function
+(`api[name]`, which the scan cannot resolve) all fail the gate - none of them can
+be shown to serve this build - and when it fails **the previous deployment keeps
+serving**, because a stale site is a bug and a blank one is an outage. Previews
+and local builds are not gated: a preview deploys a branch whose functions are
+by definition not in production yet.
+
+Run it by hand with `bun run release:check -- --production`; `--url <url>` checks
+another deployment and `--served <spec.json>` checks a saved function spec
+without asking one. `bun run convex:signatures -- --tree` prints this checkout's
+stamp and `bun run convex:signatures -- --spec <spec.json>` prints a saved
+deployment's.
+
+The workflow finishes the release by asking Vercel to rebuild the same commit
+once the functions and the stamp are in place, and runs this same gate once more
+against the deployment it just stamped (`Verify the site may publish`) - that
+step is what catches an environment variable which did not take effect. The
+rebuild request is the `VERCEL_DEPLOY_HOOK_URL` secret - create the hook in
+Vercel under Settings -> Git -> Deploy Hooks, for the production branch. Without
+it the run logs a warning naming the commit to redeploy by hand instead.
 
 ### Which commits Vercel will build
 
@@ -370,13 +451,22 @@ must be current before a deploy.
 
 1. Commit on `main` and push. Vercel builds from that push, `Vitest unit suite`
    runs alongside it, and a push that touches `src/convex/**` also deploys the
-   dev functions - read both runs before moving on.
+   dev functions - read both runs before moving on. If the push changed
+   `src/convex/**`, the Vercel build is refused and the domain keeps serving the
+   previous release: that is the gate working, not a failure to chase.
 2. From `main` run the workflow with `target: prod` and `confirm: deploy-prod`.
-3. Check the run: `Vitest unit suite`, `Check production confirmation` and
-   `Deploy functions` must all be green. A dispatch without the phrase fails
-   there by design, and a red suite skips `Deploy functions` rather than
-   releasing to production.
-4. Confirm production is serving the code you pushed, not just answering.
+   It publishes the functions, stamps the functions it serves and the shapes
+   they validate, verifies the site may publish, and asks Vercel to rebuild the
+   commit; without `VERCEL_DEPLOY_HOOK_URL` it warns and you redeploy that
+   commit in Vercel yourself.
+3. Check the run: `Vitest unit suite`, `Check production confirmation`,
+   `Deploy functions`, `Publish the served functions and their shapes` and
+   `Verify the site may publish` must all be green. A dispatch without the
+   phrase fails there by design, a red suite skips `Deploy functions` rather
+   than releasing to production, and a failed deploy never stamps - a stamp for
+   functions that are not serving would let the site through the gate on a lie.
+4. Confirm the site build for that commit went green after the rebuild, then
+   confirm production is serving the code you pushed, not just answering.
    List what is deployed and grep for a function this release added or renamed:
    `bunx convex function-spec --prod | grep -q 'setup.js:seedDeployment' && echo live`.
    Then execute against the deployment, which proves the runtime works and not

@@ -555,11 +555,71 @@ export const status = query({
  * deployment then looks exactly like one that runs nothing. Returning a
  * constant makes a value response mean "functions are running", which is the
  * only question the banner asks.
+ *
+ * The release gate asks a different question - which functions this deployment
+ * serves - and `release` below answers it, so a malformed stamp can never break
+ * the banner.
  */
 export const health = query({
   args: {},
   handler: async () => ({ ok: true as const }),
 });
+
+/**
+ * The functions this deployment serves, and what they validate, for the site
+ * build's release gate.
+ *
+ * The public HTTP API redacts every failure to `Server Error`, so a build
+ * cannot ask a deployment whether it has `tickets:queueSummary`: a deployment
+ * without it and one whose handler threw answer identically. What it can ask is
+ * what the deployment serves - the list `Deploy Convex functions` reads back
+ * from the deployment after a successful publish (`convex function-spec`) and
+ * stores as `APP_FUNCTIONS`, each function with a digest of its argument and
+ * return validators. It stays empty until a deployment has been stamped, which
+ * the gate reads as "behind": an unstamped deployment cannot be shown to serve
+ * anything.
+ *
+ * Read per request on purpose. The stamp is written *after* the deploy that
+ * creates this query, so a value captured at module scope would be the empty
+ * environment of the previous deploy until the next one.
+ */
+export const release = query({
+  args: {},
+  handler: async () => publishedReleaseFromEnv(),
+});
+
+/**
+ * `APP_FUNCTIONS` as `{ functions, signatures }`, or both `null` when the
+ * deployment has not been stamped. A stamp that cannot be parsed reads the same
+ * as a missing one, and is never an error: nothing here may turn a stale release
+ * into a deployment that answers no queries at all.
+ */
+function publishedReleaseFromEnv(): {
+  functions: string[] | null;
+  signatures: Record<string, string> | null;
+} {
+  const unstamped = { functions: null, signatures: null };
+  const raw = (process.env.APP_FUNCTIONS ?? "").trim();
+  if (!raw) return unstamped;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    // Deployments stamped before signatures existed carry a bare list of
+    // names. They still answer the name half of the gate.
+    if (Array.isArray(parsed)) {
+      if (!parsed.every((value) => typeof value === "string")) return unstamped;
+      return { functions: parsed as string[], signatures: null };
+    }
+    if (!parsed || typeof parsed !== "object") return unstamped;
+    const entries = Object.entries(parsed as Record<string, unknown>);
+    if (!entries.every(([, digest]) => typeof digest === "string")) {
+      return unstamped;
+    }
+    const signatures = Object.fromEntries(entries) as Record<string, string>;
+    return { functions: Object.keys(signatures).sort(), signatures };
+  } catch {
+    return unstamped;
+  }
+}
 
 /** Safe for any signed-in user: seeds fixed reference configuration only. */
 export const ensureBasics = mutation({

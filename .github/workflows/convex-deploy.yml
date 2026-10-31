@@ -171,3 +171,58 @@ jobs:
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY_PROD }}
         run: bunx convex deploy --yes
+
+      # Records which functions are now serving, and only after the push above
+      # succeeded: a stamp written before a failed deploy would claim functions
+      # production does not run, which is the one direction the site gate cannot
+      # recover from. The list is read *back* from the deployment, so the stamp
+      # is what is actually running rather than what this checkout asked for;
+      # `setup:release` returns it (`src/convex/setup.ts`) and the site build
+      # refuses to publish while a function its bundle calls is missing
+      # (`scripts/check-backend-release.mjs`). The deployment is named explicitly
+      # because this job is about that deployment, whatever the key resolves to.
+      - name: Publish the served functions and their shapes
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY_PROD }}
+          DEPLOYMENT: descriptive-ferret-801
+        run: |
+          set -euo pipefail
+          bunx convex function-spec --deployment "${DEPLOYMENT}" > "${RUNNER_TEMP}/function-spec.json"
+          STAMP=$(bun scripts/convex-signatures.mjs --spec "${RUNNER_TEMP}/function-spec.json")
+          bunx convex env set APP_FUNCTIONS "${STAMP}"
+          echo "Stamped ${DEPLOYMENT} with the functions it serves and their argument and return shapes."
+
+      # The same gate a production site build runs, against the deployment just
+      # stamped. It catches what the stamp alone cannot: an environment variable
+      # that did not take effect. Retried a few times because a new value needs a
+      # moment to reach every isolate, which is propagation lag rather than a
+      # flaky check - the loop is bounded, so a real failure still fails the job.
+      - name: Verify the site may publish
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if bun scripts/check-backend-release.mjs --production; then
+              exit 0
+            fi
+            echo "::warning::Not serving the expected functions yet (attempt ${attempt}/5); a stamp takes a moment to reach every isolate."
+            sleep 5
+          done
+          echo "::error::The production deployment still does not serve the functions this commit's site calls. The site build will refuse to publish."
+          exit 1
+
+      # The gate above fails the site build that ran alongside this push, so
+      # the domain keeps serving the previous release. Rebuilding the same
+      # commit now that its functions exist is what completes the release.
+      # Without the hook the deployment is a manual "Redeploy" in Vercel; the
+      # warning says so instead of pretending the release finished.
+      - name: Rebuild the site on the new functions
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HOOK}" ]; then
+            echo "::warning::VERCEL_DEPLOY_HOOK_URL is not set - redeploy ${GITHUB_SHA} manually in Vercel so the site picks up the functions published just now."
+            exit 0
+          fi
+          curl -fsS -X POST "${HOOK}" > /dev/null
+          echo "Requested a site rebuild for ${GITHUB_SHA}."
