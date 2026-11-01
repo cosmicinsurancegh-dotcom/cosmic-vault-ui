@@ -99,8 +99,9 @@ main` is the flow: commit, push, and Vercel builds the app from that push.
 ever opened), but it no longer blocks anything - it is a check to read before
 moving on. The push trigger for `Deploy Convex functions` moved from `dev` to
 `main` with it, so a push to `main` still deploys the dev functions. Production
-functions were already a manual dispatch and still are, because a push to `main`
-is not a release.
+functions are published from that same push as well, once the unit suite is
+green (see [Deployment](#deployment)), so a functions change no longer waits on
+a dispatch; the dispatch remains for a release with no code change.
 
 Everything from here to the end of this section records the gate as it was
 configured on 2026-10-26 and how to switch it back on.
@@ -292,8 +293,12 @@ to ship the backend.
   runs first and both deploy jobs need it, so a failing test - the sign-in guard
   included - stops the deploy instead of shipping functions alongside a red
   check, dev and production alike.
-- **Production functions** - manual run only, from `main`, with `target: prod`
-  and `confirm: deploy-prod`. A merge to `main` is not a release. Authenticated
+- **Production functions** - published by a push to `main` that changes
+  `src/convex/**`, after `Vitest unit suite` goes green; a manual run from
+  `main` with `target: prod` and `confirm: deploy-prod` remains for a release
+  with no code change. The confirmation phrase is only asked of a dispatch,
+  which has no diff to read - the push trigger's `paths` filter is what decides
+  that a push is a functions release. Authenticated
   by the `CONVEX_DEPLOY_KEY_PROD` secret, held on the `convex-prod`
   environment. A successful deploy is stamped: the workflow reads the functions
   the deployment serves back from it (`convex function-spec`), stores them as
@@ -313,9 +318,12 @@ production build refuses to publish when the production deployment does not
 serve a function the bundle calls. This is not hypothetical: on 2026-10-30 a
 commit added `tickets.queueSummary`, Vercel published the bundle that calls it
 about a minute later, and the production deployment still ran the previous
-functions - every staff dashboard load died on a masked `Server Error`. The site
-is built by Vercel on push, while production functions are only published by a
-manual dispatch, so nothing else stopped the frontend from getting there first.
+functions - every staff dashboard load died on a masked `Server Error`. Both
+are built from the same push, which means they now race rather than queue: the
+functions deploy and the Vercel build start together, and either can finish
+first. That is what this gate is for - it refuses the bundle when the functions
+it calls are not there yet - and the deploy asks Vercel to rebuild the commit
+once they are, so the release completes instead of waiting for a person.
 
 On a production build the check collects every `api.<module>.<function>` the
 site's own source calls (`src`, minus the backend, codegen and tests) and
@@ -450,21 +458,25 @@ must be current before a deploy.
 ### Release checklist
 
 1. Commit on `main` and push. Vercel builds from that push, `Vitest unit suite`
-   runs alongside it, and a push that touches `src/convex/**` also deploys the
-   dev functions - read both runs before moving on. If the push changed
-   `src/convex/**`, the Vercel build is refused and the domain keeps serving the
-   previous release: that is the gate working, not a failure to chase.
-2. From `main` run the workflow with `target: prod` and `confirm: deploy-prod`.
-   It publishes the functions, stamps the functions it serves and the shapes
-   they validate, verifies the site may publish, and asks Vercel to rebuild the
-   commit; without `VERCEL_DEPLOY_HOOK_URL` it warns and you redeploy that
-   commit in Vercel yourself.
-3. Check the run: `Vitest unit suite`, `Check production confirmation`,
-   `Deploy functions`, `Publish the served functions and their shapes` and
-   `Verify the site may publish` must all be green. A dispatch without the
-   phrase fails there by design, a red suite skips `Deploy functions` rather
-   than releasing to production, and a failed deploy never stamps - a stamp for
-   functions that are not serving would let the site through the gate on a lie.
+   runs alongside it, and a push that touches `src/convex/**` deploys the dev
+   functions and, once the suite is green, production - read both runs before
+   moving on. The site build and the functions deploy start at the same time,
+   so a Vercel build that ran first is refused and the domain keeps serving the
+   previous release: that is the gate working, not a failure to chase. The
+   deploy asks Vercel to rebuild the commit once the functions are in; without
+   `VERCEL_DEPLOY_HOOK_URL` it warns and you redeploy that commit in Vercel
+   yourself.
+2. A release with no code change - rolling a functions deploy forward after an
+   environment change, say - still runs from `main` with `target: prod` and
+   `confirm: deploy-prod`. It does the same work: publishes the functions,
+   stamps them, verifies the site may publish, and asks Vercel to rebuild.
+3. Check the run: `Vitest unit suite`, `Deploy functions to prod`,
+   `Publish the served functions and their shapes` and `Verify the site may
+   publish` must all be green. `Check production confirmation` runs only on a
+   dispatch, where a missing phrase fails it by design; a red suite skips
+   `Deploy functions` rather than releasing to production, and a failed deploy
+   never stamps - a stamp for functions that are not serving would let the site
+   through the gate on a lie.
 4. Confirm the site build for that commit went green after the rebuild, then
    confirm production is serving the code you pushed, not just answering.
    List what is deployed and grep for a function this release added or renamed:

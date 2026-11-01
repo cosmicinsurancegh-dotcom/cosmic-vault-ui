@@ -1,18 +1,34 @@
 name: Deploy Convex functions
 
 # Gating:
-#   push to `main`   -> avid-camel-675
+#   push to `main`   -> avid-camel-675 and descriptive-ferret-801
 #   manual, dev      -> avid-camel-675
-#   manual, prod     -> descriptive-ferret-801, only from `main` and only when
+#   manual, prod     -> descriptive-ferret-801, from `main`, and only when
 #                       `confirm` is typed as deploy-prod.
-# No push ever reaches production: a push to `main` deploys the dev functions,
-# and production stays a dispatch that needs the confirmation phrase.
+#
+# A push reaches production. The site is built by Vercel from that same push,
+# and the site calls the functions this job publishes, so leaving production
+# behind a dispatch meant every release waited on a person to notice - and the
+# one time nobody noticed, the published bundle outran its functions and every
+# staff dashboard load died on a masked `Server Error` (README, "The site cannot
+# publish ahead of its functions"). The `paths` filter below is what makes the
+# push a deploy decision rather than a guess: only a push that changes
+# `src/convex/**` - or a file the deployment is built from - starts this
+# workflow at all. The dispatch stays for a release with no code change, and is
+# the only path that needs the confirmation phrase, because it has no diff to
+# read.
+#
+# The two are still two deployments of one commit, and they are not ordered:
+# Vercel's build can finish before the functions land. That is what the site's
+# own gate is for - it refuses to publish a bundle whose functions production
+# does not serve - and the rebuild hook at the end of the `prod` job is what
+# completes the release once they do.
 #
 # The push trigger moved from `dev` to `main` on 2026-10-30, when `dev` was
-# deleted and `main` became the only branch (README, "Merging into main"). The
-# concurrency group below is keyed on the deployment being written rather than
-# on the ref, so a push-triggered dev deploy and a production dispatch never
-# wait on, or cancel, each other's lock.
+# deleted and `main` became the only branch (README, "Merging into main").
+# Concurrency is declared per job, so each job queues on the deployment it
+# writes: a push-triggered dev deploy and a production deploy run of the same
+# push never wait on, or cancel, each other's lock.
 #
 # Both deploys are also gated on the unit suite (`unit` job below): a failing
 # guard, or any other red test, stops the deploy instead of shipping next to a
@@ -43,18 +59,13 @@ on:
 permissions:
   contents: read
 
-# One deploy at a time per deployment, so two pushes cannot interleave.
-#
-# The group names the deployment, not the ref: a dispatch uses the target it was
-# given, and a push always writes dev functions, so it takes `convex-dev` even
-# though it runs from `main`. Keying on the ref would have put push runs in
+# One deploy at a time per deployment, so two pushes cannot interleave. The
+# group names the deployment and is declared on each job rather than on the
+# workflow, because a push now writes both: a single workflow-level group would
+# have to be named for one of them. Keying on the ref would put every push in
 # `convex-prod` - the ref is `main` for both - and a push would then queue
-# against, or be cancelled by, a real production dispatch. `cancel-in-progress`
+# against, or be cancelled by, a real production release. `cancel-in-progress`
 # stays false: racing deployments of the same functions is what this prevents.
-concurrency:
-  group: convex-${{ github.event_name == 'workflow_dispatch' && inputs.target || 'dev' }}
-  cancel-in-progress: false
-
 jobs:
   # The suite lives in one file. This job only calls it, so a change to the
   # steps reaches the gate and the every-push check at the same time; a calling
@@ -73,6 +84,9 @@ jobs:
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && inputs.target == 'dev')
+    concurrency:
+      group: convex-dev
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     environment: convex-dev
     timeout-minutes: 10
@@ -117,20 +131,27 @@ jobs:
     # Gated on `unit` exactly like dev, so production is never released from a
     # red tree: fix the test, or the code, and let the suite go green.
     needs: unit
-    # Dispatch runs from whichever branch was selected, so prod also requires
-    # main. A push to `main` never qualifies: `event_name` is `push`, and the
-    # dev job above is the only one that accepts one.
+    # A push and a dispatch both qualify, from `main` either way: a dispatch can
+    # select any branch, and the deploy must be the commit that is on main. The
+    # push case needs no confirmation phrase - the workflow's `paths` filter has
+    # already decided that this push is a functions release, and the phrase on a
+    # push trigger that nobody fills in would only fail every release.
     if: |
-      github.event_name == 'workflow_dispatch' &&
-      inputs.target == 'prod' &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' && inputs.target == 'prod'))
+    concurrency:
+      group: convex-prod
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     environment: convex-prod
     timeout-minutes: 10
     steps:
       # A dispatch that forgets the phrase fails loudly here instead of quietly
-      # skipping, so a half-filled form can never look like a deploy.
+      # skipping, so a half-filled form can never look like a deploy. Only a
+      # dispatch can leave it blank, which is why only a dispatch is asked.
       - name: Check production confirmation
+        if: github.event_name == 'workflow_dispatch'
         env:
           CONFIRM: ${{ inputs.confirm }}
         run: |
@@ -210,11 +231,13 @@ jobs:
           echo "::error::The production deployment still does not serve the functions this commit's site calls. The site build will refuse to publish."
           exit 1
 
-      # The gate above fails the site build that ran alongside this push, so
-      # the domain keeps serving the previous release. Rebuilding the same
-      # commit now that its functions exist is what completes the release.
-      # Without the hook the deployment is a manual "Redeploy" in Vercel; the
-      # warning says so instead of pretending the release finished.
+      # On a push the site build started at the same moment as this job, so it
+      # may have been refused by the gate above - the expected race, and why
+      # the domain can keep serving the previous release after a push that
+      # published functions. Rebuilding the same commit now that its functions
+      # exist is what completes the release. Without the hook the deployment is
+      # a manual "Redeploy" in Vercel; the warning says so instead of pretending
+      # the release finished.
       - name: Rebuild the site on the new functions
         env:
           HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
