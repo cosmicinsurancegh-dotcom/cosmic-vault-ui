@@ -28,9 +28,12 @@ const temporaryDirectories: string[] = [];
  * `convex/server` and `convex/values` the way the real modules do.
  */
 async function convexModule(source: string) {
-  const root = await mkdtemp(
-    path.join(projectRoot, "node_modules", ".cache", "signatures-"),
-  );
+  // An install creates `node_modules`, not its `.cache` directory, so a fresh
+  // checkout had no parent to create this in and `mkdtemp` failed with ENOENT
+  // - red on CI while passing here, where a build had made the directory.
+  const cache = path.join(projectRoot, "node_modules", ".cache");
+  await mkdir(cache, { recursive: true });
+  const root = await mkdtemp(path.join(cache, "signatures-"));
   temporaryDirectories.push(root);
   await mkdir(path.join(root, "src", "convex"), { recursive: true });
   await writeFile(path.join(root, "src", "convex", "sample.ts"), source);

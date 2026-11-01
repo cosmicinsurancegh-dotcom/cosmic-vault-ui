@@ -28,7 +28,12 @@ const temporaryDirectories: string[] = [];
 
 /** A throwaway tree with the given repo-relative files. */
 async function tree(files: Record<string, string>) {
-  const root = await mkdtemp(path.join(projectRoot, "node_modules", ".cache", "site-refs-"));
+  // An install creates `node_modules`, not its `.cache` directory, so a fresh
+  // checkout had no parent to create this in and `mkdtemp` failed with ENOENT
+  // - red on CI while passing here, where a build had made the directory.
+  const cache = path.join(projectRoot, "node_modules", ".cache");
+  await mkdir(cache, { recursive: true });
+  const root = await mkdtemp(path.join(cache, "site-refs-"));
   temporaryDirectories.push(root);
   for (const [relative, contents] of Object.entries(files)) {
     const target = path.join(root, relative);
