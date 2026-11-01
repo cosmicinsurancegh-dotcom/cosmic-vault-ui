@@ -8,7 +8,10 @@
  *   - the deployment answered HTTP and `/version` but ran no function, so every
  *     screen failed with a bare "Server Error",
  *   - a missing `/assets/*` file was answered with `index.html`, so the browser
- *     refused it as a module and a stale tab pinned that HTML in its cache.
+ *     refused it as a module and a stale tab pinned that HTML in its cache,
+ *   - the site was published ahead of the functions it calls: `tickets.queueSummary`
+ *     landed in the bundle about a minute before it landed in the deployment,
+ *     and every staff dashboard load failed with a masked `Server Error`.
  *
  * It needs no dependencies: Node's built-in `fetch` is enough, so CI runs it
  * straight after a release without installing anything.
@@ -21,6 +24,7 @@
  */
 
 import { readFile } from "node:fs/promises";
+import { compareRelease } from "./release-skew.mjs";
 
 const BASE_URL = (
   process.env.SMOKE_BASE_URL ?? "https://cosmic-vault-ui.vercel.app"
@@ -57,6 +61,68 @@ async function expectedConvexUrl() {
 /** A request that gives up instead of hanging a CI job. */
 function request(url, init) {
   return fetch(url, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) });
+}
+
+/**
+ * What the published bundle says it needs: the functions it calls, each with
+ * the digest of the argument and return validators it was built against.
+ *
+ * `vite.config.ts` writes this beside the bundle from the same capture the
+ * release gate reads (`release.json`). Reading it from the site, rather than
+ * scanning this checkout, is what makes the check about the bytes being served:
+ * the gate runs before they exist, and this runs after.
+ */
+async function publishedExpectation() {
+  const response = await request(`${BASE_URL}/release.json`);
+  const type = response.headers.get("content-type") ?? "";
+  // The SPA rewrite answers a missing file with `index.html`, so a build
+  // published before this manifest existed has to read as unanswerable - not as
+  // a bundle that happens to expect nothing.
+  if (!response.ok || !type.includes("json")) {
+    throw new Error(
+      `/release.json answered ${response.status} ${type || "no content type"}`,
+    );
+  }
+  const parsed = await response.json().catch(() => null);
+  const entries =
+    parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? Object.entries(parsed)
+      : [];
+  if (entries.length === 0) {
+    throw new Error(
+      "/release.json lists no functions, so the build did not record what it needs",
+    );
+  }
+  if (entries.some(([, digest]) => typeof digest !== "string")) {
+    throw new Error("/release.json is not a map of function shapes");
+  }
+  return parsed;
+}
+
+/** What the deployment says it serves, from the stamp its deploy wrote. */
+async function publishedFunctions(convexUrl) {
+  const response = await request(`${convexUrl}/api/query`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path: "setup:release", args: {}, format: "json" }),
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(`${convexUrl} answered HTTP ${response.status}`);
+  }
+  if (payload?.status !== "success" && payload?.status !== "value") {
+    throw new Error(`setup:release answered ${JSON.stringify(payload)}`);
+  }
+  return payload.value;
+}
+
+/** The skew in one line: what is absent, and what answers with a shape it does not take. */
+function describeSkew({ missing, changed }) {
+  const parts = [];
+  if (missing.length > 0) parts.push(`not published: ${missing.join(", ")}`);
+  if (changed.length > 0)
+    parts.push(`different shape: ${changed.join(", ")}`);
+  return `the site is ahead of production - ${parts.join("; ")} (publish the functions, then redeploy)`;
 }
 
 async function collect(convexUrl) {
@@ -147,6 +213,31 @@ async function collect(convexUrl) {
   } catch (error) {
     fail(
       "functions running",
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+
+  try {
+    const verdict = compareRelease(
+      await publishedExpectation(),
+      await publishedFunctions(convexUrl),
+    );
+    if (verdict.state === "match") {
+      record(
+        "release skew",
+        `${verdict.checked} functions, all served with the shapes this build calls`,
+      );
+    } else if (verdict.state === "skew") {
+      fail("release skew", describeSkew(verdict));
+    } else {
+      // Silence is right inside the app, where guessing would accuse a healthy
+      // backend. Here it is a check that could not be completed, and a runner
+      // that cannot tell is not a runner that passed.
+      fail("release skew", `could not be checked: ${verdict.detail}`);
+    }
+  } catch (error) {
+    fail(
+      "release skew",
       error instanceof Error ? error.message : String(error),
     );
   }

@@ -2,6 +2,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
+import { E2E_RELEASE_EXPECTATION } from "./stubs/release";
 
 /**
  * Vite config used only by the Playwright suite.
@@ -26,6 +27,15 @@ export default defineConfig({
    * "Outdated Optimize Dep" responses - a blank page.
    */
   cacheDir: fileURLToPath(new URL("../../node_modules/.vite-e2e", import.meta.url)),
+  // The app build inlines this from the source so the dashboard can tell a
+  // deployment that is behind. The suite pins it instead, so a scenario can
+  // answer `setup:release` and see the banner without depending on which
+  // functions the site calls today.
+  define: {
+    "import.meta.env.VITE_RELEASE_EXPECTATION": JSON.stringify(
+      E2E_RELEASE_EXPECTATION,
+    ),
+  },
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: [

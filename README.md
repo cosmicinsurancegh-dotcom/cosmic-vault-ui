@@ -382,7 +382,8 @@ Run it by hand with `bun run release:check -- --production`; `--url <url>` check
 another deployment and `--served <spec.json>` checks a saved function spec
 without asking one. `bun run convex:signatures -- --tree` prints this checkout's
 stamp and `bun run convex:signatures -- --spec <spec.json>` prints a saved
-deployment's.
+deployment's. `node scripts/release-expectation.mjs` prints what a build of this
+tree carries, which is what the dashboard compares against.
 
 The workflow finishes the release by asking Vercel to rebuild the same commit
 once the functions and the stamp are in place, and runs this same gate once more
@@ -427,14 +428,41 @@ needs no session, because production redacts every failure to a bare
 answer exactly like one that runs nothing. A failed probe is retried before it
 is reported, and a failing tab re-checks when it becomes visible again.
 
+Once the deployment answers, the same notice asks `setup:release` what it serves
+and compares that with what the bundle was built against. The gate above
+describes the moment of publishing; a deployment can be replaced or rolled back
+under a bundle that is already out, and from inside the app that is a masked
+`Server Error` with no cause. What the bundle expects is compiled in
+(`src/lib/releaseExpectation.ts`): `vite.config.ts` runs
+`scripts/release-expectation.mjs` - the capture the gate reads - and inlines the
+functions the site calls, each with the digest its validators had in the tree
+that was built, so the banner and the gate cannot disagree about what this
+build needs. A function the deployment does not serve, or serves with a
+different shape, puts a banner over the dashboard naming it and says the site is
+ahead of its backend: publish the functions, then redeploy. A deployment that
+predates `setup:release`, has never been stamped, or cannot be asked says
+nothing - the banner names a skew someone can act on and guesses at nothing,
+and a tab showing one re-checks when it becomes visible again.
+
 `bun run smoke:live` checks the published site after a release: that the served
-bundle targets `DEFAULT_CONVEX_URL`, that `setup:health` answers, that a missing
-`/assets/*` file is a `404` rather than `index.html`, and that `/dashboard` still
-serves the app. The `Smoke the live site` workflow runs it on every push to
-`main`, every six hours, and on demand; set `SMOKE_WAIT_SECONDS` to let it wait
-for a deploy to land, and `SMOKE_BASE_URL` to check another origin. That origin
-must apply `vercel.json`'s rewrites - a plain static server answers a missing
-asset with `index.html` and fails that check by design.
+bundle targets `DEFAULT_CONVEX_URL`, that `setup:health` answers, that the
+release it carries is not ahead of the functions production serves, that a
+missing `/assets/*` file is a `404` rather than `index.html`, and that
+`/dashboard` still serves the app. The `Smoke the live site` workflow runs it on
+every push to `main`, every six hours, and on demand; set `SMOKE_WAIT_SECONDS`
+to let it wait for a deploy to land, and `SMOKE_BASE_URL` to check another
+origin. That origin must apply `vercel.json`'s rewrites - a plain static server
+answers a missing asset with `index.html` and fails that check by design.
+
+The skew check asks the dashboard's question from outside the browser:
+`vite.config.ts` also writes the capture beside the bundle as `release.json`, so
+the check describes the bytes being served rather than this checkout, and sees a
+release that outran its functions even though the build gate let it through.
+Where the banner stays quiet it fails, because silence here means the check
+could not be completed: no `release.json` (the SPA rewrite answers `index.html`),
+a deployment that does not answer `setup:release`, or a stamp that lists
+nothing. A real skew names the functions, and the retry window covers a
+functions deploy landing a moment after the site.
 
 `bun run deploy:status` checks the other half: that Vercel actually built the
 commit being released. It reads the commit's `Vercel - ...` status, waiting up to

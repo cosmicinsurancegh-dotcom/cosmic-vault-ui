@@ -1,10 +1,13 @@
 name: Smoke the live site
 
 # Runs `scripts/smoke-live.mjs` against production: the served bundle's Convex
-# target, the deployment's health function, missing-asset 404s, and the SPA
-# route. A push to `main` is what Vercel builds, so the job waits for the new
-# deployment to take over; the schedule catches drift between releases (a
-# paused deployment, an expired credential, a reverted build).
+# target, the deployment's health function, the release skew between the
+# published bundle and the functions it calls (the build gate asks before a
+# release, this asks after it), missing-asset 404s, and the SPA route. A push to
+# `main` is what Vercel builds, so the job waits for the new deployment to take
+# over; the schedule catches drift between releases (a paused deployment, an
+# expired credential, a reverted build, a functions deploy rolled back under a
+# published site).
 #
 # Before the smoke check, `scripts/deploy-status.mjs` confirms Vercel actually
 # built *this* commit. A build that never started - the Hobby plan refusing a
