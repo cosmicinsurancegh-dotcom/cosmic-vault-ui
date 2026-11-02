@@ -77,7 +77,7 @@ export const credentialState = internalQuery({
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
       return {
-        signedIn: false,
+        userId: null,
         email: "",
         verified: false,
         hasPassword: false,
@@ -89,7 +89,7 @@ export const credentialState = internalQuery({
     const verified = user?.emailVerificationTime !== undefined;
     const account = await passwordAccountFor(ctx, email);
     return {
-      signedIn: true,
+      userId,
       email,
       verified,
       hasPassword: account !== null,
@@ -98,17 +98,56 @@ export const credentialState = internalQuery({
   },
 });
 
+/**
+ * Records the password credential's address as confirmed.
+ *
+ * `createAccount` and `modifyAccountCredentials` only ever write the secret. The
+ * password provider configured in `auth.ts` has a `verify` email, so a
+ * credential row without `emailVerified` is treated as an unconfirmed address on
+ * **every** sign-in: it emails a code and returns without a session. A password
+ * saved from the dashboard would then look like it simply does not work.
+ *
+ * Both callers only reach this after the address has been confirmed with a
+ * sign-in code (`emailVerificationTime` is set), which is the same proof the
+ * verification flow itself relies on.
+ */
+export const confirmPasswordCredential = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("Account not found.");
+    const email = normalizeEmail(user.email);
+    if (!email) throw new Error("This account has no email address.");
+    if (user.emailVerificationTime === undefined) {
+      throw new Error(
+        "This account has not confirmed its email address yet, so a password cannot be attached to it.",
+      );
+    }
+    const account = await passwordAccountFor(ctx, email);
+    if (!account) {
+      throw new Error("The password was not saved. Please try again.");
+    }
+    if (account.userId !== args.userId) {
+      throw new Error(
+        "That email address already has a password on another account.",
+      );
+    }
+    if (account.emailVerified !== email) {
+      await ctx.db.patch(account._id, { emailVerified: email });
+    }
+    return true;
+  },
+});
+
 export const setPassword = action({
   args: { password: v.string() },
   handler: async (ctx, args) => {
-    if (args.password.length < 8) {
-      throw new Error("Use at least 8 characters for your password.");
-    }
+    const password = assertAccountPassword(args.password);
     const state = await ctx.runQuery(
       internal.accountSecurity.credentialState,
       {},
     );
-    if (!state.signedIn) {
+    if (state.userId === null) {
       throw new Error("Sign in before setting a password.");
     }
     if (!state.email || !state.verified) {
@@ -124,16 +163,20 @@ export const setPassword = action({
     if (state.hasPassword) {
       await modifyAccountCredentials(ctx, {
         provider: PASSWORD_PROVIDER,
-        account: { id: state.email, secret: args.password },
+        account: { id: state.email, secret: password },
       });
     } else {
       await createAccount(ctx, {
         provider: PASSWORD_PROVIDER,
-        account: { id: state.email, secret: args.password },
+        account: { id: state.email, secret: password },
         profile: { email: state.email },
         shouldLinkViaEmail: true,
       });
-    }    return { ok: true };
+    }
+    await ctx.runMutation(internal.accountSecurity.confirmPasswordCredential, {
+      userId: state.userId,
+    });
+    return { ok: true };
   },
 });
 
@@ -368,6 +411,10 @@ export const staffSetPassword = action({
       });
     }
 
+    await ctx.runMutation(
+      internal.accountSecurity.confirmPasswordCredential,
+      { userId: args.userId },
+    );
     await ctx.runMutation(internal.accountSecurity.recordStaffPasswordReset, {
       userId: args.userId,
       actorId,

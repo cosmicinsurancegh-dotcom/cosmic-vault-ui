@@ -39,7 +39,11 @@ type AuthMethod = "code" | "password";
  * password. The intent decides which params the next `signIn` call needs.
  */
 interface VerificationState {
-  intent: "email-code" | "password-signup" | "password-reset";
+  intent:
+    | "email-code"
+    | "password-signup"
+    | "password-verify"
+    | "password-reset";
   email: string;
   password?: string;
 }
@@ -214,10 +218,16 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
           flow: isSignup ? "signUp" : "signIn",
         }),
       );
-      if (isSignup && !result.signingIn) {
-        // A new password account is inert until its email address is confirmed.
+      if (!result.signingIn) {
+        // A password whose credential has not confirmed its address is inert:
+        // the provider emails a code instead of signing in. Offer the code step
+        // rather than leaving a visitor who is not actually signed in.
         setOtp("");
-        setStep({ intent: "password-signup", email: address, password });
+        setStep({
+          intent: isSignup ? "password-signup" : "password-verify",
+          email: address,
+          password,
+        });
         return;
       }
       captureJourneyEvent(JOURNEY_EVENTS.signInCompleted, {
@@ -278,6 +288,15 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             flow: "signUp",
           }),
         );
+      } else if (step.intent === "password-verify") {
+        // Repeating the sign-in re-sends a code for this password credential.
+        await withSignInTimeout(
+          signIn("password", {
+            email: step.email,
+            password: step.password ?? "",
+            flow: "signIn",
+          }),
+        );
       } else {
         await withSignInTimeout(
           signIn("password", { email: step.email, flow: "reset" }),
@@ -334,6 +353,16 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             flow: "signUp",
           }),
         );
+      } else if (step.intent === "password-verify") {
+        // Confirms the address on the existing password credential, which is
+        // what makes the saved password usable for later sign-ins.
+        await withSignInTimeout(
+          signIn("password", {
+            email: step.email,
+            code,
+            flow: "email-verification",
+          }),
+        );
       } else {
         await withSignInTimeout(
           signIn("password", {
@@ -347,7 +376,11 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       if (step.intent !== "password-reset") {
         captureJourneyEvent(JOURNEY_EVENTS.signInCompleted, {
           method:
-            step.intent === "email-code" ? "email_code" : "password_signup",
+            step.intent === "email-code"
+              ? "email_code"
+              : step.intent === "password-verify"
+                ? "password"
+                : "password_signup",
         });
       }
       navigate(redirect);
@@ -774,7 +807,9 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                       ? " Enter it below with your new password."
                       : step.intent === "password-signup"
                         ? " Confirm it to switch on password sign-in for your account."
-                        : " It should land within a minute."}
+                        : step.intent === "password-verify"
+                          ? " Confirm it to finish signing in with your password."
+                          : " It should land within a minute."}
                     {step.intent === "email-code" &&
                       isSignup &&
                       " Your vault opens as soon as you're verified."}

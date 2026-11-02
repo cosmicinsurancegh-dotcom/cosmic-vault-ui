@@ -262,6 +262,8 @@ describe("staff setting a customer's password", () => {
     // Stored hashed, never as typed.
     expect(password?.secret).toBeTruthy();
     expect(password?.secret).not.toBe("a fresh password");
+    // And confirmed, or every sign-in diverts to an emailed code.
+    expect(password?.emailVerified).toBe("ada@example.com");
     // And on the customer's identity, not a duplicate one.
     expect(password?.userId).toBe(customer);
 
@@ -308,6 +310,7 @@ describe("staff setting a customer's password", () => {
     const passwords = accounts.filter((account) => account.provider === "password");
     expect(passwords).toHaveLength(1);
     expect(passwords[0]?.secret).not.toBe("previous-hash");
+    expect(passwords[0]?.emailVerified).toBe("ada@example.com");
   });
 
   it("refuses staff accounts and callers without the permission", async () => {
@@ -365,6 +368,41 @@ describe("staff setting a customer's password", () => {
           password: "a fresh password",
         }),
     ).rejects.toThrow(/has not confirmed its email/i);
+  });
+});
+
+describe("setting your own password", () => {
+  it("saves the credential confirmed, so it can actually sign in", async () => {
+    const t = test();
+    const user = await seedUser(t, { email: "ada@example.com" });
+
+    await t
+      .withIdentity({ subject: user })
+      .action(api.accountSecurity.setPassword, { password: "a fresh password" });
+
+    const accounts = await credentialsFor(t, user);
+    const password = accounts.find((account) => account.provider === "password");
+    expect(password?.providerAccountId).toBe("ada@example.com");
+    expect(password?.userId).toBe(user);
+    expect(password?.secret).toBeTruthy();
+    expect(password?.secret).not.toBe("a fresh password");
+    expect(password?.emailVerified).toBe("ada@example.com");
+  });
+
+  it("refuses an address the account has not confirmed", async () => {
+    const t = test();
+    const user = await seedUser(t, {
+      email: "ada@example.com",
+      verified: false,
+    });
+
+    await expect(
+      t
+        .withIdentity({ subject: user })
+        .action(api.accountSecurity.setPassword, { password: "a fresh password" }),
+    ).rejects.toThrow(/verify your email/i);
+
+    expect(await credentialsFor(t, user)).toHaveLength(0);
   });
 });
 
