@@ -1,10 +1,10 @@
 /**
  * Cookie consent state.
  *
- * Only one optional category exists today: interface preferences (the theme
- * and a little dashboard layout state). Nothing on the platform advertises or
- * tracks across sites, so analytics is recorded as declined and shown locked
- * off in the banner.
+ * Two optional categories exist: interface preferences (the theme and a little
+ * dashboard layout state), and analytics - PostHog product events plus a
+ * masked session replay (`src/lib/posthog.ts`). Both start declined. Nothing on
+ * the platform advertises or tracks across sites.
  *
  * Choices are kept for 180 days, after which the banner asks again. A decision
  * is stamped with its date so an old record can be recognised as stale rather
@@ -32,8 +32,8 @@ export type CookieConsent = {
   essential: true;
   /** Theme and minor interface state stored in localStorage. */
   preferences: boolean;
-  /** No analytics tooling is configured, so this is always false. */
-  analytics: false;
+  /** Product events and masked session replay. */
+  analytics: boolean;
   /** ISO timestamp of the decision. */
   decidedAt: string;
 };
@@ -51,9 +51,9 @@ export const CONSENT_CATEGORIES = {
       "Local storage remembers your light or dark theme and small layout choices, so the vault opens the way you left it.",
   },
   analytics: {
-    label: "Analytics and advertising",
+    label: "Analytics and session replay",
     description:
-      "None configured. No advertising cookies, cross-site pixels, or third-party analytics are loaded on this platform.",
+      "Records page views, a few journey events and a masked replay of the screen so a broken step can be watched and fixed. Inputs and on-screen text are masked, and nothing is recorded unless you allow it.",
   },
 } as const;
 
@@ -77,7 +77,7 @@ export function readConsent(): CookieConsent | null {
       version: CONSENT_VERSION,
       essential: true,
       preferences: parsed.preferences === true,
-      analytics: false,
+      analytics: parsed.analytics === true,
       decidedAt: parsed.decidedAt,
     };
   } catch {
@@ -88,6 +88,11 @@ export function readConsent(): CookieConsent | null {
 /** True when the visitor has allowed interface preferences to be stored. */
 export function preferencesAllowed(): boolean {
   return readConsent()?.preferences === true;
+}
+
+/** True when the visitor has allowed analytics and session replay. */
+export function analyticsAllowed(): boolean {
+  return readConsent()?.analytics === true;
 }
 
 /**
@@ -125,12 +130,15 @@ export function forgetThemePreference() {
   }
 }
 
-export function writeConsent(preferences: boolean): CookieConsent {
+export function writeConsent(
+  preferences: boolean,
+  analytics: boolean,
+): CookieConsent {
   const consent: CookieConsent = {
     version: CONSENT_VERSION,
     essential: true,
     preferences,
-    analytics: false,
+    analytics,
     decidedAt: new Date().toISOString(),
   };
 

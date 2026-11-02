@@ -3,6 +3,7 @@ import { BackendHealthNotice } from "@/components/dashboard/BackendHealthNotice"
 import { RequireAuth } from "@/components/RequireAuth";
 import { CookieConsent } from "@/components/site/CookieConsent";
 import { MissingConvexConfig } from "@/components/site/MissingConvexConfig";
+import { PostHogAnalytics } from "@/components/site/PostHogAnalytics";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { PUBLIC_ROUTES } from "@/lib/publicRoutes";
 import { installChunkReloadOnPreloadError } from "@/lib/chunkReload";
@@ -273,6 +274,9 @@ createRoot(document.getElementById("root")!).render(
                   enough to render its own explanation. */}
               {convexUrl && <BackendHealthNotice url={convexUrl} />}
               <CookieConsent />
+              {/* Inert until VITE_POSTHOG_KEY is set and the visitor allows
+                  analytics; see `src/lib/posthog.ts`. */}
+              <PostHogAnalytics />
               <Suspense fallback={<RouteLoading />}>
                 <Routes>
                   {/* Design study: the three hero directions, presented full-bleed. */}

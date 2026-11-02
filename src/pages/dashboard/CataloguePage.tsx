@@ -24,6 +24,7 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import { formatMoney } from "@/lib/format";
 import { coverImage } from "@/lib/imagery";
 import { normalizeRole } from "@/lib/permissions";
+import { captureJourneyEvent, JOURNEY_EVENTS } from "@/lib/posthog";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import { ArrowUpRight, Calculator, Check, Loader2, ShieldCheck } from "lucide-react";
@@ -365,6 +366,10 @@ function QuoteDialog({
         consentConfirmed: broker ? consent : undefined,
       });
       setSaved(response.reference);
+      captureJourneyEvent(JOURNEY_EVENTS.quotationCreated, {
+        product: product.name,
+        broker,
+      });
       toast.success("Quotation saved.", { description: response.reference });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save the quotation.");

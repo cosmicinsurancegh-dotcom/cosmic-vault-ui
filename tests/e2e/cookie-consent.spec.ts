@@ -71,7 +71,12 @@ test.describe("cookie consent", () => {
       dialog.getByRole("button", { name: "Hide details" }),
     ).toBeVisible();
     await expect(dialog.getByText("Strictly necessary")).toBeVisible();
-    await expect(dialog.getByText("None in use")).toBeVisible();
+
+    // Analytics and session replay is a real choice, and it starts declined.
+    const analytics = dialog.getByRole("switch", {
+      name: "Allow analytics and session replay",
+    });
+    await expect(analytics).not.toBeChecked();
 
     const preferences = dialog.getByRole("switch", {
       name: "Remember interface preferences",
@@ -104,6 +109,43 @@ test.describe("cookie consent", () => {
     await expect(dialog).toHaveCount(0);
     expect(await readStoredConsent(page)).toMatchObject({
       preferences: true,
+    });
+  });
+
+  test("analytics is not switched on by the preferences shortcut", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const dialog = panel(page);
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByRole("button", { name: "Allow preferences" }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(await readStoredConsent(page)).toMatchObject({
+      preferences: true,
+      analytics: false,
+    });
+
+    // Turning it on explicitly is what records it.
+    await page
+      .getByRole("contentinfo")
+      .getByRole("button", { name: "Cookie settings" })
+      .click();
+
+    const reopened = panel(page);
+    await expect(reopened).toBeVisible();
+    const analytics = reopened.getByRole("switch", {
+      name: "Allow analytics and session replay",
+    });
+    await expect(analytics).not.toBeChecked();
+    await analytics.click();
+    await expect(analytics).toBeChecked();
+    await reopened.getByRole("button", { name: "Save choices" }).click();
+    await expect(reopened).toHaveCount(0);
+
+    expect(await readStoredConsent(page)).toMatchObject({
+      preferences: true,
+      analytics: true,
     });
   });
 });

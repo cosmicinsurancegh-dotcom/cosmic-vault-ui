@@ -11,6 +11,7 @@ import {
 import { Label } from "@/components/ui/label";
 
 import { useAuth } from "@/hooks/use-auth";
+import { captureJourneyEvent, JOURNEY_EVENTS } from "@/lib/posthog";
 import { signInFailureMessage, withSignInTimeout } from "@/lib/signInTimeout";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -219,6 +220,9 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
         setStep({ intent: "password-signup", email: address, password });
         return;
       }
+      captureJourneyEvent(JOURNEY_EVENTS.signInCompleted, {
+        method: "password",
+      });
       navigate(redirect);
     } catch (error) {
       console.error("Password sign-in error:", error);
@@ -339,6 +343,12 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             flow: "reset-verification",
           }),
         );
+      }
+      if (step.intent !== "password-reset") {
+        captureJourneyEvent(JOURNEY_EVENTS.signInCompleted, {
+          method:
+            step.intent === "email-code" ? "email_code" : "password_signup",
+        });
       }
       navigate(redirect);
     } catch (error) {

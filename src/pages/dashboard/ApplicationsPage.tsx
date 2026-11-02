@@ -24,6 +24,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatDate, formatDateTime, formatMoney, statusLabel } from "@/lib/format";
 import { normalizeRole } from "@/lib/permissions";
+import { captureJourneyEvent, JOURNEY_EVENTS } from "@/lib/posthog";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "convex/react";
 import { ArrowUpRight, Check, ClipboardList, FileText, Loader2, Send, Upload } from "lucide-react";
@@ -463,6 +464,7 @@ function ApplicationDialog({
                     setPending(true);
                     try {
                       await submit({ applicationId: application._id, termsAccepted: true });
+                      captureJourneyEvent(JOURNEY_EVENTS.applicationSubmitted);
                       toast.success("Application submitted for manual underwriting.");
                     } catch (error) {
                       toast.error(error instanceof Error ? error.message : "Could not submit.");

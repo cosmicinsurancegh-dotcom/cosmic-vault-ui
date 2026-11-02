@@ -551,6 +551,13 @@ the project Keys tab (Supabase dashboard → Project Settings → API):
 Sign in as staff (`settings.manage`) and open **Dashboard → Settings → Supabase**
 to see which keys each runtime can see and to test the connection.
 
+PostHog analytics and Session Replay are optional and consent-aware
+(`src/lib/posthog.ts`). Set `VITE_POSTHOG_KEY` to the project token, and
+`VITE_POSTHOG_HOST` only if the project is not on EU cloud. With no key the
+module is inert; with a key it still sends nothing until a visitor allows
+analytics in the cookie banner, and replays mask every input and all on-screen
+text.
+
 # Using Authentication (Important!)
 
 You must follow these conventions when using authentication.

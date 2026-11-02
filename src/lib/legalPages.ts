@@ -176,12 +176,13 @@ export const LEGAL_PAGES: Record<string, LegalPageConfig> = {
           "Browser local storage that remembers your light or dark theme preference, when you allow interface preferences.",
           "Browser local storage used by the dashboard interface to remember minor interface state, such as a collapsed sidebar.",
           "A record of the cookie choice you made, kept for 180 days so the question is not asked on every visit.",
+          "PostHog analytics, only when you allow analytics: page views, a few journey events (signing in, saving a quotation, submitting an application) and a session replay in which every input and all on-screen text is masked, so a broken step can be watched without reading your paperwork.",
         ],
       },
       {
         heading: "What is not used today",
         paragraphs: [
-          "No advertising cookies, no cross-site tracking pixels, and no third-party analytics are configured on this platform. If that changes, this page will list each tool, what it collects, and how to refuse it before it is enabled.",
+          "No advertising cookies and no cross-site tracking pixels are used. The analytics tool records your journey through this platform only, never across other sites, and it is switched off until you allow it.",
         ],
       },
       {

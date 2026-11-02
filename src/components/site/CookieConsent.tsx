@@ -40,6 +40,11 @@ export function CookieConsent() {
   const [preferences, setPreferences] = useState(
     () => readConsent()?.preferences ?? true,
   );
+  /* Analytics is never switched on by the "allow preferences" shortcut: it
+     stays off until somebody turns it on and saves. */
+  const [analytics, setAnalytics] = useState(
+    () => readConsent()?.analytics ?? false,
+  );
 
   useEffect(() => {
     const stored = readConsent();
@@ -82,18 +87,21 @@ export function CookieConsent() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
-  const save = (allowPreferences: boolean) => {
-    writeConsent(allowPreferences);
+  const save = (allowPreferences: boolean, allowAnalytics: boolean) => {
+    writeConsent(allowPreferences, allowAnalytics);
     if (allowPreferences) {
       rememberTheme(resolvedTheme === "dark" ? "dark" : "light");
     }
     setPreferences(allowPreferences);
+    setAnalytics(allowAnalytics);
     setOpen(false);
     setManaging(false);
     toast("Cookie preferences saved", {
-      description: allowPreferences
-        ? "Interface preferences are remembered. Nothing tracks you across sites."
-        : "Only essential session storage is in use, and your theme will not be remembered next visit.",
+      description: allowAnalytics
+        ? "Preferences are remembered and a masked replay of the screen is recorded. Nothing tracks you across other sites."
+        : allowPreferences
+          ? "Interface preferences are remembered. Nothing tracks you across sites."
+          : "Only essential session storage is in use, and your theme will not be remembered next visit.",
     });
   };
 
@@ -149,7 +157,8 @@ export function CookieConsent() {
           >
             One session cookie keeps you signed in; a little browser storage
             remembers your theme. There is no advertising or cross-site
-            tracking here.{" "}
+            tracking here, and a masked session replay is only recorded if you
+            allow analytics.{" "}
             <Link
               to="/legal/cookies"
               className="font-medium text-[#2b61eb] underline decoration-[#2b61eb]/35 underline-offset-2 transition-colors hover:decoration-[#2b61eb]"
@@ -209,9 +218,12 @@ export function CookieConsent() {
                         {CONSENT_CATEGORIES.analytics.description}
                       </p>
                     </div>
-                    <span className="mt-0.5 shrink-0 rounded-[4px] border border-[#e6eaf1] px-2 py-0.5 text-[0.58rem] uppercase tracking-[0.14em] text-[#7a8598]">
-                      None in use
-                    </span>
+                    <Switch
+                      checked={analytics}
+                      onCheckedChange={setAnalytics}
+                      aria-label="Allow analytics and session replay"
+                      className="mt-0.5 shrink-0 data-[state=unchecked]:bg-[#cfd6e4] data-[state=checked]:bg-[#2b61eb] [&_[data-slot=switch-thumb]]:bg-white"
+                    />
                   </div>
                 </div>
               </motion.div>
@@ -221,14 +233,18 @@ export function CookieConsent() {
           <div className="relative mt-5 grid gap-2 sm:grid-cols-2">
             <button
               type="button"
-              onClick={() => save(false)}
+              onClick={() => save(false, false)}
               className={cn(secondaryButton, "order-2 sm:order-1")}
             >
               Essential only
             </button>
             <button
               type="button"
-              onClick={() => save(managing ? preferences : true)}
+              /* The shortcut covers interface preferences only; analytics is
+                 saved exactly as the switch shows it, which starts off. */
+              onClick={() =>
+                save(managing ? preferences : true, managing ? analytics : false)
+              }
               className={cn(primaryButton, "order-1 sm:order-2")}
             >
               <span>{managing ? "Save choices" : "Allow preferences"}</span>
