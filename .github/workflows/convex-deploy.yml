@@ -200,15 +200,42 @@ jobs:
       # is what is actually running rather than what this checkout asked for;
       # `setup:release` returns it (`src/convex/setup.ts`) and the site build
       # refuses to publish while a function its bundle calls is missing
-      # (`scripts/check-backend-release.mjs`). The deployment is named explicitly
-      # because this job is about that deployment, whatever the key resolves to.
+      # (`scripts/check-backend-release.mjs`).
+      #
+      # No `--deployment <name>` here, and that is deliberate. Naming a
+      # deployment makes the CLI look it up with
+      # `GET deployment/<name>/team_and_project`, which wants a user credential
+      # and answers `UnexpectedAuthHeaderFormat: ... If you are trying to use
+      # preview deployments, please generate a new key` for a deploy key. That is
+      # what broke this step on every push from 2026-10-30: the functions below
+      # this point were published, then the stamp failed, and the two steps after
+      # it never ran. Left to the deploy key, `function-spec` resolves its
+      # credentials through the same `deployment/...for_key` / `provision_and_
+      # authorize` endpoints `convex deploy` just used, so it reads back from the
+      # deployment that was published in the step above rather than one being
+      # selected again.
+      #
+      # The named deployment is checked on the answer instead of the question:
+      # the spec carries the URL it came from, and a mismatch fails here rather
+      # than stamping a deployment with another one's functions - the direction
+      # the site gate cannot recover from.
       - name: Publish the served functions and their shapes
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY_PROD }}
           DEPLOYMENT: descriptive-ferret-801
         run: |
           set -euo pipefail
-          bunx convex function-spec --deployment "${DEPLOYMENT}" > "${RUNNER_TEMP}/function-spec.json"
+          bunx convex function-spec > "${RUNNER_TEMP}/function-spec.json"
+          SERVED=$(SPEC="${RUNNER_TEMP}/function-spec.json" node -e 'const spec = require(process.env.SPEC); process.stdout.write(spec.url ?? "")')
+          case "${SERVED}" in
+            "https://${DEPLOYMENT}.convex.cloud"|"https://${DEPLOYMENT}.convex.cloud/")
+              echo "Read the spec back from ${SERVED}."
+              ;;
+            *)
+              echo "::error::Expected the spec from https://${DEPLOYMENT}.convex.cloud, got '${SERVED}'. The deploy key resolved to another deployment, so this stamp would describe the wrong functions. Refusing to publish it."
+              exit 1
+              ;;
+          esac
           STAMP=$(bun scripts/convex-signatures.mjs --spec "${RUNNER_TEMP}/function-spec.json")
           bunx convex env set APP_FUNCTIONS "${STAMP}"
           echo "Stamped ${DEPLOYMENT} with the functions it serves and their argument and return shapes."
