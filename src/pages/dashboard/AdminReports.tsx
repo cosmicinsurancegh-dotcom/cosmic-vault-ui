@@ -3,6 +3,8 @@ import {
   LoadingState,
   PageHeader,
   Panel,
+  RecordCard,
+  RecordCardList,
   TableShell,
   Td,
   Th,
@@ -167,24 +169,40 @@ export default function AdminReportsPage() {
             </p>
           </div>
         ) : (
-          <TableShell>
-            <thead>
-              <tr>
-                {result.columns.map((column) => (
-                  <Th key={column.key}>{column.label}</Th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            <RecordCardList>
               {result.rows.map((row, index) => (
-                <tr key={index} className="transition-colors hover:bg-primary/[0.02]">
-                  {result.columns.map((column) => (
-                    <Td key={column.key}>{String(row[column.key] ?? "-")}</Td>
-                  ))}
-                </tr>
+                <RecordCard
+                  key={index}
+                  title={String(row[result.columns[0].key] ?? "-")}
+                  fields={result.columns.slice(1).map((column) => ({
+                    label: column.label,
+                    value: String(row[column.key] ?? "-"),
+                  }))}
+                />
               ))}
-            </tbody>
-          </TableShell>
+            </RecordCardList>
+            <div className="hidden md:block">
+              <TableShell>
+                <thead>
+                  <tr>
+                    {result.columns.map((column) => (
+                      <Th key={column.key}>{column.label}</Th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.rows.map((row, index) => (
+                    <tr key={index} className="transition-colors hover:bg-primary/[0.02]">
+                      {result.columns.map((column) => (
+                        <Td key={column.key}>{String(row[column.key] ?? "-")}</Td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </TableShell>
+            </div>
+          </>
         )}
       </Panel>
 

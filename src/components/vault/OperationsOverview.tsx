@@ -9,11 +9,11 @@ import {
   AlertTriangle,
   ArrowUpRight,
   CalendarClock,
+  FlaskConical,
   Gem,
   PackageCheck,
   ShieldAlert,
   ShieldCheck,
-  Sparkles,
   Truck,
   Wallet,
 } from "lucide-react";
@@ -168,7 +168,7 @@ export function OperationsOverview() {
         <div className="flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/[0.035] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-2.5">
             <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-[4px] border border-primary/20 bg-card text-primary">
-              <Sparkles className="size-3.5" />
+              <FlaskConical className="size-3.5" />
             </span>
             <div>
               <p className="text-[0.72rem] font-semibold text-ink">

@@ -88,14 +88,77 @@ const EXPECTED_CONSOLE_ERRORS = [
 ];
 
 /**
+ * A 1x1 transparent PNG, used to answer map tile requests.
+ */
+const BLANK_TILE = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=",
+  "base64",
+);
+
+/**
+ * A stable answer for a geocoding lookup: the same place always resolves to the
+ * same point, and different places resolve to different points, which is all
+ * the tracking map needs to draw a route.
+ */
+function geocodeEcho(query: string) {
+  let hash = 7;
+  for (const character of query) {
+    hash = (hash * 31 + character.charCodeAt(0)) % 1_000_003;
+  }
+  return {
+    lat: String(((hash % 12_000) / 100 - 60).toFixed(4)),
+    lon: String(((Math.floor(hash / 12_000) % 36_000) / 100 - 180).toFixed(4)),
+    display_name: query,
+  };
+}
+
+/**
  * Base test that fails if the page throws while it is being driven,
  * so a crashed route can never hide behind a passing URL assertion.
+ *
+ * It also answers the two things the app fetches from the public internet -
+ * the Inter stylesheet from Google Fonts (`index.html`) and the OpenStreetMap
+ * tiles behind the shipment map. Neither is needed to drive a screen, and on a
+ * machine without egress both surface as a `net::ERR_INTERNET_DISCONNECTED`
+ * console error that would fail every scenario, including screens that touch
+ * neither. Stubbing them keeps the suite testing this repository rather than
+ * somebody else's CDN. A spec that wants to see a request fail registers its
+ * own route, which Playwright matches first.
  */
 export const test = base.extend<{
   runtimeErrors: string[];
   consent: ConsentState;
+  thirdPartyAssets: void;
 }>({
   consent: ["answered", { option: true }],
+  thirdPartyAssets: [
+    async ({ page }, use) => {
+      // An empty stylesheet is enough: with no `@font-face` the browser never
+      // requests `fonts.gstatic.com`, so the fallback font is what renders.
+      await page.route("https://fonts.googleapis.com/**", (route) =>
+        route.fulfill({ status: 200, contentType: "text/css", body: "" }),
+      );
+      await page.route("https://tile.openstreetmap.org/**", (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "image/png",
+          body: BLANK_TILE,
+        }),
+      );
+      // The tracking map resolves places through Nominatim before it can draw
+      // a route, and reads `lat`/`lon` from the first hit.
+      await page.route("https://nominatim.openstreetmap.org/**", (route) => {
+        const query = new URL(route.request().url()).searchParams.get("q");
+        void route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(query ? [geocodeEcho(query)] : []),
+        });
+      });
+      await use();
+    },
+    { auto: true },
+  ],
   runtimeErrors: [
     async ({ page, consent }, use) => {
       const errors: string[] = [];

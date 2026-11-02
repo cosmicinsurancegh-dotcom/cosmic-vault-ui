@@ -4,6 +4,8 @@ import {
   LoadingState,
   PageHeader,
   Panel,
+  RecordCard,
+  RecordCardList,
   StatusPill,
   TableShell,
   Td,
@@ -251,10 +253,88 @@ export default function AdminProductsPage() {
         </Panel>
       ) : (
         <Panel>
-          <TableShell>
-            <thead>
-              <tr>
-                <Th>Product</Th>
+          <RecordCardList>
+            {products.map((product) => (
+              <RecordCard
+                key={product._id}
+                title={product.name}
+                subtitle={product.code}
+                fields={[
+                  {
+                    label: "Category",
+                    value: (
+                      <span className="capitalize">{product.categoryKey}</span>
+                    ),
+                  },
+                  { label: "Version", value: `v${product.version}` },
+                  {
+                    label: "Base premium",
+                    value: formatMoney(product.basePremium, product.currency),
+                  },
+                  { label: "Countries", value: product.countries.length },
+                  {
+                    label: "Updated",
+                    value: formatDate(product.updatedAt),
+                  },
+                  {
+                    label: "Status",
+                    value: <StatusPill status={product.status} />,
+                  },
+                ]}
+                footer={
+                  <>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 rounded-[4px] px-2.5"
+                      onClick={() => {
+                        setForm(toForm(product, product.status !== "draft"));
+                        setOpen(true);
+                      }}
+                    >
+                      <Pencil className="size-3.5" />
+                      {product.status === "draft" ? "Edit" : "New version"}
+                    </Button>
+                    {product.status === "draft" && (
+                      <Button
+                        size="sm"
+                        className="h-8 rounded-[4px] px-2.5"
+                        onClick={async () => {
+                          try {
+                            await publish({ productId: product._id });
+                            toast.success("Product published.");
+                          } catch (error) {
+                            toast.error(
+                              error instanceof Error
+                                ? error.message
+                                : "Could not publish.",
+                            );
+                          }
+                        }}
+                      >
+                        <Rocket className="size-3.5" /> Publish
+                      </Button>
+                    )}
+                    {product.status === "published" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 rounded-[4px] px-2.5 text-muted-foreground"
+                        onClick={() => setArchiveTarget(product)}
+                      >
+                        <Archive className="size-3.5" /> Archive
+                      </Button>
+                    )}
+                  </>
+                }
+              />
+            ))}
+          </RecordCardList>
+          <div className="hidden md:block">
+            <TableShell>
+              <thead>
+                <tr>
+                  <Th>Product</Th>
                 <Th>Category</Th>
                 <Th>Version</Th>
                 <Th>Base premium</Th>
@@ -322,7 +402,8 @@ export default function AdminProductsPage() {
                 </tr>
               ))}
             </tbody>
-          </TableShell>
+            </TableShell>
+          </div>
         </Panel>
       )}
 

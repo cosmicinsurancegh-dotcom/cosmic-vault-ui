@@ -28,14 +28,13 @@ import {
   Download,
   Gem,
   Headset,
-  MapPin,
+  History,
   Plus,
   RefreshCw,
   Search,
   ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
-  Sparkles,
   Truck,
   Wallet,
 } from "lucide-react";
@@ -465,102 +464,84 @@ export default function VaultPage() {
                     <StatusPill status={policy?.status ?? mineral.status} />
                   </div>
 
-                  <div className="space-y-4 px-5 py-4">
-                    <div>
-                      <p className="text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                        Insurance
-                      </p>
+                  <div className="divide-y divide-line">
+                    <div className="flex gap-3 px-5 py-3">
                       {policy ? (
-                        <div className="mt-1.5 space-y-0.5">
-                          <p className="text-xs font-medium text-ink">
-                            {policy.policyNumber}
-                          </p>
-                          <p className="text-[0.62rem] leading-5 text-muted-foreground">
-                            {policy.provider} ·{" "}
-                            {COVERAGE_LABELS[policy.coverage] ??
-                              policy.coverage}{" "}
-                            · cover limit{" "}
-                            {formatMoney(
-                              policy.coverageLimit,
-                              policy.currency,
-                            )}
-                          </p>
-                          <p className="text-[0.58rem] uppercase tracking-[0.08em] text-muted-foreground">
-                            In force {formatDate(policy.startDate)} —{" "}
-                            {formatDate(policy.endDate)}
-                          </p>
-                        </div>
+                        <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                       ) : (
-                        <p className="mt-1.5 flex items-center gap-1.5 text-[0.62rem] text-muted-foreground">
-                          <ShieldAlert className="size-3.5 text-amber-600 dark:text-amber-400" />
-                          No policy has been recorded for this mineral.
-                        </p>
+                        <ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
                       )}
+                      <div className="min-w-0">
+                        {policy ? (
+                          <>
+                            <p className="text-xs font-medium text-ink">
+                              <span className="sr-only">Insurance: </span>
+                              {policy.policyNumber}
+                              <span className="text-muted-foreground">
+                                {" · "}
+                                {policy.provider}
+                              </span>
+                            </p>
+                            <p className="mt-0.5 text-[0.62rem] leading-5 text-muted-foreground">
+                              {COVERAGE_LABELS[policy.coverage] ??
+                                policy.coverage}{" "}
+                              · cover limit{" "}
+                              {formatMoney(
+                                policy.coverageLimit,
+                                policy.currency,
+                              )}{" "}
+                              · in force {formatDate(policy.startDate)} —{" "}
+                              {formatDate(policy.endDate)}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-[0.62rem] leading-5 text-muted-foreground">
+                            <span className="sr-only">Insurance: </span>
+                            No policy has been recorded for this mineral.
+                          </p>
+                        )}
+                      </div>
                     </div>
 
-                    <div>
-                      <p className="text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                        Shipment
-                      </p>
-                      {shipment ? (
-                        <div className="mt-1.5 space-y-1">
-                          <p className="flex flex-wrap items-center gap-2 text-xs text-ink">
-                            <StatusPill status={shipment.status} />
-                            <span className="text-[0.62rem] text-muted-foreground">
-                              {shipment.reference}
-                            </span>
-                          </p>
-                          <p className="flex items-center gap-1.5 text-[0.62rem] text-muted-foreground">
-                            <MapPin className="size-3.5 shrink-0" />
-                            {shipment.origin} → {shipment.destination}
-                          </p>
-                          <p className="flex flex-wrap items-center gap-x-2 text-[0.6rem] text-muted-foreground">
-                            <span className="inline-flex items-center gap-1.5">
-                              <Truck className="size-3.5 shrink-0" />
+                    <div className="flex gap-3 px-5 py-3">
+                      <Truck className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0">
+                        {shipment ? (
+                          <>
+                            <p className="flex flex-wrap items-center gap-2">
+                              <span className="sr-only">Shipment: </span>
+                              <StatusPill status={shipment.status} />
+                              <Link
+                                to="/dashboard/shipments"
+                                className="text-[0.62rem] font-medium text-ink underline decoration-line underline-offset-[3px] transition-colors hover:decoration-ink"
+                              >
+                                {shipment.reference}
+                              </Link>
+                            </p>
+                            <p className="mt-0.5 text-[0.62rem] leading-5 text-muted-foreground">
+                              {shipment.origin} → {shipment.destination} ·{" "}
                               {shipment.carrier}
-                            </span>
-                            {shipment.trackingNumber && (
-                              <span>· {shipment.trackingNumber}</span>
+                              {shipment.estimatedArrivalAt
+                                ? ` · ETA ${formatDate(shipment.estimatedArrivalAt)}`
+                                : ""}
+                            </p>
+                            {events.length > 0 && (
+                              <p className="mt-0.5 text-[0.62rem] leading-5 text-muted-foreground">
+                                {events[0].note ||
+                                  SHIPMENT_STATUS_LABELS[events[0].status]}{" "}
+                                · {formatDate(events[0].createdAt)}
+                              </p>
                             )}
-                            {shipment.estimatedArrivalAt && (
-                              <span className="inline-flex items-center gap-1">
-                                · <CalendarClock className="size-3" />{" "}
-                                {formatDate(shipment.estimatedArrivalAt)}
-                              </span>
-                            )}
+                          </>
+                        ) : (
+                          <p className="text-[0.62rem] leading-5 text-muted-foreground">
+                            <span className="sr-only">Shipment: </span>
+                            Held in the vault. No consignment has been arranged.
                           </p>
-                          {events.length > 0 && (
-                            <div className="mt-2 border-t border-line/70 pt-2">
-                              <Timeline
-                                items={events.slice(0, 2).map((event) => ({
-                                  title: SHIPMENT_STATUS_LABELS[event.status],
-                                  body: [event.location, event.note]
-                                    .filter(Boolean)
-                                    .join(" · "),
-                                  at: event.createdAt,
-                                }))}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="mt-1.5 text-[0.62rem] text-muted-foreground">
-                          Held in the vault. No consignment has been arranged.
-                        </p>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
-
-                  {shipment && (
-                    <div className="border-t border-line px-5 py-3">
-                      <Link
-                        to="/dashboard/shipments"
-                        className="inline-flex items-center gap-1 text-[0.62rem] font-semibold text-primary"
-                      >
-                        Track this consignment
-                      </Link>
-                    </div>
-                  )}
                 </Panel>
               ))}
             </div>
@@ -693,7 +674,7 @@ export default function VaultPage() {
       </div>
 
       <p className="px-1 text-[0.58rem] leading-4 text-muted-foreground">
-        <Sparkles className="mr-1 inline size-3" />
+        <History className="mr-1 inline size-3 align-[-0.15em]" />
         Records are maintained by vault operations. Assignment, insurance and
         tracking changes are recorded in the audit log.
       </p>

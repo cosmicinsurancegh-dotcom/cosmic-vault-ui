@@ -6,8 +6,9 @@ import {
   statusLabel,
   statusTone,
 } from "@/lib/format";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Loader2 } from "lucide-react";
-import type { ComponentType, ReactNode } from "react";
+import { Fragment, type ComponentType, type ReactNode } from "react";
 import { Link } from "react-router";
 
 export function PageHeader({
@@ -359,13 +360,107 @@ export function Pagination({
   );
 }
 
-export function TableShell({ children }: { children: ReactNode }) {
+export function TableShell({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  /** Set a wider floor on narrow screens when a table has many columns. */
+  className?: string;
+}) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+      <table
+        className={cn(
+          "w-full min-w-[640px] border-collapse text-left text-sm",
+          className,
+        )}
+      >
         {children}
       </table>
     </div>
+  );
+}
+
+/**
+ * The phone form of a record table.
+ *
+ * A seven-column table has nowhere to go on a 390px screen: it either scrolls
+ * sideways or squeezes every value into a ribbon. So below `md` each row is
+ * rendered as a stacked card and the table is hidden; from `md` up the table is
+ * the real thing, unchanged.
+ */
+export function RecordCardList({ children }: { children: ReactNode }) {
+  const isMobile = useIsMobile();
+  // Rendered below `md` and nowhere else, so on a wider screen the table is the
+  // only copy of the record in the DOM - no duplicate text for queries to find.
+  if (!isMobile) return null;
+  return (
+    <ul className="divide-y divide-line border-t border-line">{children}</ul>
+  );
+}
+
+export function RecordCard({
+  title,
+  subtitle,
+  fields,
+  action,
+  footer,
+}: {
+  /** What the row is, in the table's first column. */
+  title: ReactNode;
+  /** The secondary identity line: reference, email, provider ref. */
+  subtitle?: ReactNode;
+  /** `block` drops the value onto its own full-width line under the label,
+   * which is what long free text needs. */
+  fields: { label: string; value: ReactNode; block?: boolean }[];
+  /** The row's single action, beside the title. */
+  action?: ReactNode;
+  /** A row of actions under the fields, when one button is not enough. */
+  footer?: ReactNode;
+}) {
+  return (
+    <li className="px-4 py-3.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-xs font-semibold text-ink">{title}</p>
+          {subtitle ? (
+            <p className="mt-0.5 truncate text-[0.62rem] text-muted-foreground">
+              {subtitle}
+            </p>
+          ) : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+      {fields.length > 0 ? (
+        <dl className="mt-2.5 grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-3 gap-y-1.5">
+          {fields.map((field) =>
+            field.block ? (
+              <div key={field.label} className="col-span-2">
+                <dt className="text-[0.56rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  {field.label}
+                </dt>
+                <dd className="mt-0.5 text-[0.68rem] leading-5 text-ink">
+                  {field.value}
+                </dd>
+              </div>
+            ) : (
+              <Fragment key={field.label}>
+                <dt className="text-[0.56rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  {field.label}
+                </dt>
+                <dd className="min-w-0 text-right text-[0.68rem] text-ink">
+                  {field.value}
+                </dd>
+              </Fragment>
+            ),
+          )}
+        </dl>
+      ) : null}
+      {footer ? (
+        <div className="mt-3 flex flex-wrap justify-end gap-1.5">{footer}</div>
+      ) : null}
+    </li>
   );
 }
 

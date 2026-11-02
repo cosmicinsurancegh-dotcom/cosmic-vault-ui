@@ -4,6 +4,8 @@ import {
   Pagination,
   PageHeader,
   Panel,
+  RecordCard,
+  RecordCardList,
   TableShell,
   Td,
   Th,
@@ -103,10 +105,44 @@ export default function AdminAuditPage() {
           </p>
         ) : (
           <>
-            <TableShell>
-              <thead>
-                <tr>
-                  <Th>When</Th>
+            <RecordCardList>
+              {log.rows.map((entry) => (
+                <RecordCard
+                  key={entry._id}
+                  title={entry.action}
+                  subtitle={`${entry.actorName} · ${formatDateTime(entry.at)}`}
+                  fields={[
+                    {
+                      label: "Entity",
+                      value: `${entry.entityType} · ${entry.entityId}`,
+                    },
+                    { label: "Reason", value: entry.reason ?? "-", block: true },
+                    {
+                      label: "Details",
+                      value: (
+                        <details className="inline-block text-left">
+                          <summary className="cursor-pointer text-[0.65rem] font-medium text-primary">
+                            View
+                          </summary>
+                          <pre className="mt-2 max-h-[180px] overflow-auto rounded-lg bg-muted p-2 text-[0.58rem] leading-4 text-muted-foreground">
+                            {JSON.stringify(
+                              { before: entry.before, after: entry.after },
+                              null,
+                              2,
+                            )}
+                          </pre>
+                        </details>
+                      ),
+                    },
+                  ]}
+                />
+              ))}
+            </RecordCardList>
+            <div className="hidden md:block">
+              <TableShell className="min-w-[940px]">
+                <thead>
+                  <tr>
+                    <Th>When</Th>
                   <Th>Actor</Th>
                   <Th>Action</Th>
                   <Th>Entity</Th>
@@ -144,8 +180,9 @@ export default function AdminAuditPage() {
                     </Td>
                   </tr>
                 ))}
-              </tbody>
-            </TableShell>
+                </tbody>
+              </TableShell>
+            </div>
             <div className="flex items-center justify-between">
               <Pagination page={log.page} pageSize={log.pageSize} total={log.total} onPage={setPage} />
               <span className="px-5 text-[0.62rem] text-muted-foreground">Read-only</span>

@@ -7,6 +7,8 @@ import {
   PageHeader,
   Panel,
   PanelHeader,
+  RecordCard,
+  RecordCardList,
   StatusPill,
   TableShell,
   Td,
@@ -141,10 +143,43 @@ export default function AdminPoliciesPage() {
           <EmptyState icon={ScrollText} title="No policies match" />
         ) : (
           <>
-            <TableShell>
-              <thead>
-                <tr>
-                  <Th>Policy</Th>
+            <RecordCardList>
+              {policies.rows.map((policy) => (
+                <RecordCard
+                  key={policy._id}
+                  title={policy.policyNumber}
+                  subtitle={formatDate(policy.issuedAt)}
+                  action={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-[4px] bg-transparent px-3"
+                      onClick={() => setSelectedId(policy._id)}
+                    >
+                      Open
+                    </Button>
+                  }
+                  fields={[
+                    { label: "Customer", value: policy.customerName },
+                    { label: "Product", value: policy.productName },
+                    {
+                      label: "Premium",
+                      value: formatMoney(policy.premium, policy.currency),
+                    },
+                    { label: "Term ends", value: formatDate(policy.endDate) },
+                    {
+                      label: "Status",
+                      value: <StatusPill status={policy.status} />,
+                    },
+                  ]}
+                />
+              ))}
+            </RecordCardList>
+            <div className="hidden md:block">
+              <TableShell>
+                <thead>
+                  <tr>
+                    <Th>Policy</Th>
                   <Th>Customer</Th>
                   <Th>Product</Th>
                   <Th>Premium</Th>
@@ -172,8 +207,9 @@ export default function AdminPoliciesPage() {
                     </Td>
                   </tr>
                 ))}
-              </tbody>
-            </TableShell>
+                </tbody>
+              </TableShell>
+            </div>
             <Pagination page={policies.page} pageSize={policies.pageSize} total={policies.total} onPage={setPage} />
           </>
         )}

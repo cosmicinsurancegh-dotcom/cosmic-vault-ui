@@ -2,9 +2,9 @@ import { cn } from "@/lib/utils";
 import {
   Coins,
   Gem,
+  Hexagon,
   Layers3,
   Mountain,
-  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
@@ -13,7 +13,7 @@ import type { Mineral, MineralType } from "@/lib/vault/types";
 const TYPE_ICONS: Record<MineralType, LucideIcon> = {
   "Gold Bar": Layers3,
   "Gold Coin": Coins,
-  "Gold Nugget": Sparkles,
+  "Gold Nugget": Hexagon,
   "Silver Bar": Layers3,
   Diamond: Gem,
   Emerald: Gem,
@@ -73,16 +73,18 @@ export function MineralVisual({
       {failed ? (
         <div
           className={cn(
-            "starfield absolute inset-0 grid place-items-center bg-gradient-to-br",
+            "starfield @container absolute inset-0 grid place-items-center bg-gradient-to-br",
             fallbackClass(mineral.type),
           )}
           aria-hidden="true"
         >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(255,255,255,0.14),transparent_58%)]" />
-          <div className="relative grid size-20 place-items-center rounded-full border border-white/15 bg-white/[0.04]">
-            <Icon className="size-9" strokeWidth={1.1} />
+          {/* Scales with the frame: this art has to read in a 40px holding
+              row as well as in the full-height record panel. */}
+          <div className="relative grid aspect-square w-[70%] max-w-20 place-items-center rounded-full border border-white/15 bg-white/[0.04]">
+            <Icon className="size-[46%]" strokeWidth={1.35} />
           </div>
-          <p className="absolute bottom-4 left-5 text-[0.55rem] font-semibold uppercase tracking-[0.24em] opacity-55">
+          <p className="absolute bottom-4 left-5 hidden text-[0.55rem] font-semibold uppercase tracking-[0.24em] opacity-55 @min-[9rem]:block">
             {mineral.type}
           </p>
         </div>

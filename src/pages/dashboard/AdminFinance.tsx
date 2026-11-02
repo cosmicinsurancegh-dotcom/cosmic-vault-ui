@@ -6,6 +6,8 @@ import {
   Pagination,
   PageHeader,
   Panel,
+  RecordCard,
+  RecordCardList,
   StatusPill,
   TableShell,
   Td,
@@ -114,10 +116,64 @@ export function AdminPaymentsPage() {
           <EmptyState icon={Wallet} title="No transactions match" />
         ) : (
           <>
-            <TableShell>
-              <thead>
-                <tr>
-                  <Th>Reference</Th>
+            <RecordCardList>
+              {transactions.rows.map((transaction) => (
+                <RecordCard
+                  key={transaction._id}
+                  title={transaction.reference}
+                  subtitle={transaction.providerRef ?? "no provider ref"}
+                  action={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-[4px] bg-transparent px-3"
+                      onClick={() => setSelectedId(transaction._id)}
+                    >
+                      Manage
+                    </Button>
+                  }
+                  fields={[
+                    { label: "Customer", value: transaction.customerName },
+                    {
+                      label: "Type",
+                      value: (
+                        <span className="capitalize">
+                          {transaction.type.replace("_", " ")}
+                        </span>
+                      ),
+                    },
+                    {
+                      label: "Amount",
+                      value: formatMoney(
+                        transaction.amount,
+                        transaction.currency,
+                      ),
+                    },
+                    {
+                      label: "Method",
+                      value: (
+                        <span className="capitalize">
+                          {transaction.method.replace("_", " ")}
+                        </span>
+                      ),
+                    },
+                    {
+                      label: "Created",
+                      value: formatDate(transaction.createdAt),
+                    },
+                    {
+                      label: "Status",
+                      value: <StatusPill status={transaction.status} />,
+                    },
+                  ]}
+                />
+              ))}
+            </RecordCardList>
+            <div className="hidden md:block">
+              <TableShell className="min-w-[980px]">
+                <thead>
+                  <tr>
+                    <Th>Reference</Th>
                   <Th>Customer</Th>
                   <Th>Type</Th>
                   <Th>Amount</Th>
@@ -149,8 +205,9 @@ export function AdminPaymentsPage() {
                     </Td>
                   </tr>
                 ))}
-              </tbody>
-            </TableShell>
+                </tbody>
+              </TableShell>
+            </div>
             <Pagination page={transactions.page} pageSize={transactions.pageSize} total={transactions.total} onPage={setPage} />
           </>
         )}

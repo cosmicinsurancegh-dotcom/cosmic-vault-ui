@@ -6,6 +6,8 @@ import {
   PageHeader,
   Panel,
   PanelHeader,
+  RecordCard,
+  RecordCardList,
   StatusPill,
   TableShell,
   Td,
@@ -248,14 +250,14 @@ export default function AdminMineralsPage() {
           title="Mineral register"
           description="Open a record to update its shipment status. The assigned member is emailed on every change."
           action={
-            <div className="relative">
+            <div className="relative w-full sm:w-72">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search name, reference, member"
                 aria-label="Search minerals"
-                className="h-9 w-full rounded-lg bg-card pl-8 text-xs sm:w-64"
+                className="h-9 w-full rounded-lg bg-card pl-8 text-xs"
               />
             </div>
           }
@@ -278,8 +280,77 @@ export default function AdminMineralsPage() {
             }
           />
         ) : (
-          <TableShell>
-            <thead>
+          <>
+            <RecordCardList>
+              {rows.map(({ mineral, policy, shipment, request, assignee }) => (
+                <RecordCard
+                  key={mineral._id}
+                  title={mineral.name}
+                  subtitle={`${mineral.reference} · ${mineral.category} · ${mineral.quantity.toLocaleString("en-GB")} ${mineral.unit}`}
+                  action={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-[4px] bg-transparent px-3"
+                      onClick={() => setDetailId(mineral._id)}
+                    >
+                      Manage
+                    </Button>
+                  }
+                  fields={[
+                    {
+                      label: "Declared",
+                      value: formatMoney(
+                        mineral.declaredValue,
+                        mineral.currency,
+                      ),
+                    },
+                    {
+                      label: "Policy",
+                      value: policy
+                        ? `${policy.policyNumber} · ${policy.provider}`
+                        : "No policy",
+                    },
+                    {
+                      label: "Shipment",
+                      value: shipment
+                        ? `${SHIPMENT_STATUS_LABELS[shipment.status]} · ${shipment.origin} → ${shipment.destination}`
+                        : request?.status === "pending"
+                          ? `Requested · ${request.destination}`
+                          : "No shipment",
+                    },
+                    {
+                      label: "Assigned",
+                      value: assignee ? (
+                        assignee.name
+                      ) : canManage ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 rounded-[4px] bg-transparent px-2 text-[0.62rem]"
+                          onClick={() => setDetailId(mineral._id)}
+                        >
+                          Assign
+                        </Button>
+                      ) : (
+                        "Unassigned"
+                      ),
+                    },
+                    {
+                      label: "Status",
+                      value: (
+                        <StatusPill
+                          status={shipment?.status ?? mineral.status}
+                        />
+                      ),
+                    },
+                  ]}
+                />
+              ))}
+            </RecordCardList>
+            <div className="hidden md:block">
+              <TableShell className="min-w-[1040px]">
+                <thead>
               <tr>
                 <Th>Mineral</Th>
                 <Th>Declared value</Th>
@@ -380,8 +451,10 @@ export default function AdminMineralsPage() {
                   </Td>
                 </tr>
               ))}
-            </tbody>
-          </TableShell>
+                </tbody>
+              </TableShell>
+            </div>
+          </>
         )}
       </Panel>
 

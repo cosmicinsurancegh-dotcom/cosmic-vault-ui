@@ -6,6 +6,8 @@ import {
   Pagination,
   PageHeader,
   Panel,
+  RecordCard,
+  RecordCardList,
   StatusPill,
   TableShell,
   Td,
@@ -104,10 +106,46 @@ export default function AdminClaimsPage() {
           <EmptyState icon={ShieldAlert} title="Queue empty" description="No claims match the selected filters." />
         ) : (
           <>
-            <TableShell>
-              <thead>
-                <tr>
-                  <Th>Claim</Th>
+            <RecordCardList>
+              {queue.rows.map((claim) => (
+                <RecordCard
+                  key={claim._id}
+                  title={claim.reference}
+                  subtitle={claim.assignedTo ? "Assigned" : "Unassigned"}
+                  action={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-[4px] bg-transparent px-3"
+                      onClick={() => setSelectedId(claim._id)}
+                    >
+                      Review
+                    </Button>
+                  }
+                  fields={[
+                    { label: "Customer", value: claim.customerName },
+                    { label: "Policy", value: claim.policyNumber },
+                    {
+                      label: "Claimed",
+                      value: formatMoney(claim.amountClaimed, claim.currency),
+                    },
+                    {
+                      label: "Incident",
+                      value: formatDate(claim.incidentDate),
+                    },
+                    {
+                      label: "Status",
+                      value: <StatusPill status={claim.status} />,
+                    },
+                  ]}
+                />
+              ))}
+            </RecordCardList>
+            <div className="hidden md:block">
+              <TableShell className="min-w-[940px]">
+                <thead>
+                  <tr>
+                    <Th>Claim</Th>
                   <Th>Customer</Th>
                   <Th>Policy</Th>
                   <Th>Claimed</Th>
@@ -137,8 +175,9 @@ export default function AdminClaimsPage() {
                     </Td>
                   </tr>
                 ))}
-              </tbody>
-            </TableShell>
+                </tbody>
+              </TableShell>
+            </div>
             <Pagination page={queue.page} pageSize={queue.pageSize} total={queue.total} onPage={setPage} />
           </>
         )}

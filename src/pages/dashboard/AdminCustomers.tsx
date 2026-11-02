@@ -6,6 +6,8 @@ import {
   Pagination,
   PageHeader,
   Panel,
+  RecordCard,
+  RecordCardList,
   StatusPill,
   TableShell,
   Td,
@@ -163,10 +165,43 @@ export function AdminCustomersPage() {
           <EmptyState icon={Users} title="No customers match" description="Adjust the filters or search a different reference." />
         ) : (
           <>
-            <TableShell>
-              <thead>
-                <tr>
-                  <Th>Customer</Th>
+            <RecordCardList>
+              {directory.rows.map((row) => (
+                <RecordCard
+                  key={row._id}
+                  title={row.fullName}
+                  subtitle={row.email}
+                  action={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-[4px] bg-transparent px-3"
+                      onClick={() => setSelectedUserId(row.userId)}
+                    >
+                      Open
+                    </Button>
+                  }
+                  fields={[
+                    { label: "Reference", value: row.reference },
+                    { label: "Country", value: row.country },
+                    { label: "Registered", value: formatDate(row.createdAt) },
+                    {
+                      label: "Verification",
+                      value: <StatusPill status={row.verificationStatus} />,
+                    },
+                    {
+                      label: "Account",
+                      value: <StatusPill status={row.accountStatus} />,
+                    },
+                  ]}
+                />
+              ))}
+            </RecordCardList>
+            <div className="hidden md:block">
+              <TableShell>
+                <thead>
+                  <tr>
+                    <Th>Customer</Th>
                   <Th>Reference</Th>
                   <Th>Country</Th>
                   <Th>Registered</Th>
@@ -182,7 +217,7 @@ export function AdminCustomersPage() {
                       <p className="text-xs font-medium text-ink">{row.fullName}</p>
                       <p className="mt-0.5 text-[0.62rem] text-muted-foreground">{row.email}</p>
                     </Td>
-                    <Td>{row.reference}</Td>
+                    <Td className="whitespace-nowrap">{row.reference}</Td>
                     <Td>{row.country}</Td>
                     <Td>{formatDate(row.createdAt)}</Td>
                     <Td><StatusPill status={row.verificationStatus} /></Td>
@@ -199,8 +234,9 @@ export function AdminCustomersPage() {
                     </Td>
                   </tr>
                 ))}
-              </tbody>
-            </TableShell>
+                </tbody>
+              </TableShell>
+            </div>
             <Pagination page={directory.page} pageSize={directory.pageSize} total={directory.total} onPage={setPage} />
           </>
         )}
@@ -1349,10 +1385,58 @@ export function AdminSupportPage() {
           <EmptyState icon={ShieldCheck} title="No tickets match" />
         ) : (
           <>
-            <TableShell>
-              <thead>
-                <tr>
-                  <Th>Ticket</Th>
+            <RecordCardList>
+              {tickets.rows.map((ticket) => (
+                <RecordCard
+                  key={ticket._id}
+                  title={ticket.subject}
+                  subtitle={ticket.reference}
+                  action={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-[4px] bg-transparent px-3"
+                      onClick={() => setSelectedId(ticket._id)}
+                    >
+                      Open
+                    </Button>
+                  }
+                  fields={[
+                    { label: "Customer", value: ticket.customerName },
+                    {
+                      label: "Category",
+                      value: (
+                        <span className="capitalize">{ticket.category}</span>
+                      ),
+                    },
+                    {
+                      label: "Owner",
+                      value: ticket.assigneeName ? (
+                        ticket.assigneeName
+                      ) : (
+                        <span className="font-medium text-amber-700 dark:text-amber-400">
+                          Unassigned
+                        </span>
+                      ),
+                    },
+                    {
+                      label: "Priority",
+                      value: <StatusPill status={ticket.priority} />,
+                    },
+                    { label: "Updated", value: formatDate(ticket.updatedAt) },
+                    {
+                      label: "Status",
+                      value: <StatusPill status={ticket.status} />,
+                    },
+                  ]}
+                />
+              ))}
+            </RecordCardList>
+            <div className="hidden md:block">
+              <TableShell>
+                <thead>
+                  <tr>
+                    <Th>Ticket</Th>
                   <Th>Customer</Th>
                   <Th>Category</Th>
                   <Th>Priority</Th>
@@ -1391,8 +1475,9 @@ export function AdminSupportPage() {
                     </Td>
                   </tr>
                 ))}
-              </tbody>
-            </TableShell>
+                </tbody>
+              </TableShell>
+            </div>
             <Pagination page={tickets.page} pageSize={tickets.pageSize} total={tickets.total} onPage={setPage} />
           </>
         )}

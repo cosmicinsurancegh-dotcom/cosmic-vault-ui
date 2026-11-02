@@ -4,6 +4,8 @@ import {
   LoadingState,
   PageHeader,
   Panel,
+  RecordCard,
+  RecordCardList,
   StatusPill,
   TableShell,
   Td,
@@ -89,10 +91,46 @@ export default function AdminBrokersPage() {
         </Panel>
       ) : (
         <Panel>
-          <TableShell>
-            <thead>
-              <tr>
-                <Th>Brokerage</Th>
+          <RecordCardList>
+            {brokers.map((broker) => (
+              <RecordCard
+                key={broker._id}
+                title={broker.orgName}
+                subtitle={`${broker.reference} · ${broker.email}`}
+                action={
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 rounded-[4px] bg-transparent px-3"
+                    onClick={() =>
+                      setAssignmentsFor({
+                        profileId: broker._id,
+                        orgName: broker.orgName,
+                      })
+                    }
+                  >
+                    Manage
+                  </Button>
+                }
+                fields={[
+                  { label: "Contact", value: broker.contactName },
+                  { label: "Countries", value: broker.countries.join(", ") },
+                  { label: "Customers", value: broker.assignedCustomers },
+                  { label: "Applications", value: broker.applications },
+                  { label: "Active policies", value: broker.activePolicies },
+                  {
+                    label: "Status",
+                    value: <StatusPill status={broker.status} />,
+                  },
+                ]}
+              />
+            ))}
+          </RecordCardList>
+          <div className="hidden md:block">
+            <TableShell className="min-w-[1100px]">
+              <thead>
+                <tr>
+                  <Th>Brokerage</Th>
                 <Th>Contact</Th>
                 <Th>Countries</Th>
                 <Th>Customers</Th>
@@ -128,7 +166,8 @@ export default function AdminBrokersPage() {
                 </tr>
               ))}
             </tbody>
-          </TableShell>
+            </TableShell>
+          </div>
         </Panel>
       )}
 

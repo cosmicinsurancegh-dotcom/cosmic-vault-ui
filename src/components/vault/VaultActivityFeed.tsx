@@ -6,9 +6,9 @@ import {
   FileCheck2,
   Gem,
   MessageSquareLock,
+  PenLine,
   Scale,
   ShieldCheck,
-  Sparkles,
   Truck,
   type LucideIcon,
 } from "lucide-react";
@@ -21,7 +21,7 @@ const ICONS: Record<VaultActivity["kind"], LucideIcon> = {
   shipping: Truck,
   claim: FileCheck2,
   valuation: Scale,
-  edit: Sparkles,
+  edit: PenLine,
   note: MessageSquareLock,
 };
 

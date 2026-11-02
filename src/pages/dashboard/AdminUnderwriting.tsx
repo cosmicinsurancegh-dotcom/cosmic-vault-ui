@@ -6,6 +6,8 @@ import {
   Pagination,
   PageHeader,
   Panel,
+  RecordCard,
+  RecordCardList,
   StatusPill,
   TableShell,
   Td,
@@ -102,10 +104,54 @@ export default function AdminUnderwritingPage() {
           <EmptyState icon={ClipboardList} title="Queue empty" description="No applications match the selected filters." />
         ) : (
           <>
-            <TableShell>
-              <thead>
-                <tr>
-                  <Th>Application</Th>
+            <RecordCardList>
+              {queue.rows.map((application) => (
+                <RecordCard
+                  key={application._id}
+                  title={application.reference}
+                  subtitle={
+                    application.assignedTo ? "Assigned" : "Unassigned"
+                  }
+                  action={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-[4px] bg-transparent px-3"
+                      onClick={() => setSelectedId(application._id)}
+                    >
+                      Review
+                    </Button>
+                  }
+                  fields={[
+                    { label: "Customer", value: application.customerName },
+                    { label: "Product", value: application.productName },
+                    { label: "Country", value: application.country },
+                    {
+                      label: "Premium",
+                      value: formatMoney(
+                        application.premium,
+                        application.currency,
+                      ),
+                    },
+                    {
+                      label: "Submitted",
+                      value: formatDate(
+                        application.submittedAt ?? application.createdAt,
+                      ),
+                    },
+                    {
+                      label: "Status",
+                      value: <StatusPill status={application.status} />,
+                    },
+                  ]}
+                />
+              ))}
+            </RecordCardList>
+            <div className="hidden md:block">
+              <TableShell>
+                <thead>
+                  <tr>
+                    <Th>Application</Th>
                   <Th>Customer</Th>
                   <Th>Product</Th>
                   <Th>Country</Th>
@@ -142,8 +188,9 @@ export default function AdminUnderwritingPage() {
                     </Td>
                   </tr>
                 ))}
-              </tbody>
-            </TableShell>
+                </tbody>
+              </TableShell>
+            </div>
             <Pagination page={queue.page} pageSize={queue.pageSize} total={queue.total} onPage={setPage} />
           </>
         )}
