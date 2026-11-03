@@ -1,0 +1,53 @@
+# supabase/config.toml
+#
+# Local development configuration for the Supabase CLI.
+#
+# `supabase start` runs the whole stack in Docker against the migrations in
+# `supabase/migrations`, so the schema and every RLS policy can be exercised
+# before anything is applied to the hosted project:
+#
+#   supabase start
+#   supabase db reset          # re-applies 0001 -> 0003 from scratch
+#   supabase gen types typescript --local > src/types/db.ts
+#
+# Nothing here is secret. The hosted project's URL and keys live in `.env.local`
+# (browser: VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY, server only:
+# SUPABASE_SERVICE_ROLE_KEY) and are never committed.
+
+project_id = "cosmic-vault"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173", "http://127.0.0.1:5173"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+# Local development prints the magic link / OTP to the CLI instead of sending
+# mail; production uses the project's SMTP settings.
+enable_signup = true
+double_confirm_changes = true
+
+[storage]
+enabled = true
+file_size_limit = "10MiB"
+
+[analytics]
+enabled = false

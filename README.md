@@ -540,16 +540,61 @@ The convex server has a separate set of environment variables that are accessibl
 Currently, these variables include auth-specific keys: JWKS, JWT_PRIVATE_KEY, and SITE_URL.
 
 Supabase is wired as a second data plane (Postgres, Storage, Realtime) alongside
-Convex, which stays the app's primary backend and identity provider. Add these in
-the project Keys tab (Supabase dashboard → Project Settings → API):
+Convex, which stays the app's primary backend and identity provider until each
+domain is migrated. Add these in the project Keys tab (Supabase dashboard →
+Project Settings → API):
 
 - `VITE_SUPABASE_URL` - project URL, read by the browser client in `src/lib/supabase.ts`.
 - `VITE_SUPABASE_ANON_KEY` - anon/public key, browser only, protected by row-level security.
 - `SUPABASE_SERVICE_ROLE_KEY` - service role key, used only inside the Convex
-  Node actions in `src/convex/supabase.ts`. Never expose it to the browser.
+  Node actions in `src/convex/supabase.ts` and the offline migration script.
+  Never expose it to the browser.
+- `SUPABASE_DB_URL` - Postgres connection string, used only by `supabase db push`
+  and the import script. Server-side only.
 
 Sign in as staff (`settings.manage`) and open **Dashboard → Settings → Supabase**
 to see which keys each runtime can see and to test the connection.
+
+## Moving Convex to Supabase
+
+The schema for all 30 Convex tables lives in `supabase/migrations`. It mirrors
+`src/convex/schema.ts`: same ids (kept as `text`, so existing `Id<"...">` values
+stay valid), epoch-ms numbers kept as `double precision`, nested values as
+`jsonb`, and every Convex index mirrored as a Postgres index. RLS is enabled on
+every table and reads role/permissions from `users`, not from JWT claims.
+
+Which backend serves a domain is decided per domain, so the site keeps working
+through the move. Unset means Convex:
+
+```bash
+# .env.local
+VITE_DATA_PLANE=convex                 # default for every domain
+VITE_DATA_PLANE_QUOTES=supabase        # quote capture moved to Postgres
+```
+
+A domain also stays on Convex when the Supabase keys are missing, so flipping a
+flag before the project is configured cannot take a page down.
+
+Run these in order:
+
+```bash
+bun run supabase:check --file .env.local   # which variables are missing
+supabase db push                           # apply 0001-0003 to the project
+npx convex export --path ./.convex-export  # snapshot Convex
+unzip .convex-export -d ./.convex-export-dir
+bun run supabase:migrate --in ./.convex-export-dir --dry-run
+bun run supabase:migrate --in ./.convex-export-dir
+```
+
+The import is idempotent: rows are upserted by their Convex id, so it can be
+re-run after Convex has taken more writes. `--dry-run` prints row counts and
+writes nothing.
+
+Phase 0 of the migration adds the schema, RLS, storage bucket, typed client and
+import tooling and changes no runtime behaviour. Convex Auth remains the
+identity provider; password hashes cannot be exported, so moving sign-in to
+Supabase Auth uses the email-code flow the app already supports rather than a
+mass password reset.
 
 PostHog analytics and Session Replay are optional and consent-aware
 (`src/lib/posthog.ts`). Set `VITE_POSTHOG_KEY` to the project token, and

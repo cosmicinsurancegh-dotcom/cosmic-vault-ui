@@ -17,3 +17,10 @@ blob-report
 # Convex deploy keys for CI (never commit)
 .env.convex-prod
 .env.convex-dev
+
+# Supabase CLI link state (project ref, pooler URL) is machine-local.
+supabase/.temp/
+
+# Local agent runtime state and imported chat attachments, never project files.
+.freebuff/
+.cloud-attachments/

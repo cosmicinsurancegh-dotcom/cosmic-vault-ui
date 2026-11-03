@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/db";
 
 /**
  * Supabase browser client.
@@ -11,6 +12,13 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  * Keys are read from the Vite env (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
  * Only the anon key may live in the browser; the service role key is used
  * exclusively by the Convex action in `src/convex/supabase.ts`.
+ *
+ * The client is typed against `src/types/db.ts`, which mirrors the migrations in
+ * `supabase/migrations`. Reads and writes still have to pass RLS: the anon key
+ * carries no row access of its own.
+ *
+ * Which backend a domain actually uses is decided in `src/lib/data/plane.ts`,
+ * not here - this module only answers "can a client be built?".
  */
 
 const url = ((import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? "").trim();
@@ -21,12 +29,12 @@ const anonKey = (
 export const supabaseUrl = url;
 export const supabaseConfigured = Boolean(url && anonKey);
 
-let client: SupabaseClient | null = null;
+let client: SupabaseClient<Database> | null = null;
 
 /** The shared client, or `null` when the Supabase keys are not configured yet. */
-export function getSupabase(): SupabaseClient | null {
+export function getSupabase(): SupabaseClient<Database> | null {
   if (!client && supabaseConfigured) {
-    client = createClient(url, anonKey, {
+    client = createClient<Database>(url, anonKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
