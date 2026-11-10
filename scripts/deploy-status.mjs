@@ -49,11 +49,13 @@ const TIMEOUT_MS = 15_000;
 /**
  * The domain this vouches for: the one people use. `SMOKE_BASE_URL` is honoured
  * too, so a run pointed at another origin checks that origin on both halves.
+ * `cosmic-vault-ui.vercel.app` is not it - that alias answers with another
+ * site's HTML, so a release read there looks like a build that stamps nothing.
  */
 const BASE_URL = (
   process.env.DEPLOY_BASE_URL ??
   process.env.SMOKE_BASE_URL ??
-  "https://cosmic-vault-ui.vercel.app"
+  "https://cosmicinsurance2vaultgh.com"
 ).replace(/\/+$/, "");
 /** How long the domain may take to switch over once the build turns green. */
 const SERVED_WAIT_SECONDS = Number(

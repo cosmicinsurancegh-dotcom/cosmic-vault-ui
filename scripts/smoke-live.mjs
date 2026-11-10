@@ -26,8 +26,13 @@
 import { readFile } from "node:fs/promises";
 import { compareRelease } from "./release-skew.mjs";
 
+/**
+ * The origin people use. Not `cosmic-vault-ui.vercel.app`: that project alias
+ * answers with another site's HTML, so `/release-commit.json` reads as
+ * `index.html` - which fails a smoke run against a healthy release.
+ */
 const BASE_URL = (
-  process.env.SMOKE_BASE_URL ?? "https://cosmic-vault-ui.vercel.app"
+  process.env.SMOKE_BASE_URL ?? "https://cosmicinsurance2vaultgh.com"
 ).replace(/\/+$/, "");
 const WAIT_SECONDS = Number(process.env.SMOKE_WAIT_SECONDS ?? "0");
 const RETRY_MS = 15_000;
