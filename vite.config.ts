@@ -75,6 +75,36 @@ function releaseManifest(expectation: string): Plugin {
   };
 }
 
+/**
+ * The commit this bundle was built from, written beside the bundle.
+ *
+ * `scripts/deploy-status.mjs` has to answer a question the commit's Vercel
+ * status cannot: is the production domain serving the build Vercel made for
+ * this commit? A preview deployment posts the same "Deployment has completed"
+ * as a production one, so on 2026-11-10 every push reported a finished
+ * deployment while the domain kept serving a build from 2026-11-01. Stamping
+ * the commit Vercel built lets that check ask the domain rather than a status
+ * that cannot tell the two apart.
+ *
+ * No stamp is written when the build cannot see the commit
+ * (`VERCEL_GIT_COMMIT_SHA`): the field stays `null`, because a guessed stamp
+ * would vouch for bytes it does not describe.
+ */
+function buildStamp(): Plugin {
+  const commit = process.env.VERCEL_GIT_COMMIT_SHA?.trim() || null;
+  return {
+    name: "build-stamp",
+    apply: "build",
+    generateBundle() {
+      this.emitFile({
+        type: "asset",
+        fileName: "release-commit.json",
+        source: `${JSON.stringify({ commit })}\n`,
+      });
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig(async (): Promise<UserConfig> => {
   const expectation = await captureReleaseExpectation();
@@ -87,6 +117,7 @@ export default defineConfig(async (): Promise<UserConfig> => {
       vlyPlugin(),
       tailwindcss(),
       releaseManifest(expectation),
+      buildStamp(),
     ],
     resolve: {
       alias: {

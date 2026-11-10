@@ -10,9 +10,13 @@ name: Smoke the live site
 # published site).
 #
 # Before the smoke check, `scripts/deploy-status.mjs` confirms Vercel actually
-# built *this* commit. A build that never started - the Hobby plan refusing a
-# commit whose author does not own the project is the one that has happened -
-# leaves the previous deployment serving, which every smoke check passes. The
+# built *this* commit, and that the production domain is serving that build
+# rather than an older deployment: a preview build posts the same "Deployment
+# has completed", so the status alone cannot tell a release from a green push
+# that never reached the domain. A build that never started - the Hobby plan
+# refusing a commit whose author does not own the project is the one that has
+# happened - leaves the previous deployment serving, which every smoke check
+# passes. The
 # reason is written to the run summary, so the failure is readable on the run
 # page instead of only in the Vercel dashboard.
 #
@@ -48,7 +52,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Check Vercel built this commit
+      - name: Check Vercel built this commit, and that the domain serves it
         env:
           # `github.token` is enough: the status list is public on this repo, and
           # `statuses: read` covers the authenticated case.

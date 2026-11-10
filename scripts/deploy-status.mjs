@@ -17,6 +17,14 @@
  * is on the run page instead of only in the Vercel dashboard. A blocked or
  * failed build fails the job.
  *
+ * A finished build is not yet a release. A preview deployment posts the same
+ * `Deployment has completed` as a production one, so on 2026-11-10 every push
+ * reported a finished deployment while https://cosmic-vault-ui.vercel.app kept
+ * serving a build from 2026-11-01 - the shape a project takes when its
+ * Production Branch is not the branch being pushed. The build stamps the commit
+ * Vercel built beside the bundle (`vite.config.ts`, `release-commit.json`), so
+ * this asks the domain which commit it serves before vouching for the release.
+ *
  *   GITHUB_REPOSITORY=owner/repo GITHUB_SHA=$(git rev-parse HEAD) \
  *     bun run deploy:status
  *
@@ -38,6 +46,20 @@ const WAIT_SECONDS = Number(process.env.VERCEL_WAIT_SECONDS ?? "0");
 const RETRY_MS = 10_000;
 const TIMEOUT_MS = 15_000;
 
+/**
+ * The domain this vouches for: the one people use. `SMOKE_BASE_URL` is honoured
+ * too, so a run pointed at another origin checks that origin on both halves.
+ */
+const BASE_URL = (
+  process.env.DEPLOY_BASE_URL ??
+  process.env.SMOKE_BASE_URL ??
+  "https://cosmic-vault-ui.vercel.app"
+).replace(/\/+$/, "");
+/** How long the domain may take to switch over once the build turns green. */
+const SERVED_WAIT_SECONDS = Number(
+  process.env.DEPLOY_SERVED_WAIT_SECONDS ?? "120",
+);
+
 /** Where the fix for a blocked build is written down. */
 const HOSTING_RULE =
   "https://github.com/" +
@@ -55,6 +77,78 @@ function request(path) {
       ...(TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}),
     },
   });
+}
+
+/**
+ * Which commit the domain stamped beside its bundle.
+ *
+ * The stamp is written by the build itself (`vite.config.ts`), so this answers
+ * "what is being served" rather than "what did Vercel do". A domain still on an
+ * older deployment answers with that deployment's commit - or, when that build
+ * predates the stamp, with the SPA rewrite's `index.html`.
+ */
+async function servedCommit() {
+  const response = await fetch(`${BASE_URL}/release-commit.json`, {
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+  const type = response.headers.get("content-type") ?? "";
+  if (!response.ok || !type.includes("json")) {
+    throw new Error(
+      `/release-commit.json answered ${response.status} ${type || "no content type"}`,
+    );
+  }
+  const payload = await response.json().catch(() => null);
+  const commit = payload?.commit;
+  if (typeof commit !== "string" || commit === "") {
+    throw new Error("/release-commit.json names no commit");
+  }
+  return commit;
+}
+
+/**
+ * Waits for the domain to serve this commit, and says why it does not.
+ *
+ * The build turning green is when the switch starts, not when it is done, so
+ * this retries for a bounded time. Everything it cannot prove fails: a domain
+ * that will not say what it serves cannot vouch for the release.
+ */
+async function verifyServed() {
+  const deadline = Date.now() + SERVED_WAIT_SECONDS * 1000;
+  let served = null;
+  let detail = "";
+
+  for (;;) {
+    try {
+      served = await servedCommit();
+      if (served.toLowerCase() === SHA.toLowerCase()) {
+        console.log(
+          `✓ served build      ${BASE_URL} serves ${SHA.slice(0, 7)}`,
+        );
+        return { ok: true, served, detail: "" };
+      }
+      detail =
+        `${BASE_URL} serves ${served.slice(0, 7)}, not ${SHA.slice(0, 7)}: ` +
+        "Vercel built this commit, but the domain is on another deployment. A " +
+        'preview build posts the same "Deployment has completed" as a ' +
+        "production one, so check the project's Production Branch " +
+        "(Settings -> Git) and redeploy or promote this deployment.";
+    } catch (error) {
+      detail =
+        `${BASE_URL} did not say which build it serves (${error instanceof Error ? error.message : String(error)}), so the release cannot be vouched for: ` +
+        "a build that cannot see VERCEL_GIT_COMMIT_SHA stamps no commit, and a " +
+        "domain on a build older than the stamp answers index.html here.";
+    }
+
+    if (Date.now() + RETRY_MS > deadline) return { ok: false, served, detail };
+
+    console.log(
+      `… ${BASE_URL} does not serve ${SHA.slice(0, 7)} yet (${Math.max(
+        0,
+        Math.round((deadline - Date.now()) / 1000),
+      )}s left)`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, RETRY_MS));
+  }
 }
 
 /**
@@ -114,17 +208,19 @@ function explain(notes) {
   return lines;
 }
 
-function report({ outcome, status, detail, notes = [] }) {
+function report({ outcome, status, detail, notes = [], served = null }) {
   const state = status?.state ?? "missing";
   // A successful build needs no explanation; its notes are just "Vercel is
-  // deploying your app" and "Deployment has completed".
-  const relevant = outcome === "succeeded" ? [] : notes;
+  // deploying your app" and "Deployment has completed". Neither does a stale
+  // one: its news is what the domain serves, not what Vercel said.
+  const relevant = outcome === "succeeded" || outcome === "stale" ? [] : notes;
   console.log(
     `${outcome === "succeeded" ? "✓" : "✗"} vercel build      ${state}${
       status?.description ? ` - ${status.description}` : ""
     }`,
   );
   if (status?.target_url) console.log(`  deployment        ${status.target_url}`);
+  if (served) console.log(`  serving           ${served.slice(0, 7)}`);
   for (const note of relevant) {
     if (note !== status?.description) console.log(`  github says       ${note}`);
   }
@@ -139,12 +235,15 @@ function report({ outcome, status, detail, notes = [] }) {
           ? "Vercel deployment was blocked"
           : outcome === "pending"
             ? "Vercel deployment did not finish"
-            : "Vercel never started a deployment"
+            : outcome === "stale"
+              ? "Vercel built the commit, but the domain serves another build"
+              : "Vercel never started a deployment"
     }`,
     "",
     `- Commit: \`${SHA.slice(0, 7)}\``,
     `- Status: \`${state}\`${status?.description ? ` - ${status.description}` : ""}`,
   ];
+  if (served) lines.push(`- Serving: \`${served.slice(0, 7)}\``);
   if (status?.target_url) lines.push(`- Deployment: ${status.target_url}`);
   for (const note of relevant) {
     if (note !== status?.description) lines.push(`- GitHub says: ${note}`);
@@ -220,7 +319,25 @@ async function main() {
     process.exit(1);
   }
 
-  await report({ outcome: "succeeded", status: latest, notes });
+  // The status proves Vercel built the commit. It does not prove the domain
+  // serves it, which is the half that leaves a release silently behind.
+  const served = await verifyServed();
+  if (!served.ok) {
+    await report({
+      outcome: "stale",
+      status: latest,
+      served: served.served,
+      detail: served.detail,
+    });
+    process.exit(1);
+  }
+
+  await report({
+    outcome: "succeeded",
+    status: latest,
+    notes,
+    served: served.served,
+  });
   process.exit(0);
 }
 
