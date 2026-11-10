@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./support/fixtures";
+import { dateIn, expect, test } from "./support/fixtures";
 import type { E2ESession } from "./stubs/session";
 
 /**
@@ -56,7 +56,7 @@ const FIXTURES: Record<string, unknown> = {
         _id: "e2e-mobile-policy",
         policyNumber: "CV-MIN-ROLL-1426",
         provider: "Cosmic Vault Insurance",
-        endDate: Date.UTC(2027, 9, 24),
+        endDate: dateIn(365),
         status: "active",
       },
       shipment: {
@@ -185,7 +185,7 @@ const FIXTURES: Record<string, unknown> = {
         productName: "Household Contents",
         premium: 18500,
         currency: "GBP",
-        endDate: Date.UTC(2027, 9, 24),
+        endDate: dateIn(365),
         status: "active",
       },
     ],

@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { vaultRoute } from "@/components/vault/vaultRoute";
 import type { Shipment, ShippingStatus } from "@/lib/vault/types";
+import { daysFromToday } from "./dates";
 
 const RELEASED_AT = Date.UTC(2026, 9, 20, 9, 15);
 const MOVED_AT = Date.UTC(2026, 9, 22, 16, 40);
-const ETA = Date.UTC(2026, 10, 4);
+const ETA = daysFromToday(14);
 
 function shipment(overrides: Partial<Shipment> = {}): Shipment {
   return {

@@ -12,6 +12,36 @@ export const NOT_FOUND_TITLE = "Page not found · Cosmic Vault";
 export const NOT_FOUND_HEADING = "This page has drifted out of orbit.";
 
 /**
+ * A day `days` from today, at midnight UTC.
+ *
+ * Fixtures use this instead of a literal future date: the screens compute
+ * renewal notices, expiry and "ahead of today" rules against the real clock, so
+ * a fixture that passes changes what renders even though the spec did not.
+ */
+export function dateIn(days: number) {
+  const now = new Date();
+  return Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() + days,
+  );
+}
+
+/** The same day as the value an `<input type="date">` takes. */
+export function dateInput(at: number) {
+  return new Date(at).toISOString().slice(0, 10);
+}
+
+/**
+ * The timestamp a date input's value is read back as: the machine's local
+ * midnight, the way the forms parse it.
+ */
+export function dateInputEpoch(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day).getTime();
+}
+
+/**
  * The consent panel opens over the bottom-left corner after a short pause and
  * covers the footer columns and the sidebar sign-out control. Scenarios here
  * navigate like a returning visitor by default, so the suite records a

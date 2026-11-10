@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import schema from "../src/convex/schema";
 import { internalAction } from "../src/convex/_generated/server";
 import { api } from "../src/convex/_generated/api";
+import { daysFromToday, isoDate } from "./dates";
 
 /**
  * Server coverage for the two admin creation flows: staff-created accounts and
@@ -114,7 +115,8 @@ async function seedProduct(t: Test, overrides: Record<string, unknown> = {}) {
   );
 }
 
-const TODAY = "2026-10-23";
+/** The day the register is asked to start cover: today, written as it expects. */
+const TODAY = isoDate(daysFromToday(0));
 
 describe("issuing a policy from the register", () => {
   it("writes the policy, its application, documents, invoice and audit", async () => {

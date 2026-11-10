@@ -1,4 +1,10 @@
-import { expect, test } from "./support/fixtures";
+import {
+  dateIn,
+  dateInput,
+  dateInputEpoch,
+  expect,
+  test,
+} from "./support/fixtures";
 import type { E2ESession } from "./stubs/session";
 
 /**
@@ -609,7 +615,7 @@ test.describe("staff shipment control", () => {
     await expect(dialog.getByLabel("New status")).not.toHaveValue("in_transit");
     await dialog.getByLabel("New status").selectOption("delivered");
     await dialog.getByLabel("Location").fill("Zurich vault");
-    await dialog.getByLabel("Estimated delivery").fill("2026-04-02");
+    await dialog.getByLabel("Estimated delivery").fill(dateInput(dateIn(14)));
     await dialog
       .getByLabel("Note for the owner")
       .fill("Handed to the customer at the vault desk.");
@@ -629,7 +635,7 @@ test.describe("staff shipment control", () => {
       location: "Zurich vault",
       note: "Handed to the customer at the vault desk.",
       // The date input is read on the machine's clock, like the desk displays it.
-      estimatedArrivalAt: new Date(2026, 3, 2).getTime(),
+      estimatedArrivalAt: dateInputEpoch(dateInput(dateIn(14))),
     });
   });
 

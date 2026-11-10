@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./support/fixtures";
+import { dateIn, expect, test } from "./support/fixtures";
 import type { E2ESession } from "./stubs/session";
 
 /**
@@ -19,7 +19,7 @@ const MEMBER_SESSION: E2ESession = {
 
 const MEMBER_ID = MEMBER_SESSION._id;
 const CREATED_AT = Date.UTC(2026, 5, 2);
-const ENDS_AT = Date.UTC(2027, 5, 2);
+const ENDS_AT = dateIn(365);
 const ETA = Date.UTC(2026, 5, 20);
 
 const OVERVIEW = {

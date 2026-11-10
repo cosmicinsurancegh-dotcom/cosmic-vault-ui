@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import schema from "../src/convex/schema";
 import { api, internal } from "../src/convex/_generated/api";
 import { deliveryFailure } from "../src/convex/lib/delivery";
+import { daysFromToday } from "./dates";
 
 /**
  * The email gateway answers HTTP 2xx even when it refuses a message, carrying
@@ -185,7 +186,7 @@ describe("consignment email outcome", () => {
     destination: "Bahnhofstrasse 1, Zurich",
     originCity: "London",
     destinationCity: "Zurich",
-    estimatedDelivery: Date.UTC(2027, 0, 15),
+    estimatedDelivery: daysFromToday(30),
     status: "in_transit" as const,
     note: "Left the depot",
     updatedAt: Date.UTC(2026, 9, 25),

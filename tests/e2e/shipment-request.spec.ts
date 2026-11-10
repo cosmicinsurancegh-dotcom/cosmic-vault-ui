@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./support/fixtures";
+import { dateIn, dateInput, expect, test } from "./support/fixtures";
 import type { E2ESession } from "./stubs/session";
 
 /**
@@ -28,7 +28,7 @@ const ADMIN: E2ESession = {
 };
 
 const CREATED_AT = Date.UTC(2026, 9, 2);
-const PREFERRED = Date.UTC(2026, 10, 2);
+const PREFERRED = dateIn(7);
 
 const MINERAL = {
   _id: "e2e-request-mineral-1",
@@ -57,7 +57,7 @@ const POLICY = {
   premium: 45_000,
   currency: "GBP",
   startDate: CREATED_AT,
-  endDate: Date.UTC(2027, 9, 2),
+  endDate: dateIn(365),
   status: "active",
   createdBy: ADMIN._id,
   createdAt: CREATED_AT,
@@ -123,7 +123,9 @@ test.describe("shipment requests", () => {
       dialog.getByRole("button", { name: "Send request" }),
     ).toBeDisabled();
     await dialog.getByLabel("Destination").fill("Zurich, CH");
-    await dialog.getByLabel("Preferred shipping date").fill("2026-11-02");
+    await dialog
+      .getByLabel("Preferred shipping date")
+      .fill(dateInput(PREFERRED));
     await dialog.getByLabel("Notes (optional)").fill("Use the west gate.");
     await dialog.getByRole("button", { name: "Send request" }).click();
 
@@ -136,7 +138,7 @@ test.describe("shipment requests", () => {
     ).toMatchObject({
       mineralId: MINERAL._id,
       destination: "Zurich, CH",
-      preferredDate: "2026-11-02",
+      preferredDate: dateInput(PREFERRED),
       notes: "Use the west gate.",
     });
   });

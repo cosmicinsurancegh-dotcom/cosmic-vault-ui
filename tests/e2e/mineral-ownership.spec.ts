@@ -1,4 +1,4 @@
-import { expect, test } from "./support/fixtures";
+import { dateIn, expect, test } from "./support/fixtures";
 import type { E2ESession } from "./stubs/session";
 
 /**
@@ -34,7 +34,8 @@ const UNASSIGNED_MINERAL_ID = "e2e-mineral-2";
 const UNASSIGNED_SHIPMENT_ID = "e2e-shipment-2";
 
 const JOINED_AT = Date.UTC(2026, 0, 12);
-const COVER_ENDS_AT = Date.UTC(2027, 0, 1);
+const COVER_ENDS_AT = dateIn(365);
+const ETA = dateIn(14);
 
 const FIXTURES: Record<string, unknown> = {
   "customers.directory": {
@@ -232,7 +233,7 @@ const REGISTER_SHIPMENT = {
   destination: "London, GB",
   status: "in_transit",
   currentLocation: "Basel, CH",
-  estimatedArrivalAt: COVER_ENDS_AT,
+  estimatedArrivalAt: ETA,
   createdAt: JOINED_AT,
 };
 

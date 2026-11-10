@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./support/fixtures";
+import { dateIn, expect, test } from "./support/fixtures";
 import type { E2ESession } from "./stubs/session";
 
 /**
@@ -31,7 +31,7 @@ const POLICY = {
   premium: 45000,
   currency: "GBP",
   startDate: CREATED_AT,
-  endDate: Date.UTC(2027, 3, 2),
+  endDate: dateIn(365),
   status: "active",
   createdAt: CREATED_AT,
   updatedAt: CREATED_AT,

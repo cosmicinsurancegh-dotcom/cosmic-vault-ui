@@ -9,6 +9,7 @@ import {
   renderAssignmentEmail,
   renderShipmentStatusEmail,
 } from "../src/convex/lib/shipmentEmail";
+import { DAY, daysFromToday, isoDate } from "./dates";
 
 /**
  * The delivery adapter is an action that runs a mutation internally. convex-test
@@ -102,6 +103,14 @@ function preferredDateIn(days: number) {
   return { input: new Date(stored).toISOString().slice(0, 10), stored };
 }
 
+/** The cover term every case books: a month in, and a year long. */
+const POLICY_START = isoDate(daysFromToday(-30));
+const POLICY_END = isoDate(daysFromToday(335));
+
+/** The consignment the booking helper records: a week out, so it stays ahead. */
+const DEPARTURE = daysFromToday(7);
+const ARRIVAL = daysFromToday(11);
+
 function payload(userId?: Id<"users">) {
   return {
     mineral: {
@@ -118,8 +127,8 @@ function payload(userId?: Id<"users">) {
       coverage: "cargo_transit" as const,
       coverageLimit: 30_000_000,
       premium: 45_000,
-      startDate: "2026-01-01",
-      endDate: "2027-01-01",
+      startDate: POLICY_START,
+      endDate: POLICY_END,
       status: "active" as const,
     },
     assignment: userId
@@ -144,8 +153,8 @@ async function bookShipment(
         trackingNumber: "BGS-918273",
         origin: "Zurich, CH",
         destination: "London, GB",
-        departureAt: "2026-10-20",
-        estimatedArrivalAt: "2026-10-24",
+        departureAt: isoDate(DEPARTURE),
+        estimatedArrivalAt: isoDate(ARRIVAL),
         status: "preparing" as const,
         ...overrides,
       },
@@ -408,7 +417,7 @@ describe("minerals and shipments", () => {
       .mutation(api.minerals.create, payload(client));
     const booked = await bookShipment(t, admin, created.mineralId);
 
-    const nextEta = Date.UTC(2027, 0, 15);
+    const nextEta = daysFromToday(45);
     await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.updateShipmentStatus, {
@@ -479,7 +488,7 @@ describe("minerals and shipments", () => {
     const change = audit.find(
       (entry) => entry.action === "shipment.status_changed",
     );
-    expect(change?.before.estimatedArrivalAt).toBe(Date.UTC(2026, 9, 24));
+    expect(change?.before.estimatedArrivalAt).toBe(ARRIVAL);
     expect(change?.after.estimatedArrivalAt).toBeNull();
 
     // The member's desk now holds no estimate rather than a stale one.
@@ -743,8 +752,8 @@ describe("shipment requests", () => {
           trackingNumber: "MA-55120",
           origin: "London, GB",
           destination: "Zurich, CH",
-          departureAt: "2026-11-03",
-          estimatedArrivalAt: "2026-11-05",
+          departureAt: isoDate(preferred.stored + DAY),
+          estimatedArrivalAt: isoDate(preferred.stored + 3 * DAY),
           status: "preparing",
           currentLocation: "London vault",
           notes: "Booked as requested.",
@@ -2415,7 +2424,7 @@ describe("member records for vault cover", () => {
       .withIdentity({ subject: admin })
       .mutation(api.minerals.create, {
         ...base,
-        policy: { ...base.policy, startDate: "2026-01-01", endDate: "2027-01-01" },
+        policy: { ...base.policy, startDate: POLICY_START, endDate: POLICY_END },
       });
     await t.finishAllScheduledFunctions(() => {});
 
@@ -2465,8 +2474,8 @@ describe("member records for vault cover", () => {
         ...base,
         policy: {
           ...base.policy,
-          startDate: "2026-01-01",
-          endDate: "2027-01-01",
+          startDate: POLICY_START,
+          endDate: POLICY_END,
         },
       });
     await t.finishAllScheduledFunctions(() => {});
@@ -2532,8 +2541,8 @@ describe("member records for vault cover", () => {
         ...base,
         policy: {
           ...base.policy,
-          startDate: "2026-01-01",
-          endDate: "2027-01-01",
+          startDate: POLICY_START,
+          endDate: POLICY_END,
         },
       });
     await t.finishAllScheduledFunctions(() => {});
@@ -2541,7 +2550,7 @@ describe("member records for vault cover", () => {
     /* The state the old renewal path left behind: the member's policy renewed
        with its renewal date stamped as the term end, and the cover still
        expired on the term that has ended. */
-    const newEnd = Date.parse("2028-01-01");
+    const newEnd = daysFromToday(700);
     await t.run(async (ctx) => {
       await ctx.db.patch(created.policyId, {
         status: "active",
@@ -2570,7 +2579,9 @@ describe("member records for vault cover", () => {
     const certificate = stored.documents.find((row) =>
       row.name.endsWith("- certificate"),
     );
-    expect(certificate?.body).toContain("to 2028-01-01");
+    // The certificate states the term the cover now runs to.
+    const termEnd = isoDate(newEnd);
+    expect(certificate?.body).toContain(`to ${termEnd}`);
 
     // A second pass finds nothing left to repair.
     const second = await t.mutation(
@@ -2591,7 +2602,7 @@ describe("member records for vault cover", () => {
       .withIdentity({ subject: admin })
       .mutation(api.minerals.create, {
         ...base,
-        policy: { ...base.policy, startDate: "2026-01-01", endDate: "2027-01-01" },
+        policy: { ...base.policy, startDate: POLICY_START, endDate: POLICY_END },
       });
     await t.finishAllScheduledFunctions(() => {});
 

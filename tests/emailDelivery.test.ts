@@ -5,6 +5,7 @@ import schema from "../src/convex/schema";
 import { internalAction } from "../src/convex/_generated/server";
 import { api } from "../src/convex/_generated/api";
 import type { Id } from "../src/convex/_generated/dataModel";
+import { daysFromToday, isoDate } from "./dates";
 
 /**
  * Delivery is asynchronous: the mutation queues the message and a scheduled
@@ -109,8 +110,8 @@ function payload(userId: Id<"users">) {
       coverage: "cargo_transit" as const,
       coverageLimit: 30_000_000,
       premium: 45_000,
-      startDate: "2026-01-01",
-      endDate: "2027-01-01",
+      startDate: isoDate(daysFromToday(-30)),
+      endDate: isoDate(daysFromToday(335)),
       status: "active" as const,
     },
     assignment: { mode: "existing" as const, userId },
@@ -132,8 +133,8 @@ async function bookShipment(
         trackingNumber: "BGS-918273",
         origin: "Zurich, CH",
         destination: "London, GB",
-        departureAt: "2026-10-20",
-        estimatedArrivalAt: "2026-10-24",
+        departureAt: isoDate(daysFromToday(7)),
+        estimatedArrivalAt: isoDate(daysFromToday(11)),
         status: "preparing" as const,
       },
     });
