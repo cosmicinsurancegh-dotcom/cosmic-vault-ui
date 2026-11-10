@@ -857,6 +857,12 @@ const schema = defineSchema(
       name: v.string(),
       category: v.string(),
       description: v.optional(v.string()),
+      /** Physical measurements, recorded at intake for the certificate. */
+      dimensions: v.optional(v.string()),
+      purity: v.optional(v.string()),
+      grade: v.optional(v.string()),
+      /** Bay and shelf the parcel sits in, printed on the certificate. */
+      storageLocation: v.optional(v.string()),
       quantity: v.number(),
       unit: v.string(),
       declaredValue: v.number(), // minor units

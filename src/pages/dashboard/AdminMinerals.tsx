@@ -56,6 +56,7 @@ import {
   ChevronDown,
   Gem,
   Loader2,
+  Pencil,
   Plus,
   Search,
   Trash2,
@@ -101,6 +102,10 @@ function emptyForm() {
     name: "",
     category: "",
     description: "",
+    dimensions: "",
+    purity: "",
+    grade: "",
+    storageLocation: "",
     quantity: "1",
     unit: "kg",
     declaredValue: "",
@@ -541,6 +546,10 @@ function CreateMineralDialog({
           name: form.name,
           category: form.category,
           description: form.description || undefined,
+          dimensions: form.dimensions.trim() || undefined,
+          purity: form.purity.trim() || undefined,
+          grade: form.grade.trim() || undefined,
+          storageLocation: form.storageLocation.trim() || undefined,
           quantity: Number(form.quantity),
           unit: form.unit,
           declaredValue: toMinor(form.declaredValue, "Declared value"),
@@ -728,6 +737,48 @@ function CreateMineralDialog({
                       )}
                     </select>
                   </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="m-dimensions">Dimensions (optional)</Label>
+                  <Input
+                    id="m-dimensions"
+                    value={form.dimensions}
+                    onChange={(event) => set("dimensions", event.target.value)}
+                    placeholder="115 x 52 x 9 mm"
+                    className="h-9 rounded-lg bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="m-purity">Purity (optional)</Label>
+                  <Input
+                    id="m-purity"
+                    value={form.purity}
+                    onChange={(event) => set("purity", event.target.value)}
+                    placeholder="999.9"
+                    className="h-9 rounded-lg bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="m-grade">Grade (optional)</Label>
+                  <Input
+                    id="m-grade"
+                    value={form.grade}
+                    onChange={(event) => set("grade", event.target.value)}
+                    placeholder="24 ct · LBMA Good Delivery"
+                    className="h-9 rounded-lg bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="m-storage">Storage bay (optional)</Label>
+                  <Input
+                    id="m-storage"
+                    value={form.storageLocation}
+                    onChange={(event) =>
+                      set("storageLocation", event.target.value)
+                    }
+                    placeholder="Bay 4 · Shelf C"
+                    className="h-9 rounded-lg bg-card"
+                  />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="m-description">Description (optional)</Label>
@@ -1302,6 +1353,17 @@ function MineralDetailDialog({
   const updateStatus = useMutation(api.minerals.updateShipmentStatus);
   const createShipment = useMutation(api.minerals.createShipment);
   const removeMineral = useMutation(api.minerals.remove);
+  const updateDetails = useMutation(api.minerals.updateDetails);
+  /* The certificate fields are edited as a set, so the form opens on the
+     record and saves all four together. */
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [detailsForm, setDetailsForm] = useState({
+    dimensions: "",
+    purity: "",
+    grade: "",
+    storageLocation: "",
+  });
+  const [savingDetails, setSavingDetails] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removeReason, setRemoveReason] = useState("");
   const [removing, setRemoving] = useState(false);
@@ -1393,6 +1455,153 @@ function MineralDetailDialog({
               )}
             </div>
           </section>
+
+          {/* Backfilled after intake, when the assay or measurements arrive. */}
+          {canManage && (
+            <section className="space-y-3 rounded-xl border border-line p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h3 className="text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Certificate details
+                  </h3>
+                  <p className="mt-1 text-[0.65rem] leading-5 text-muted-foreground">
+                    {[
+                      mineral.dimensions,
+                      mineral.purity && `Purity ${mineral.purity}`,
+                      mineral.grade,
+                      mineral.storageLocation,
+                    ].filter(Boolean).length > 0
+                      ? [
+                          mineral.dimensions,
+                          mineral.purity && `Purity ${mineral.purity}`,
+                          mineral.grade,
+                          mineral.storageLocation,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")
+                      : "Nothing recorded yet. These print on the member's certificate."}
+                  </p>
+                </div>
+                {!editingDetails && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9 shrink-0 rounded-[4px] bg-transparent px-4"
+                    onClick={() => {
+                      setDetailsForm({
+                        dimensions: mineral.dimensions ?? "",
+                        purity: mineral.purity ?? "",
+                        grade: mineral.grade ?? "",
+                        storageLocation: mineral.storageLocation ?? "",
+                      });
+                      setEditingDetails(true);
+                    }}
+                  >
+                    <Pencil className="size-3.5" /> Edit details
+                  </Button>
+                )}
+              </div>
+
+              {editingDetails && (
+                <div className="space-y-2 border-t border-line pt-3">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Input
+                      aria-label="Dimensions"
+                      value={detailsForm.dimensions}
+                      onChange={(event) =>
+                        setDetailsForm((current) => ({
+                          ...current,
+                          dimensions: event.target.value,
+                        }))
+                      }
+                      placeholder="115 x 52 x 9 mm"
+                      className="h-9 rounded-lg bg-card text-xs"
+                    />
+                    <Input
+                      aria-label="Purity"
+                      value={detailsForm.purity}
+                      onChange={(event) =>
+                        setDetailsForm((current) => ({
+                          ...current,
+                          purity: event.target.value,
+                        }))
+                      }
+                      placeholder="999.9"
+                      className="h-9 rounded-lg bg-card text-xs"
+                    />
+                    <Input
+                      aria-label="Grade"
+                      value={detailsForm.grade}
+                      onChange={(event) =>
+                        setDetailsForm((current) => ({
+                          ...current,
+                          grade: event.target.value,
+                        }))
+                      }
+                      placeholder="24 ct · LBMA Good Delivery"
+                      className="h-9 rounded-lg bg-card text-xs"
+                    />
+                    <Input
+                      aria-label="Storage bay"
+                      value={detailsForm.storageLocation}
+                      onChange={(event) =>
+                        setDetailsForm((current) => ({
+                          ...current,
+                          storageLocation: event.target.value,
+                        }))
+                      }
+                      placeholder="Bay 4 · Shelf C"
+                      className="h-9 rounded-lg bg-card text-xs"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[0.62rem] leading-5 text-muted-foreground">
+                      Leave a field blank to leave it off the certificate.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="h-8 rounded-[4px] bg-transparent px-3 text-[0.65rem]"
+                        disabled={savingDetails}
+                        onClick={() => setEditingDetails(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-8 rounded-[4px] px-3 text-[0.65rem]"
+                        disabled={savingDetails}
+                        onClick={async () => {
+                          setSavingDetails(true);
+                          try {
+                            await updateDetails({
+                              mineralId: mineral._id,
+                              details: detailsForm,
+                            });
+                            toast.success("Certificate details saved.");
+                            setEditingDetails(false);
+                          } catch (error) {
+                            toast.error(
+                              error instanceof Error
+                                ? error.message
+                                : "Could not save the details.",
+                            );
+                          } finally {
+                            setSavingDetails(false);
+                          }
+                        }}
+                      >
+                        {savingDetails && (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        )}{" "}
+                        Save details
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
 
           {shipment && (
             <section className="space-y-3 rounded-xl border border-line p-4">

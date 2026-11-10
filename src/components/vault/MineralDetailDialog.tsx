@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatDate, formatDateTime, formatMoneyValue } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { vaultDocumentRecordFromMineral } from "@/lib/vault/documentRecord";
 import { MINERAL_PLANS, premiumLabel } from "@/lib/vault/plans";
 import type { Mineral, VaultActor } from "@/lib/vault/types";
 import { formatAddress, formatWeight } from "@/lib/vault/types";
@@ -766,7 +767,7 @@ export function MineralDetailDialog({
         onOpenChange={setClaimOpen}
       />
       <VaultDocumentDialog
-        mineral={mineral}
+        record={vaultDocumentRecordFromMineral(mineral)}
         kind={documentKind}
         open={Boolean(documentKind)}
         onOpenChange={(next) => !next && setDocumentKind(null)}

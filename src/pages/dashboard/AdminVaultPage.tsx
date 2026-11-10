@@ -17,7 +17,8 @@ import {
   type ShipmentStatus,
 } from "@/convex/lib/shipments";
 import { useAuth } from "@/hooks/use-auth";
-import { downloadCsv, formatDate, formatMoney, formatMoneyList } from "@/lib/format";
+import { formatDate, formatMoney, formatMoneyList } from "@/lib/format";
+import { downloadPdfTable } from "@/lib/pdf";
 import { STAFF_PERMISSIONS, can } from "@/lib/permissions";
 import { useQuery } from "convex/react";
 import {
@@ -171,9 +172,11 @@ export default function AdminVaultPage() {
     (rows ?? []).find((row) => row.mineral._id === assigningId) ?? null;
 
   const exportRegister = () => {
-    downloadCsv(
-      "cosmic-vault-register.csv",
-      [
+    downloadPdfTable({
+      filename: "cosmic-vault-register.pdf",
+      title: "Vault register",
+      subtitle: `${filtered.length} of ${(rows ?? []).length} records · every mineral in custody with the owner, policy and consignment attached to it.`,
+      columns: [
         { key: "mineral", label: "Mineral" },
         { key: "reference", label: "Reference" },
         { key: "category", label: "Category" },
@@ -192,12 +195,12 @@ export default function AdminVaultPage() {
         { key: "shipping", label: "Shipping status" },
         { key: "updated", label: "Updated" },
       ],
-      filtered.map((row) => ({
+      rows: filtered.map((row) => ({
         mineral: row.mineral.name,
         reference: row.mineral.reference,
         category: row.mineral.category,
         quantity: `${row.mineral.quantity} ${row.mineral.unit}`,
-        value: row.mineral.declaredValue,
+        value: formatMoney(row.mineral.declaredValue, row.mineral.currency),
         currency: row.mineral.currency,
         owner: row.assignee?.name ?? "Unassigned",
         email: row.assignee?.email ?? "",
@@ -205,7 +208,9 @@ export default function AdminVaultPage() {
         coverage: row.policy
           ? (COVERAGE_LABELS[row.policy.coverage] ?? row.policy.coverage)
           : "",
-        coverLimit: row.policy?.coverageLimit ?? "",
+        coverLimit: row.policy
+          ? formatMoney(row.policy.coverageLimit, row.policy.currency)
+          : "",
         policyStatus: row.policy?.status ?? "",
         shipment: row.shipment?.reference ?? "",
         carrier: row.shipment?.carrier ?? "",
@@ -215,8 +220,8 @@ export default function AdminVaultPage() {
           : "In vault",
         updated: formatDate(row.mineral.updatedAt),
       })),
-    );
-    toast.success("Vault register exported.");
+    });
+    toast.success("Vault register downloaded as a PDF.");
   };
 
   if (authLoading) return <LoadingState label="Loading the vault" />;

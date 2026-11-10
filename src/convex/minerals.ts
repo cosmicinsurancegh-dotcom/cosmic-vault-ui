@@ -492,6 +492,10 @@ export const create = mutation({
       name: v.string(),
       category: v.string(),
       description: v.optional(v.string()),
+      dimensions: v.optional(v.string()),
+      purity: v.optional(v.string()),
+      grade: v.optional(v.string()),
+      storageLocation: v.optional(v.string()),
       quantity: v.number(),
       unit: v.string(),
       declaredValue: v.number(),
@@ -562,6 +566,12 @@ export const create = mutation({
       category,
       description:
         cleanText(args.mineral.description, "Description", 2000) || undefined,
+      dimensions:
+        cleanText(args.mineral.dimensions, "Dimensions", 120) || undefined,
+      purity: cleanText(args.mineral.purity, "Purity", 60) || undefined,
+      grade: cleanText(args.mineral.grade, "Grade", 120) || undefined,
+      storageLocation:
+        cleanText(args.mineral.storageLocation, "Storage bay", 120) || undefined,
       quantity: args.mineral.quantity,
       unit,
       declaredValue,
@@ -664,6 +674,66 @@ export const create = mutation({
       assignedUserId: userId,
       isNewAccount,
     };
+  },
+});
+
+/**
+ * The details that print on the member's certificate are often only to hand
+ * after intake, so staff backfill them here. The four fields are replaced as a
+ * set: clearing one on the form leaves it off the record and the certificate.
+ */
+export const updateDetails = mutation({
+  args: {
+    mineralId: v.id("minerals"),
+    details: v.object({
+      dimensions: v.optional(v.string()),
+      purity: v.optional(v.string()),
+      grade: v.optional(v.string()),
+      storageLocation: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const viewer = await requirePermission(ctx, PERMISSIONS.POLICIES_MANAGE);
+    const mineral = await ctx.db.get(args.mineralId);
+    if (!mineral) throw new Error("Mineral not found.");
+
+    const details = {
+      dimensions:
+        cleanText(args.details.dimensions, "Dimensions", 120) || undefined,
+      purity: cleanText(args.details.purity, "Purity", 60) || undefined,
+      grade: cleanText(args.details.grade, "Grade", 120) || undefined,
+      storageLocation:
+        cleanText(args.details.storageLocation, "Storage bay", 120) ||
+        undefined,
+    };
+
+    const keys = [
+      "dimensions",
+      "purity",
+      "grade",
+      "storageLocation",
+    ] as const;
+    const changed = keys.filter((key) => details[key] !== mineral[key]);
+    if (changed.length === 0) {
+      return { mineralId: mineral._id, changed };
+    }
+
+    await ctx.db.patch(mineral._id, {
+      ...details,
+      updatedAt: Date.now(),
+    });
+
+    await writeAudit(ctx, viewer, {
+      action: "mineral.details_updated",
+      entityType: "minerals",
+      entityId: mineral._id,
+      before: Object.fromEntries(
+        keys.map((key) => [key, mineral[key] ?? null]),
+      ),
+      after: Object.fromEntries(keys.map((key) => [key, details[key] ?? null])),
+    });
+
+    return { mineralId: mineral._id, changed };
   },
 });
 

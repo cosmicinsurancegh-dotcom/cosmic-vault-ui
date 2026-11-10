@@ -162,6 +162,103 @@ async function bookShipment(
 }
 
 describe("minerals and shipments", () => {
+  it("records the certificate details entered at intake", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+
+    const args = payload(client);
+    const result = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, {
+        ...args,
+        mineral: {
+          ...args.mineral,
+          dimensions: "115 x 52 x 9 mm",
+          purity: "999.9",
+          grade: "24 ct",
+          storageLocation: "Bay 4 · Shelf C",
+        },
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    const stored = await t.run((ctx) => ctx.db.get(result.mineralId));
+    expect(stored).toMatchObject({
+      dimensions: "115 x 52 x 9 mm",
+      purity: "999.9",
+      grade: "24 ct",
+      storageLocation: "Bay 4 · Shelf C",
+    });
+  });
+
+  it("lets staff backfill the certificate details after intake", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, payload(client));
+
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.updateDetails, {
+        mineralId: created.mineralId,
+        details: {
+          dimensions: "115 x 52 x 9 mm",
+          purity: "999.9",
+          grade: "24 ct",
+          storageLocation: "Bay 4 · Shelf C",
+        },
+      });
+
+    const stored = await t.run((ctx) => ctx.db.get(created.mineralId));
+    expect(stored).toMatchObject({
+      dimensions: "115 x 52 x 9 mm",
+      purity: "999.9",
+      grade: "24 ct",
+      storageLocation: "Bay 4 · Shelf C",
+    });
+
+    const audit = await t.run((ctx) =>
+      ctx.db.query("auditLogs").collect(),
+    );
+    expect(
+      audit.find((entry) => entry.action === "mineral.details_updated")
+        ?.entityId,
+    ).toBe(created.mineralId);
+
+    // Clearing a field takes it off the certificate rather than keeping it.
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.updateDetails, {
+        mineralId: created.mineralId,
+        details: {
+          dimensions: "115 x 52 x 9 mm",
+          purity: "999.9",
+          grade: "24 ct",
+          storageLocation: "",
+        },
+      });
+    const cleared = await t.run((ctx) => ctx.db.get(created.mineralId));
+    expect(cleared?.storageLocation).toBeUndefined();
+
+    // The member sees the corrected record, but cannot edit it.
+    const mine = await t
+      .withIdentity({ subject: client })
+      .query(api.minerals.mine, {});
+    expect(mine[0].mineral).toMatchObject({ purity: "999.9" });
+    await expect(
+      t
+        .withIdentity({ subject: client })
+        .mutation(api.minerals.updateDetails, {
+          mineralId: created.mineralId,
+          details: { dimensions: "x" },
+        }),
+    ).rejects.toThrow(/restricted to staff/i);
+  });
+
   it("records a mineral and its policy without booking a shipment", async () => {
     const t = test();
     const admin = await seedAdmin(t);

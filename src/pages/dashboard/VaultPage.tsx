@@ -7,6 +7,10 @@ import {
   StatusPill,
   Timeline,
 } from "@/components/dashboard/PlatformUI";
+import {
+  VaultDocumentDialog,
+  type VaultDocumentKind,
+} from "@/components/vault/VaultDocuments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
@@ -16,16 +20,15 @@ import {
   type ShipmentStatus,
 } from "@/convex/lib/shipments";
 import { useAuth } from "@/hooks/use-auth";
-import {
-  downloadCsv,
-  formatDate,
-  formatMoney,
-  formatMoneyList,
-} from "@/lib/format";
+import { formatDate, formatMoney, formatMoneyList } from "@/lib/format";
+import { downloadPdfTable } from "@/lib/pdf";
+import type { VaultDocumentRecord } from "@/lib/vault/documentRecord";
 import { useQuery } from "convex/react";
 import {
   CalendarClock,
   Download,
+  FileCheck2,
+  FileText,
   Gem,
   Headset,
   History,
@@ -53,6 +56,55 @@ const COVERAGE_LABELS: Record<string, string> = {
 
 const RENEWAL_WINDOW = 90 * 24 * 60 * 60 * 1000;
 
+/** The live row fields a certificate or assay report prints. */
+type DocumentMineral = {
+  reference: string;
+  name: string;
+  category: string;
+  dimensions?: string;
+  purity?: string;
+  grade?: string;
+  storageLocation?: string;
+  quantity: number;
+  unit: string;
+  declaredValue: number;
+  currency: string;
+  createdAt: number;
+  updatedAt: number;
+  isDemo?: boolean;
+};
+
+/**
+ * Turns an assigned holding into the record a document prints.
+ *
+ * Only facts the member's own record carries are mapped. Fields a live mineral
+ * does not hold - dimensions, purity, a certificate number - stay blank rather
+ * than being filled in from anywhere else.
+ */
+function documentRecordFor(
+  mineral: DocumentMineral,
+  policy: { status: string } | null,
+  owner: { name?: string | null; email?: string | null },
+): VaultDocumentRecord {
+  return {
+    reference: mineral.reference,
+    name: mineral.name,
+    category: mineral.category,
+    ownerName: owner.name ?? undefined,
+    ownerEmail: owner.email ?? undefined,
+    quantity: `${mineral.quantity.toLocaleString("en-GB")} ${mineral.unit}`,
+    dimensions: mineral.dimensions,
+    purity: mineral.purity,
+    grade: mineral.grade,
+    storageLocation: mineral.storageLocation,
+    value: formatMoney(mineral.declaredValue, mineral.currency),
+    depositedAt: formatDate(mineral.createdAt),
+    appraisedAt: formatDate(mineral.updatedAt),
+    insured: policy?.status === "active",
+    isDemo: mineral.isDemo,
+  };
+}
+
 function greeting() {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
@@ -79,6 +131,10 @@ export default function VaultPage() {
   const [sort, setSort] = useState<SortKey>("value_desc");
   // Captured once so the renewal window cannot shift between renders.
   const [renewalCutoff] = useState(() => Date.now() + RENEWAL_WINDOW);
+  const [document, setDocument] = useState<{
+    record: VaultDocumentRecord;
+    kind: VaultDocumentKind;
+  } | null>(null);
 
   const categories = useMemo(
     () =>
@@ -201,9 +257,11 @@ export default function VaultPage() {
   if (rows === undefined) return <LoadingState label="Loading your vault" />;
 
   const downloadInventory = () => {
-    downloadCsv(
-      "cosmic-vault-inventory.csv",
-      [
+    downloadPdfTable({
+      filename: "cosmic-vault-inventory.pdf",
+      title: "Vault inventory",
+      subtitle: `${filtered.length} records · every mineral assigned to you with the policy protecting it and its latest movement.`,
+      columns: [
         { key: "reference", label: "Reference" },
         { key: "name", label: "Mineral" },
         { key: "category", label: "Category" },
@@ -218,18 +276,20 @@ export default function VaultPage() {
         { key: "shipping", label: "Shipping status" },
         { key: "updated", label: "Updated" },
       ],
-      filtered.map((row) => ({
+      rows: filtered.map((row) => ({
         reference: row.mineral.reference,
         name: row.mineral.name,
         category: row.mineral.category,
         quantity: `${row.mineral.quantity} ${row.mineral.unit}`,
-        value: row.mineral.declaredValue,
+        value: formatMoney(row.mineral.declaredValue, row.mineral.currency),
         currency: row.mineral.currency,
         policy: row.policy?.policyNumber ?? "None",
         coverage: row.policy
           ? (COVERAGE_LABELS[row.policy.coverage] ?? row.policy.coverage)
           : "",
-        coverLimit: row.policy?.coverageLimit ?? "",
+        coverLimit: row.policy
+          ? formatMoney(row.policy.coverageLimit, row.policy.currency)
+          : "",
         policyStatus: row.policy?.status ?? "",
         shipment: row.shipment?.reference ?? "",
         shipping: row.shipment
@@ -237,8 +297,8 @@ export default function VaultPage() {
           : "In vault",
         updated: formatDate(row.mineral.updatedAt),
       })),
-    );
-    toast.success("Inventory downloaded.");
+    });
+    toast.success("Inventory downloaded as a PDF.");
   };
 
   return (
@@ -542,6 +602,42 @@ export default function VaultPage() {
                       </div>
                     </div>
                   </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-5 py-3">
+                    <p className="text-[0.58rem] text-muted-foreground">
+                      Certificates and assay reports
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 rounded-[4px] bg-transparent px-3 text-[0.62rem]"
+                        onClick={() =>
+                          setDocument({
+                            record: documentRecordFor(mineral, policy, user ?? {}),
+                            kind: "certificate",
+                          })
+                        }
+                      >
+                        <FileText className="size-3" />
+                        Certificate
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 rounded-[4px] bg-transparent px-3 text-[0.62rem]"
+                        onClick={() =>
+                          setDocument({
+                            record: documentRecordFor(mineral, policy, user ?? {}),
+                            kind: "assay",
+                          })
+                        }
+                      >
+                        <FileCheck2 className="size-3" />
+                        Assay report
+                      </Button>
+                    </div>
+                  </div>
                 </Panel>
               ))}
             </div>
@@ -678,6 +774,15 @@ export default function VaultPage() {
         Records are maintained by vault operations. Assignment, insurance and
         tracking changes are recorded in the audit log.
       </p>
+
+      {document && (
+        <VaultDocumentDialog
+          record={document.record}
+          kind={document.kind}
+          open
+          onOpenChange={(open) => !open && setDocument(null)}
+        />
+      )}
     </div>
   );
 }

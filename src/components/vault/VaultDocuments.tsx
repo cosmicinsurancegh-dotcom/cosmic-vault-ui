@@ -7,52 +7,108 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { downloadText, formatDate, formatMoneyValue } from "@/lib/format";
-import type { Mineral } from "@/lib/vault/types";
-import { formatWeight } from "@/lib/vault/types";
+import type { VaultDocumentRecord } from "@/lib/vault/documentRecord";
+import { downloadPdfDocument } from "@/lib/pdf";
 import { BadgeCheck, Download, Fingerprint } from "lucide-react";
 import { toast } from "sonner";
 
 export type VaultDocumentKind = "certificate" | "assay";
 
+function assayNumber(record: VaultDocumentRecord) {
+  const source = record.certificateNumber ?? record.reference;
+  return `ASSAY-${source.split("-").slice(-2).join("-")}`;
+}
+
+function certificateFields(record: VaultDocumentRecord): [string, string][] {
+  const fields: ([string, string] | null)[] = [
+    ["Weight", record.quantity],
+    record.dimensions ? ["Dimensions", record.dimensions] : null,
+    record.purity ? ["Purity", record.purity] : null,
+    record.grade ? ["Grade", record.grade] : null,
+    record.storageLocation ? ["Storage", record.storageLocation] : null,
+    record.depositedAt ? ["Deposited", record.depositedAt] : null,
+    ["Appraised value", record.value],
+    record.appraisedAt ? ["Appraisal refreshed", record.appraisedAt] : null,
+    ["Record status", record.insured ? "Insured" : "Uninsured"],
+  ];
+  return fields.filter((field): field is [string, string] => field !== null);
+}
+
+function assayRows(record: VaultDocumentRecord): [string, string, string][] {
+  const purityAndGrade = [record.purity, record.grade].filter(Boolean).join(" · ");
+  const rows: ([string, string, string] | null)[] = [
+    ["Total weight", "Calibrated balance", record.quantity],
+    record.dimensions
+      ? ["Dimensions", "Digital calliper", record.dimensions]
+      : null,
+    purityAndGrade
+      ? ["Purity / grade", "XRF and visual", purityAndGrade]
+      : null,
+    ["Appraised value", "Market comparison", record.value],
+    ["Parcel seal", "Serial verification", "Intact · matched to record"],
+  ];
+  return rows.filter((row): row is [string, string, string] => row !== null);
+}
+
+function summaryLines(record: VaultDocumentRecord) {
+  return [
+    `Record: ${record.reference}`,
+    ...(record.certificateNumber
+      ? [`Certificate: ${record.certificateNumber}`]
+      : []),
+    ...(record.ownerName
+      ? [
+          `Owner: ${record.ownerName}${
+            record.ownerReference ? ` (${record.ownerReference})` : ""
+          }`,
+        ]
+      : []),
+    ...(record.ownerEmail ? [`Owner email: ${record.ownerEmail}`] : []),
+    `Object: ${record.name}`,
+    `Category: ${record.category}`,
+    `Weight: ${record.quantity}`,
+    ...(record.dimensions ? [`Dimensions: ${record.dimensions}`] : []),
+    ...(record.purity ? [`Purity: ${record.purity}`] : []),
+    ...(record.grade ? [`Grade: ${record.grade}`] : []),
+    `Appraised value: ${record.value}`,
+    ...(record.storageLocation
+      ? [`Vault location: ${record.storageLocation}`]
+      : []),
+    ...(record.depositedAt ? [`Deposited: ${record.depositedAt}`] : []),
+    ...(record.appraisedAt
+      ? [`Appraisal refreshed: ${record.appraisedAt}`]
+      : []),
+    "",
+    record.isDemo
+      ? "Demonstration document. Not a real certificate or assay."
+      : "Record generated from the live vault ledger.",
+  ];
+}
+
 function DownloadSummary({
-  mineral,
+  record,
   kind,
 }: {
-  mineral: Mineral;
+  record: VaultDocumentRecord;
   kind: VaultDocumentKind;
 }) {
-  const title =
-    kind === "certificate" ? "Certificate of Authenticity" : "Assay & Appraisal Report";
   return (
     <Button
       variant="outline"
       className="h-9 rounded-[4px] bg-transparent text-xs"
       onClick={() => {
-        const body = [
-          `COSMIC VAULT — ${title.toUpperCase()}`,
-          "",
-          `Record: ${mineral.vaultId}`,
-          `Certificate: ${mineral.certificateNumber}`,
-          `Owner: ${mineral.ownerName} (${mineral.ownerReference})`,
-          `Object: ${mineral.name}`,
-          `Type: ${mineral.type} / ${mineral.category}`,
-          `Weight: ${formatWeight(mineral.weight, mineral.unit)}`,
-          `Dimensions: ${mineral.dimensions}`,
-          `Purity: ${mineral.purity}`,
-          `Grade: ${mineral.grade}`,
-          `Appraised value: ${formatMoneyValue(mineral.estimatedValue, mineral.currency)}`,
-          `Vault location: ${mineral.storageLocation}`,
-          `Deposited: ${formatDate(mineral.depositDate)}`,
-          `Appraisal refreshed: ${formatDate(mineral.valuationUpdatedAt)}`,
-          "",
-          "This summary is generated from the vault record. The signed original is held by Cosmic Vault.",
-        ].join("\n");
-        downloadText(
-          `${mineral.vaultId}-${kind === "certificate" ? "certificate" : "assay"}.txt`,
-          body,
-        );
-        toast.success("Document summary downloaded.");
+        downloadPdfDocument({
+          filename: `${record.reference}-${kind === "certificate" ? "certificate" : "assay"}.pdf`,
+          title:
+            kind === "certificate"
+              ? "Certificate of Authenticity"
+              : "Assay & Appraisal Report",
+          subtitle: [record.name, record.certificateNumber]
+            .filter(Boolean)
+            .join(" · "),
+          lines: summaryLines(record),
+        });
+        toast.success("Document summary downloaded as a PDF.");
       }}
     >
       <Download className="size-3.5" />
@@ -62,18 +118,19 @@ function DownloadSummary({
 }
 
 export function VaultDocumentDialog({
-  mineral,
+  record,
   kind,
   open,
   onOpenChange,
 }: {
-  mineral: Mineral;
+  record: VaultDocumentRecord;
   kind: VaultDocumentKind | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   if (!kind) return null;
   const isCertificate = kind === "certificate";
+  const number = isCertificate ? record.certificateNumber : assayNumber(record);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -112,43 +169,51 @@ export function VaultDocumentDialog({
 
         <div className="px-5 py-6 sm:px-8">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
-            <div>
-              <p className="text-[0.56rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                {isCertificate ? "Certificate" : "Report"} number
-              </p>
-              <p className="mt-1 text-sm font-semibold tracking-[0.02em] text-ink">
-                {isCertificate ? mineral.certificateNumber : `ASSAY-${mineral.certificateNumber.split("-").slice(-2).join("-")}`}
-              </p>
-            </div>
-            <div className="text-right">
+            {number && (
+              <div>
+                <p className="text-[0.56rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  {isCertificate ? "Certificate" : "Report"} number
+                </p>
+                <p className="mt-1 text-sm font-semibold tracking-[0.02em] text-ink">
+                  {number}
+                </p>
+              </div>
+            )}
+            <div className={number ? "text-right" : undefined}>
               <p className="text-[0.56rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 Vault record
               </p>
               <p className="mt-1 text-sm font-semibold tracking-[0.02em] text-ink">
-                {mineral.vaultId}
+                {record.reference}
               </p>
             </div>
           </div>
 
           <div className="mt-6 grid gap-5 sm:grid-cols-2">
-            <div>
-              <p className="text-[0.56rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Registered owner
-              </p>
-              <p className="mt-1.5 font-display text-lg italic text-ink">
-                {mineral.ownerName}
-              </p>
-              <p className="mt-0.5 text-[0.65rem] text-muted-foreground">
-                {mineral.ownerReference} · {mineral.ownerEmail}
-              </p>
-            </div>
+            {record.ownerName && (
+              <div>
+                <p className="text-[0.56rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Registered owner
+                </p>
+                <p className="mt-1.5 font-display text-lg italic text-ink">
+                  {record.ownerName}
+                </p>
+                {(record.ownerReference || record.ownerEmail) && (
+                  <p className="mt-0.5 text-[0.65rem] text-muted-foreground">
+                    {[record.ownerReference, record.ownerEmail]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
+              </div>
+            )}
             <div>
               <p className="text-[0.56rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Object
               </p>
-              <p className="mt-1.5 text-sm font-semibold text-ink">{mineral.name}</p>
+              <p className="mt-1.5 text-sm font-semibold text-ink">{record.name}</p>
               <p className="mt-0.5 text-[0.65rem] text-muted-foreground">
-                {mineral.type} · {mineral.category}
+                {record.category}
               </p>
             </div>
           </div>
@@ -156,20 +221,7 @@ export function VaultDocumentDialog({
           {isCertificate ? (
             <>
               <dl className="mt-6 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-line pt-5 sm:grid-cols-3">
-                {[
-                  ["Weight", formatWeight(mineral.weight, mineral.unit)],
-                  ["Dimensions", mineral.dimensions],
-                  ["Purity", mineral.purity],
-                  ["Grade", mineral.grade],
-                  ["Storage", mineral.storageLocation],
-                  ["Deposited", formatDate(mineral.depositDate)],
-                  [
-                    "Appraised value",
-                    formatMoneyValue(mineral.estimatedValue, mineral.currency),
-                  ],
-                  ["Appraisal refreshed", formatDate(mineral.valuationUpdatedAt)],
-                  ["Record status", mineral.insurancePolicy ? "Insured" : "Uninsured"],
-                ].map(([label, value]) => (
+                {certificateFields(record).map(([label, value]) => (
                   <div key={label} className="min-w-0">
                     <dt className="text-[0.52rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                       {label}
@@ -220,17 +272,7 @@ export function VaultDocumentDialog({
                     </tr>
                   </thead>
                   <tbody>
-                    {[
-                      ["Total weight", "Calibrated balance", formatWeight(mineral.weight, mineral.unit)],
-                      ["Dimensions", "Digital calliper", mineral.dimensions],
-                      ["Purity / grade", "XRF and visual", `${mineral.purity} · ${mineral.grade}`],
-                      [
-                        "Appraised value",
-                        "Market comparison",
-                        formatMoneyValue(mineral.estimatedValue, mineral.currency),
-                      ],
-                      ["Parcel seal", "Serial verification", "Intact · matched to record"],
-                    ].map(([observation, method, result]) => (
+                    {assayRows(record).map(([observation, method, result]) => (
                       <tr key={observation} className="odd:bg-card even:bg-ice/20">
                         <td className="border-b border-line/70 px-3 py-2.5 font-medium text-ink">
                           {observation}
@@ -268,12 +310,12 @@ export function VaultDocumentDialog({
 
           <div className="mt-7 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-4">
             <p className="text-[0.58rem] text-muted-foreground">
-              {mineral.isDemo
+              {record.isDemo
                 ? "Demonstration document. Not a real certificate or assay."
                 : "Record generated from the live vault ledger."}
             </p>
             <div className="flex gap-2">
-              <DownloadSummary mineral={mineral} kind={kind} />
+              <DownloadSummary record={record} kind={kind} />
               <Button
                 className="h-9 rounded-[4px] px-4 text-xs"
                 onClick={() => onOpenChange(false)}

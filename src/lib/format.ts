@@ -183,41 +183,6 @@ export function daysUntil(value: number) {
   return Math.ceil((value - Date.now()) / (24 * 60 * 60 * 1000));
 }
 
-export function csvEscape(value: string | number) {
-  const text = String(value ?? "");
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
-export function downloadCsv(
-  filename: string,
-  columns: { key: string; label: string }[],
-  rows: Record<string, string | number>[],
-) {
-  const header = columns.map((column) => csvEscape(column.label)).join(",");
-  const body = rows
-    .map((row) => columns.map((column) => csvEscape(row[column.key])).join(","))
-    .join("\n");
-  const blob = new Blob([`${header}\n${body}`], {
-    type: "text/csv;charset=utf-8",
-  });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
-
-export function downloadText(filename: string, body: string) {
-  const blob = new Blob([body], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
-
 export function toMinor(value: string, label: string) {
   const numeric = Number(value.replace(/,/g, ""));
   if (!Number.isFinite(numeric) || numeric <= 0) {

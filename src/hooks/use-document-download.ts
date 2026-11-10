@@ -1,6 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { downloadText } from "@/lib/format";
+import { downloadPdfDocument } from "@/lib/pdf";
 import { useConvex } from "convex/react";
 import { useCallback } from "react";
 
@@ -15,11 +15,14 @@ export function useDocumentDownload() {
         window.open(url, "_blank", "noopener,noreferrer");
         return;
       }
-      const safeName = document.name.replace(/[^\w.-]+/g, "-");
-      downloadText(
-        safeName.endsWith(".txt") ? safeName : `${safeName}.txt`,
-        document.body ?? "This document has no content.",
-      );
+      const safeName = document.name
+        .replace(/[^\w.-]+/g, "-")
+        .replace(/\.(csv|txt)$/i, "");
+      downloadPdfDocument({
+        filename: `${safeName}.pdf`,
+        title: document.name,
+        lines: (document.body ?? "This document has no content.").split("\n"),
+      });
     },
     [convex],
   );

@@ -14,10 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
-import { downloadCsv } from "@/lib/format";
+import { downloadPdfTable } from "@/lib/pdf";
 import { STAFF_PERMISSIONS, can } from "@/lib/permissions";
 import { useQuery } from "convex/react";
-import { Download, FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet, FileText } from "lucide-react";
 import { useMemo, useState } from "react";
 
 const REPORTS = [
@@ -147,14 +147,20 @@ export default function AdminReportsPage() {
             disabled={!result || result.rows.length === 0}
             onClick={() => {
               if (!result) return;
-              downloadCsv(
-                `${result.report}-${from}-to-${to}.csv`,
-                result.columns,
-                result.rows,
-              );
+              const label =
+                REPORTS.find((option) => option.value === result.report)?.label ??
+                "Report";
+              downloadPdfTable({
+                filename: `${result.report}-${from}-to-${to}.pdf`,
+                title: label,
+                subtitle: `${result.rows.length} rows · ${from} to ${to} · reporting currency ${result.currency}`,
+                columns: result.columns,
+                rows: result.rows,
+                note: result.basis,
+              });
             }}
           >
-            <Download className="size-4" /> Export CSV
+            <FileText className="size-4" /> Export PDF
           </Button>
         </div>
 
