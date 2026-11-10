@@ -18,6 +18,9 @@ blob-report
 .env.convex-prod
 .env.convex-dev
 
+# Local Vercel CLI token, used for one-off production promotion checks.
+.vercel-token.txt
+
 # Supabase CLI link state (project ref, pooler URL) is machine-local.
 supabase/.temp/
 
