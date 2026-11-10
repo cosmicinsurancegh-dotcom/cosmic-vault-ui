@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # No version input: setup-bun reads `packageManager` from package.json,
       # so CI installs with the same Bun that wrote `bun.lock`.

@@ -88,6 +88,20 @@ async function seedCurrency(t: Test) {
   );
 }
 
+/**
+ * A preferred date the desk can keep. The request refuses a date before today,
+ * so a fixed date turns this suite red the day after it is written.
+ */
+function preferredDateIn(days: number) {
+  const now = new Date();
+  const stored = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() + days,
+  );
+  return { input: new Date(stored).toISOString().slice(0, 10), stored };
+}
+
 function payload(userId?: Id<"users">) {
   return {
     mineral: {
@@ -556,12 +570,13 @@ describe("shipment requests", () => {
       .withIdentity({ subject: admin })
       .mutation(api.minerals.create, payload(client));
 
+    const preferred = preferredDateIn(7);
     const { requestId } = await t
       .withIdentity({ subject: client })
       .mutation(api.minerals.requestShipment, {
         mineralId: created.mineralId,
         destination: "Zurich, CH",
-        preferredDate: "2026-11-02",
+        preferredDate: preferred.input,
         notes: "Deliver to the Zurich vault, please.",
       });
     await t.finishAllScheduledFunctions(() => {});
@@ -579,7 +594,7 @@ describe("shipment requests", () => {
       notes: "Deliver to the Zurich vault, please.",
       status: "pending",
     });
-    expect(stored.request?.preferredDate).toBe(Date.UTC(2026, 10, 2));
+    expect(stored.request?.preferredDate).toBe(preferred.stored);
 
     const notice = stored.notifications.find(
       (notification) => notification.type === "shipment.requested",
@@ -710,12 +725,13 @@ describe("shipment requests", () => {
     const created = await t
       .withIdentity({ subject: admin })
       .mutation(api.minerals.create, payload(client));
+    const preferred = preferredDateIn(7);
     const { requestId } = await t
       .withIdentity({ subject: client })
       .mutation(api.minerals.requestShipment, {
         mineralId: created.mineralId,
         destination: "Zurich, CH",
-        preferredDate: "2026-11-02",
+        preferredDate: preferred.input,
       });
 
     const result = await t
