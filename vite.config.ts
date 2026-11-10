@@ -86,15 +86,26 @@ function releaseManifest(expectation: string): Plugin {
  * the commit Vercel built lets that check ask the domain rather than a status
  * that cannot tell the two apart.
  *
- * No stamp is written when the build cannot see the commit
- * (`VERCEL_GIT_COMMIT_SHA`): the field stays `null`, because a guessed stamp
- * would vouch for bytes it does not describe.
+ * A production build refuses to run without that commit
+ * (`VERCEL_GIT_COMMIT_SHA`): a stamp of `null` vouchsafes nothing, and it is
+ * the one field that lets the release check tell the domain's build from the
+ * build of this commit. Failing the build is the only way that stamp cannot be
+ * published empty. Local builds have no Vercel commit and still stamp `null`,
+ * because they are never what the domain serves.
  */
 function buildStamp(): Plugin {
   const commit = process.env.VERCEL_GIT_COMMIT_SHA?.trim() || null;
+  const production = process.env.VERCEL_ENV === "production";
   return {
     name: "build-stamp",
     apply: "build",
+    buildStart() {
+      if (production && !commit) {
+        this.error(
+          "VERCEL_ENV=production but VERCEL_GIT_COMMIT_SHA is empty, so the release stamp would name no commit and the published site could not say which build it serves. Deploy from a git push, or set VERCEL_GIT_COMMIT_SHA.",
+        );
+      }
+    },
     generateBundle() {
       this.emitFile({
         type: "asset",

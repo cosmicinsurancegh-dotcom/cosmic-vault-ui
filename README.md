@@ -472,7 +472,8 @@ to the run summary. A finished build is not yet a release: a preview deployment
 posts the same status as a production one, so it then asks the production domain
 which commit it serves - the build stamps `release-commit.json` beside the
 bundle (`vite.config.ts`) - and fails when the answer is another build, or no
-stamp at all. That is what a project whose Production Branch is not `main`
+stamp at all. A production build refuses to run when it cannot see
+`VERCEL_GIT_COMMIT_SHA`, so that stamp is never published empty. That is what a project whose Production Branch is not `main`
 looks like: every push green, the domain never moving. `DEPLOY_BASE_URL` (or
 `SMOKE_BASE_URL`) selects the origin and `DEPLOY_SERVED_WAIT_SECONDS` the
 switchover wait. The `Smoke the live site` workflow runs it before the smoke
