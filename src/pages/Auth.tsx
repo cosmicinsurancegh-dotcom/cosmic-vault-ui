@@ -11,6 +11,7 @@ import {
 import { Label } from "@/components/ui/label";
 
 import { useAuth } from "@/hooks/use-auth";
+import { normalizeEmailIdentifier } from "@/lib/emailIdentifier";
 import { captureJourneyEvent, JOURNEY_EVENTS } from "@/lib/posthog";
 import { signInFailureMessage, withSignInTimeout } from "@/lib/signInTimeout";
 import { AnimatePresence, motion } from "framer-motion";
@@ -166,7 +167,10 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
 
   const handleCodeSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const address = email.trim();
+    // Email accounts are keyed by the exact address, so normalise it the same
+    // way the password flow does: a capitalised address would otherwise key a
+    // second account with an empty dashboard.
+    const address = normalizeEmailIdentifier(email);
     setIsLoading(true);
     setError(null);
     try {
