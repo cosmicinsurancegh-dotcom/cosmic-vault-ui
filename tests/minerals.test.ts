@@ -2436,6 +2436,134 @@ describe("member records for vault cover", () => {
     expect(policy?.suspendedAt).toBeUndefined();
   });
 
+  it("moves the cover and its paperwork with a renewal", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+    const base = payload(client);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, {
+        ...base,
+        policy: {
+          ...base.policy,
+          startDate: "2026-01-01",
+          endDate: "2027-01-01",
+        },
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    // The term ran out, which the daily job records on both rows.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(created.policyId, { status: "expired" });
+      await ctx.db.patch(created.coverId, { status: "expired" });
+    });
+
+    const { requestId } = await t
+      .withIdentity({ subject: client })
+      .mutation(api.policies.requestChange, {
+        policyId: created.policyId,
+        kind: "renewal",
+        details: "Please renew my vault cover.",
+      });
+
+    await t
+      .withIdentity({ subject: admin })
+      .mutation(api.policies.decideRequest, {
+        requestId,
+        decision: "approved",
+        note: "Renewed after review.",
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    const stored = await t.run(async (ctx) => ({
+      policy: await ctx.db.get(created.policyId),
+      cover: await ctx.db.get(created.coverId),
+      documents: await ctx.db.query("documents").collect(),
+    }));
+
+    /* The vault and the home band read the cover, so a renewal that rewrote
+       only the member policy left them reporting "No cover in force" over
+       cover that is in force. */
+    expect(stored.cover?.status).toBe("active");
+    expect(stored.cover?.endDate).toBe(stored.policy?.endDate);
+
+    // The renewal date is the notice date, not the term end the schedule states.
+    expect(stored.policy?.renewalDate).toBeLessThan(stored.policy!.endDate);
+
+    // The certificate in the library states the renewed term, not the old one.
+    const certificate = stored.documents.find((row) =>
+      row.name.endsWith("- certificate"),
+    );
+    const termEnd = new Date(stored.cover!.endDate)
+      .toISOString()
+      .slice(0, 10);
+    expect(certificate?.body).toContain(`to ${termEnd}`);
+  });
+
+  it("reconciles a cover a renewal left behind", async () => {
+    const t = test();
+    const admin = await seedAdmin(t);
+    const client = await seedCustomer(t);
+    await seedCurrency(t);
+    const base = payload(client);
+
+    const created = await t
+      .withIdentity({ subject: admin })
+      .mutation(api.minerals.create, {
+        ...base,
+        policy: {
+          ...base.policy,
+          startDate: "2026-01-01",
+          endDate: "2027-01-01",
+        },
+      });
+    await t.finishAllScheduledFunctions(() => {});
+
+    /* The state the old renewal path left behind: the member's policy renewed
+       with its renewal date stamped as the term end, and the cover still
+       expired on the term that has ended. */
+    const newEnd = Date.parse("2028-01-01");
+    await t.run(async (ctx) => {
+      await ctx.db.patch(created.policyId, {
+        status: "active",
+        endDate: newEnd,
+        renewalDate: newEnd,
+      });
+      await ctx.db.patch(created.coverId, { status: "expired" });
+    });
+
+    const result = await t.mutation(
+      internal.minerals.reconcileCoverRecords,
+      {},
+    );
+    expect(result.reconciled).toBe(1);
+
+    const stored = await t.run(async (ctx) => ({
+      policy: await ctx.db.get(created.policyId),
+      cover: await ctx.db.get(created.coverId),
+      documents: await ctx.db.query("documents").collect(),
+    }));
+
+    expect(stored.cover?.status).toBe("active");
+    expect(stored.cover?.endDate).toBe(newEnd);
+    expect(stored.policy?.renewalDate).toBe(newEnd - 30 * 86_400_000);
+
+    const certificate = stored.documents.find((row) =>
+      row.name.endsWith("- certificate"),
+    );
+    expect(certificate?.body).toContain("to 2028-01-01");
+
+    // A second pass finds nothing left to repair.
+    const second = await t.mutation(
+      internal.minerals.reconcileCoverRecords,
+      {},
+    );
+    expect(second.reconciled).toBe(0);
+  });
+
   it("uses the configured premium payment term for renewal invoices", async () => {
     const t = test();
     const admin = await seedAdmin(t);

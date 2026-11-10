@@ -3,7 +3,7 @@ import type { MutationCtx } from "../_generated/server";
 import type { Viewer } from "./authz";
 import { normalizeRole } from "./authz";
 import { displayName, ensureCustomerProfile, getCustomerProfile } from "./people";
-import { reference } from "./refs";
+import { DAY, reference } from "./refs";
 import type { MineralCoverage } from "../schema";
 
 /**
@@ -68,6 +68,21 @@ function quantity(amount: number, unit: string) {
 
 function isoDate(at: number) {
   return new Date(at).toISOString().slice(0, 10);
+}
+
+/**
+ * The reminder date every other policy on the platform carries: the product's
+ * notice period before the term ends, and never before cover starts.
+ *
+ * A custody cover used to stamp the term end here, so the member's policy read
+ * "renews" the same day the schedule said the term ended, and a renewal then
+ * moved the date by a notice period the issued copy never carried.
+ */
+export function renewalDateFor(
+  term: { startDate: number; endDate: number },
+  noticeDays: number,
+) {
+  return Math.max(term.startDate, term.endDate - noticeDays * DAY);
 }
 
 /** Find-or-create the anchor product the member-facing policy points at. */
@@ -170,6 +185,73 @@ export function buildMineralPolicyDocuments(args: {
     { name: `${cover.policyNumber} - policy schedule`, body: schedule },
     { name: `${cover.policyNumber} - certificate`, body: certificate },
   ];
+}
+
+/**
+ * Writes the schedule and certificate a cover is read through.
+ *
+ * Both are generated from the cover, so the stored text is the only place the
+ * term appears in the member's library. A renewal, a limit change or a move to
+ * another account therefore has to rewrite them: left alone they contradict
+ * the policy page they sit beside, showing a term that ended while the policy
+ * states the renewed one. One schedule and one certificate are kept per policy
+ * number, so this updates the copy already on file rather than filing a second
+ * one for the same cover.
+ */
+export async function writeCoverDocuments(
+  ctx: MutationCtx,
+  args: {
+    mineral: Doc<"minerals">;
+    cover: Doc<"mineralPolicies">;
+    ownerUserId: Id<"users">;
+    customerName: string;
+    country: string;
+    policyId: Id<"policies">;
+    issuedBy: Id<"users">;
+    /** Stamped on a document written for the first time. */
+    version?: number;
+    now: number;
+  },
+): Promise<void> {
+  const existing = await ctx.db
+    .query("documents")
+    .withIndex("by_policy", (q) => q.eq("policyId", args.policyId))
+    .collect();
+
+  const documents = buildMineralPolicyDocuments({
+    mineral: args.mineral,
+    cover: args.cover,
+    customerName: args.customerName,
+    country: args.country,
+  });
+
+  for (const document of documents) {
+    const stored = existing.find(
+      (row) => row.category === "policy" && row.name === document.name,
+    );
+    if (!stored) {
+      await ctx.db.insert("documents", {
+        ownerUserId: args.ownerUserId,
+        name: document.name,
+        category: "policy",
+        policyId: args.policyId,
+        body: document.body,
+        contentType: "text/plain",
+        version: args.version ?? 1,
+        issuedBy: args.issuedBy,
+        issuedAt: args.now,
+        createdAt: args.now,
+      });
+      continue;
+    }
+    if (stored.body === document.body) continue;
+    await ctx.db.patch(stored._id, {
+      ownerUserId: args.ownerUserId,
+      body: document.body,
+      version: stored.version + 1,
+      issuedAt: args.now,
+    });
+  }
 }
 
 type OwnerContext = {
@@ -285,7 +367,7 @@ async function insertMemberRecords(
     wordingVersion: product.wordingVersion,
     startDate: cover.startDate,
     endDate: cover.endDate,
-    renewalDate: cover.endDate,
+    renewalDate: renewalDateFor(cover, product.renewalNoticeDays),
     issuedBy: viewer.user._id,
     issuedAt: now,
     endorsements: [],
@@ -296,25 +378,17 @@ async function insertMemberRecords(
   await ctx.db.patch(applicationId, { policyId, updatedAt: now });
   await ctx.db.patch(cover._id, { policyId, updatedAt: now });
 
-  for (const document of buildMineralPolicyDocuments({
+  await writeCoverDocuments(ctx, {
     mineral,
     cover,
+    ownerUserId: owner.ownerUserId,
     customerName: owner.customerName,
     country: owner.country,
-  })) {
-    await ctx.db.insert("documents", {
-      ownerUserId: owner.ownerUserId,
-      name: document.name,
-      category: "policy",
-      policyId,
-      body: document.body,
-      contentType: "text/plain",
-      version: product.version,
-      issuedBy: viewer.user._id,
-      issuedAt: now,
-      createdAt: now,
-    });
-  }
+    policyId,
+    issuedBy: viewer.user._id,
+    version: product.version,
+    now,
+  });
 
   /* No premium, no receivable: a zero-premium cover truthfully shows nothing
      due rather than a payment instruction for nothing. An expired or cancelled
@@ -497,6 +571,12 @@ export async function syncMemberPolicy(
     });
   }
 
+  /* The renewal date is the reminder date every other policy carries: the
+     product's notice period before the term ends, so it is never the term end
+     that the schedule and certificate state. */
+  const product = await ctx.db.get(existingPolicy.productId);
+  const renewalNoticeDays = product?.renewalNoticeDays ?? 30;
+
   await ctx.db.patch(existingPolicy._id, {
     status,
     premium: cover.premium,
@@ -504,7 +584,7 @@ export async function syncMemberPolicy(
     currency: cover.currency,
     startDate: cover.startDate,
     endDate: cover.endDate,
-    renewalDate: cover.endDate,
+    renewalDate: renewalDateFor(cover, renewalNoticeDays),
     ...(status === "suspended"
       ? {
           suspendedAt: now,
@@ -558,12 +638,115 @@ export async function syncMemberPolicy(
     });
   }
 
+  /* The paperwork states the term, limit and premium, so it follows the cover
+     whenever those move - and follows a new owner's name and jurisdiction on a
+     reassignment, which is the other way this path is reached. */
+  await writeCoverDocuments(ctx, {
+    mineral,
+    cover,
+    ownerUserId,
+    customerName: owner.customerName,
+    country: owner.country,
+    policyId: existingPolicy._id,
+    issuedBy: viewer.user._id,
+    now,
+  });
+
   return {
     policyId: existingPolicy._id,
     applicationId: existingApplication._id,
     created: false,
     movedFrom,
   };
+}
+
+/** The cover status that means the same thing as a member policy's status. */
+function coverStatusFor(
+  status: Doc<"policies">["status"],
+): Doc<"mineralPolicies">["status"] | null {
+  if (status === "active") return "active";
+  if (status === "expired") return "expired";
+  if (status === "cancelled") return "cancelled";
+  return null;
+}
+
+/**
+ * Whether a cover already states the term and status its policy carries.
+ *
+ * Used to find the covers servicing changed without them, so a reconciliation
+ * can report how much it actually repaired instead of counting every row it
+ * looked at.
+ */
+export function coverMatchesPolicy(
+  cover: Doc<"mineralPolicies">,
+  policy: Doc<"policies">,
+): boolean {
+  const status = coverStatusFor(policy.status);
+  return (
+    cover.startDate === policy.startDate &&
+    cover.endDate === policy.endDate &&
+    (status === null || cover.status === status)
+  );
+}
+
+/**
+ * Brings a cover in line with the member policy issued from it.
+ *
+ * The cover is the vault's record and the policy is the member's view of the
+ * same cover, so servicing that changes the policy - a renewal extends the
+ * term, a cancellation ends it - has to move the cover with it. Without that
+ * the two drift apart: the home band and `/dashboard/vault` read the cover and
+ * keep reporting the old term, or "No cover in force" over a policy the member
+ * has just been told is active.
+ *
+ * A status with no cover equivalent (draft, suspended) leaves the cover status
+ * alone rather than inventing one; the term is still brought into line.
+ */
+export async function syncCoverFromPolicy(
+  ctx: MutationCtx,
+  args: { policy: Doc<"policies">; now: number; issuedBy: Id<"users"> },
+): Promise<{ found: boolean; changed: boolean }> {
+  const cover = await ctx.db
+    .query("mineralPolicies")
+    .withIndex("by_policy", (q) => q.eq("policyId", args.policy._id))
+    .first();
+  if (!cover) return { found: false, changed: false };
+
+  if (coverMatchesPolicy(cover, args.policy)) {
+    return { found: true, changed: false };
+  }
+
+  const status = coverStatusFor(args.policy.status);
+
+  const updated: Doc<"mineralPolicies"> = {
+    ...cover,
+    startDate: args.policy.startDate,
+    endDate: args.policy.endDate,
+    status: status ?? cover.status,
+    updatedAt: args.now,
+  };
+  await ctx.db.patch(cover._id, {
+    startDate: updated.startDate,
+    endDate: updated.endDate,
+    ...(status ? { status } : {}),
+    updatedAt: args.now,
+  });
+
+  const mineral = await ctx.db.get(cover.mineralId);
+  if (mineral) {
+    await writeCoverDocuments(ctx, {
+      mineral,
+      cover: updated,
+      ownerUserId: args.policy.customerUserId,
+      customerName: args.policy.insuredName,
+      country: args.policy.country,
+      policyId: args.policy._id,
+      issuedBy: args.issuedBy,
+      now: args.now,
+    });
+  }
+
+  return { found: true, changed: true };
 }
 
 /**

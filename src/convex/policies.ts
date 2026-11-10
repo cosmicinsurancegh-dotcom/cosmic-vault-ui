@@ -13,6 +13,7 @@ import { isBrokerAssigned } from "./lib/access";
 import { writeAudit } from "./lib/audit";
 import { notifyStaff, notifyUser } from "./lib/notify";
 import { ensureCustomerProfile } from "./lib/people";
+import { syncCoverFromPolicy } from "./lib/mineralPolicyRecords";
 import {
   buildPolicyDocuments,
   writePolicyDocuments,
@@ -717,6 +718,19 @@ export const decideRequest = mutation({
         issuedAt: now,
         createdAt: now,
       });
+
+      /* The cover behind this policy is the same cover `/dashboard/vault` and
+         the home band report on, so servicing must move it in step: a renewal
+         that only rewrote the policy left the vault reading the lapsed cover,
+         and the schedule and certificate stating the term that had ended. */
+      const serviced = await ctx.db.get(policy._id);
+      if (serviced) {
+        await syncCoverFromPolicy(ctx, {
+          policy: serviced,
+          now,
+          issuedBy: viewer.user._id,
+        });
+      }
     }
 
     await notifyUser(ctx, {
@@ -767,6 +781,18 @@ export const setStatus = mutation({
       suspensionReason: args.status === "suspended" ? reason : policy.suspensionReason,
       updatedAt: now,
     });
+
+    /* Cover issued from a mineral is the vault's record of the same policy: a
+       cancellation or suspension here has to stop the vault reporting it in
+       force, or the member is told two different things. */
+    const serviced = await ctx.db.get(policy._id);
+    if (serviced) {
+      await syncCoverFromPolicy(ctx, {
+        policy: serviced,
+        now,
+        issuedBy: viewer.user._id,
+      });
+    }
     await writeAudit(ctx, viewer, {
       action: `policy.status_${args.status}`,
       entityType: "policies",

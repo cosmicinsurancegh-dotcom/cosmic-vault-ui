@@ -23,7 +23,10 @@ import {
 } from "./lib/invite";
 import {
   COVERAGE_LABELS,
+  coverMatchesPolicy,
   removeMemberPolicyRecords,
+  renewalDateFor,
+  syncCoverFromPolicy,
   syncMemberPolicy,
 } from "./lib/mineralPolicyRecords";
 import {
@@ -2061,5 +2064,111 @@ export const backfillMemberRecords = internalMutation({
       },
       limit,
     );
+  },
+});
+
+/**
+ * One-off reconciliation of custody covers that drifted from the policy issued
+ * from them.
+ *
+ * Approving a renewal used to rewrite the member's policy alone and leave the
+ * cover on the term that had ended: the policy read renewed and in force while
+ * `/dashboard/vault` and the home band still reported the lapsed cover - "No
+ * cover in force" over cover that is in force. Nothing corrects that pair
+ * later, because the daily job only expires what has run out, so this replays
+ * the policy's term and status onto its cover and rewrites the certificate and
+ * schedule, which carry the term as text. Policies issued before the renewal
+ * date was derived the way the rest of the platform derives it are brought in
+ * line here too, so the policy, its schedule and the reminder that reads it
+ * agree.
+ *
+ * Idempotent: a cover already in line is counted and left alone, a cover with
+ * no member policy is skipped (that is `backfillMemberRecords`' job), and a
+ * second pass repairs nothing. Capped per run, like the record backfill, so one
+ * call cannot turn six hundred covers into a transaction the database refuses.
+ *
+ *   bunx convex run minerals:reconcileCoverRecords
+ *   bunx convex run minerals:reconcileCoverRecords '{"limit":200}'
+ *
+ * Internal, so no browser can reach it.
+ */
+export const reconcileCoverRecords = internalMutation({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const limit = Math.min(200, Math.max(1, Math.round(args.limit ?? 100)));
+    const covers = await ctx.db.query("mineralPolicies").take(600);
+    const now = Date.now();
+    let reconciled = 0;
+    let renewalDates = 0;
+    let inLine = 0;
+    let skipped = 0;
+    let remaining = 0;
+
+    for (const cover of covers) {
+      // A cover with no member policy has no second record to be in line with.
+      if (!cover.policyId) {
+        skipped += 1;
+        continue;
+      }
+      const policy = await ctx.db.get(cover.policyId);
+      if (!policy) {
+        skipped += 1;
+        continue;
+      }
+
+      /* The product, not a constant: the notice period belongs to the product
+         version, as it does on every policy issued from the catalogue. */
+      const product = await ctx.db.get(policy.productId);
+      const renewalDate = renewalDateFor(
+        policy,
+        product?.renewalNoticeDays ?? 30,
+      );
+      const renewalStale = policy.renewalDate !== renewalDate;
+      if (coverMatchesPolicy(cover, policy) && !renewalStale) {
+        inLine += 1;
+        continue;
+      }
+      if (reconciled >= limit) {
+        remaining += 1;
+        continue;
+      }
+
+      if (renewalStale) {
+        await ctx.db.patch(policy._id, { renewalDate, updatedAt: now });
+        renewalDates += 1;
+      }
+      await syncCoverFromPolicy(ctx, {
+        policy: renewalStale ? { ...policy, renewalDate } : policy,
+        now,
+        issuedBy: policy.issuedBy,
+      });
+      reconciled += 1;
+
+      /* Attributed to the account that issued the policy, so the rewritten
+         paperwork names the issuer the record already carries. */
+      const issuer = await ctx.db.get(policy.issuedBy);
+      if (issuer) {
+        await writeAudit(ctx, viewerForUser(issuer), {
+          action: "mineral.cover_reconciled",
+          entityType: "mineralPolicies",
+          entityId: cover._id,
+          before: {
+            status: cover.status,
+            startDate: cover.startDate,
+            endDate: cover.endDate,
+            policyRenewalDate: policy.renewalDate,
+          },
+          after: {
+            status: policy.status,
+            startDate: policy.startDate,
+            endDate: policy.endDate,
+            policyRenewalDate: renewalDate,
+          },
+          reason: "Reconciled with the member policy issued from it.",
+        });
+      }
+    }
+
+    return { reconciled, renewalDates, inLine, skipped, remaining };
   },
 });
