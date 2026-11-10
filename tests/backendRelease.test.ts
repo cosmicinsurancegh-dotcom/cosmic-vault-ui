@@ -5,10 +5,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { DEFAULT_CONVEX_URL as APP_DEFAULT_CONVEX_URL } from "../src/lib/convexUrl";
 import {
   DEFAULT_CONVEX_URL,
+  DEFAULT_RELEASE_WAIT_SECONDS,
   decide,
   resolveDeploymentUrl,
+  resolveWaitSeconds,
   siteFunctionRefs,
   stripComments,
+  waitForVerdict,
 } from "../scripts/check-backend-release.mjs";
 
 /**
@@ -276,5 +279,171 @@ describe("resolveDeploymentUrl", () => {
     // A copy of the constant is what lets this script run without importing
     // the app's TypeScript; this is what keeps the copy from drifting.
     expect(DEFAULT_CONVEX_URL).toBe(APP_DEFAULT_CONVEX_URL);
+  });
+});
+
+describe("resolveWaitSeconds", () => {
+  it("waits in a Vercel production build and not elsewhere", () => {
+    expect(
+      resolveWaitSeconds({
+        flagValue: undefined,
+        configured: undefined,
+        environment: "production",
+      }),
+    ).toBe(DEFAULT_RELEASE_WAIT_SECONDS);
+    expect(
+      resolveWaitSeconds({ configured: undefined, environment: "preview" }),
+    ).toBe(0);
+    expect(resolveWaitSeconds({ configured: undefined })).toBe(0);
+  });
+
+  it("lets the flag override the environment, which overrides the default", () => {
+    expect(
+      resolveWaitSeconds({
+        flagValue: "0",
+        configured: "120",
+        environment: "production",
+      }),
+    ).toBe(0);
+    expect(
+      resolveWaitSeconds({ configured: "45", environment: "production" }),
+    ).toBe(45);
+    // A typo in the flag must not disable a configured wait.
+    expect(
+      resolveWaitSeconds({
+        flagValue: "nope",
+        configured: "45",
+        environment: "production",
+      }),
+    ).toBe(45);
+  });
+
+  it("ignores an unusable value instead of waiting forever", () => {
+    expect(
+      resolveWaitSeconds({
+        flagValue: "-1",
+        configured: "",
+        environment: "production",
+      }),
+    ).toBe(DEFAULT_RELEASE_WAIT_SECONDS);
+  });
+});
+
+describe("waitForVerdict", () => {
+  const ready = { ok: true, detail: "ready" };
+  const behind = { ok: false, detail: "not there yet" };
+  const permanent = { ok: false, permanent: true, detail: "dynamic refs" };
+
+  it("returns a passing answer without waiting", async () => {
+    const sleeps: number[] = [];
+    const outcome = await waitForVerdict({
+      read: async () => "release",
+      decide: () => ready,
+      waitSeconds: 300,
+      sleep: async (milliseconds) => {
+        sleeps.push(milliseconds);
+      },
+    });
+    expect(outcome).toMatchObject({ ok: true, attempts: 1 });
+    expect(sleeps).toEqual([]);
+  });
+
+  it("asks again until the functions deploy lands", async () => {
+    let clock = 0;
+    let calls = 0;
+    const sleeps: number[] = [];
+    const outcome = await waitForVerdict({
+      read: async () => "release",
+      decide: () => {
+        calls += 1;
+        return calls < 3 ? behind : ready;
+      },
+      waitSeconds: 120,
+      retrySeconds: 10,
+      now: () => clock,
+      sleep: async (milliseconds) => {
+        sleeps.push(milliseconds);
+        clock += milliseconds;
+      },
+    });
+    expect(outcome).toMatchObject({ ok: true, attempts: 3 });
+    expect(sleeps).toEqual([10_000, 10_000]);
+  });
+
+  it("gives up when the wait runs out, keeping the last answer", async () => {
+    let clock = 0;
+    let calls = 0;
+    const outcome = await waitForVerdict({
+      read: async () => {
+        calls += 1;
+        return "release";
+      },
+      decide: () => behind,
+      waitSeconds: 20,
+      retrySeconds: 10,
+      now: () => clock,
+      sleep: async (milliseconds) => {
+        clock += milliseconds;
+      },
+    });
+    expect(outcome.ok).toBe(false);
+    expect(outcome.verdict).toBe(behind);
+    expect(outcome.timedOut).toBe(true);
+    expect(calls).toBe(3);
+  });
+
+  it("fails at once on a verdict waiting cannot change", async () => {
+    let slept = false;
+    const outcome = await waitForVerdict({
+      read: async () => "release",
+      decide: () => permanent,
+      waitSeconds: 300,
+      sleep: async () => {
+        slept = true;
+      },
+    });
+    expect(outcome).toMatchObject({ ok: false, attempts: 1 });
+    expect(outcome.verdict).toBe(permanent);
+    expect(slept).toBe(false);
+  });
+
+  it("treats an unreachable deployment as not there yet", async () => {
+    let clock = 0;
+    let calls = 0;
+    const outcome = await waitForVerdict({
+      read: async () => {
+        calls += 1;
+        if (calls < 3) throw new Error("fetch failed");
+        return "release";
+      },
+      decide: () => ready,
+      waitSeconds: 60,
+      retrySeconds: 10,
+      now: () => clock,
+      sleep: async (milliseconds) => {
+        clock += milliseconds;
+      },
+    });
+    expect(outcome).toMatchObject({ ok: true, attempts: 3 });
+  });
+
+  it("reports the error when every read fails", async () => {
+    let clock = 0;
+    const failure = new Error("fetch failed");
+    const outcome = await waitForVerdict({
+      read: async () => {
+        throw failure;
+      },
+      decide: () => ready,
+      waitSeconds: 10,
+      retrySeconds: 10,
+      now: () => clock,
+      sleep: async (milliseconds) => {
+        clock += milliseconds;
+      },
+    });
+    expect(outcome.ok).toBe(false);
+    expect(outcome.error).toBe(failure);
+    expect(outcome.attempts).toBe(2);
   });
 });

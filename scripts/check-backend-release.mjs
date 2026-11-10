@@ -37,11 +37,23 @@
  * preview deploys a branch whose functions are by definition not in production
  * yet, so gating it would block every review.
  *
+ * A production site build and the functions deploy start at the same moment, so
+ * the first answer is often "not there yet". The gate therefore waits: an
+ * answer a functions deploy can still change (a missing function, a changed
+ * shape, an unstamped or unreachable deployment) is retried for
+ * `RELEASE_WAIT_SECONDS` - 300s in a Vercel production build, 0 elsewhere -
+ * before the build is refused. Verdicts read from this checkout (a dynamic
+ * `api[...]` reference, an empty scan) are permanent and fail at once, because
+ * waiting cannot change them.
+ *
  * Usage:
- *   node scripts/check-backend-release.mjs               # gate a Vercel build
- *   node scripts/check-backend-release.mjs --production  # run the gate locally
+ *   node scripts/check-backend-release.mjs               # gate a Vercel build, waiting for the stamp
+ *   node scripts/check-backend-release.mjs --production  # run the gate locally (no wait)
  *   node scripts/check-backend-release.mjs --url <url>   # check another deployment
  *   node scripts/check-backend-release.mjs --served <spec.json>  # saved spec
+ *   node scripts/check-backend-release.mjs --production --wait 120  # wait locally
+ *
+ * `RELEASE_WAIT_SECONDS` overrides the wait; `--wait 0` fails on the first answer.
  *
  * The script exits 0 when the build may publish, 1 when it may not.
  */
@@ -87,6 +99,17 @@ const IGNORED_DIRECTORIES = new Set(["_generated", "node_modules"]);
 
 /** How many names a failure spells out before summarising the rest. */
 const MAX_NAMED = 12;
+
+/**
+ * How long a production build waits for a functions deploy that started with
+ * the same push. The workflow runs the unit suite, then publishes and stamps
+ * the functions; five minutes covers that queue on this repository without
+ * stalling a genuinely broken release for long.
+ */
+export const DEFAULT_RELEASE_WAIT_SECONDS = 300;
+
+/** How often the gate asks again while it waits. */
+export const RELEASE_RETRY_SECONDS = 10;
 
 /**
  * The deployment this build's bundle will talk to, resolved the way the app
@@ -226,6 +249,7 @@ export function decide({
   if (dynamic.length > 0) {
     return {
       ok: false,
+      permanent: true,
       missing: [],
       detail: `The site indexes the api object dynamically (${nameList(dynamic)}), so the functions it calls cannot be listed - and a build that cannot list them cannot check them.`,
     };
@@ -241,6 +265,7 @@ export function decide({
   if (required.length === 0) {
     return {
       ok: false,
+      permanent: true,
       missing: [],
       detail:
         "No api references were found in the site's source, so there is nothing to check - which means the scan is looking in the wrong place.",
@@ -261,6 +286,7 @@ export function decide({
   if (unknown.length > 0) {
     return {
       ok: false,
+      permanent: true,
       missing: [],
       changed: [],
       detail: `This build's own signatures could not be read for ${nameList(unknown)}, so whether production matches them cannot be checked.`,
@@ -295,6 +321,78 @@ export function decide({
     changed: [],
     detail: `The production deployment serves all ${required.length} functions this build calls, with matching argument and return shapes.`,
   };
+}
+
+/** A non-negative number of seconds, or `null` for "not usable". */
+function parseSeconds(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const seconds = Number(value);
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
+}
+
+/**
+ * How long the gate waits before refusing the build. `--wait` wins over
+ * `RELEASE_WAIT_SECONDS`, which wins over the default: a real Vercel production
+ * build waits for the functions deploy started by the same push, while a local
+ * run does not unless asked.
+ */
+export function resolveWaitSeconds({
+  flagValue,
+  configured = process.env.RELEASE_WAIT_SECONDS,
+  environment = process.env.VERCEL_ENV,
+} = {}) {
+  const fromFlag = parseSeconds(flagValue);
+  if (fromFlag !== null) return fromFlag;
+  const fromEnvironment = parseSeconds(configured);
+  if (fromEnvironment !== null) return fromEnvironment;
+  return environment === "production" ? DEFAULT_RELEASE_WAIT_SECONDS : 0;
+}
+
+/**
+ * Asks for the deployment's release until it can be shown to serve this build,
+ * or until the wait runs out. A read error counts as "not yet": a deployment
+ * that has just been published can refuse a request for a moment, and treating
+ * that as a verdict would fail the build for the same race as a missing stamp.
+ * A permanent verdict (from this checkout, not the deployment) returns at once.
+ *
+ * The clock and sleep are injectable so the retry behaviour can be tested
+ * without waiting five real minutes.
+ */
+export async function waitForVerdict({
+  read,
+  decide: decideNow,
+  waitSeconds = 0,
+  retrySeconds = RELEASE_RETRY_SECONDS,
+  sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
+  now = () => Date.now(),
+  onRetry = () => {},
+}) {
+  const deadline = now() + Math.max(0, waitSeconds) * 1000;
+  let attempt = 0;
+  for (;;) {
+    attempt += 1;
+    let verdict;
+    let error;
+    try {
+      verdict = decideNow(await read());
+    } catch (caught) {
+      error = caught;
+    }
+    if (verdict?.ok) return { ok: true, verdict, attempts: attempt };
+    if (verdict?.permanent) return { ok: false, verdict, attempts: attempt };
+    const remainingMs = deadline - now();
+    if (remainingMs <= 0) {
+      return {
+        ok: false,
+        verdict,
+        error,
+        attempts: attempt,
+        timedOut: waitSeconds > 0,
+      };
+    }
+    onRetry({ attempt, verdict, error, remainingMs });
+    await sleep(Math.min(retrySeconds * 1000, remainingMs));
+  }
 }
 
 /**
@@ -385,33 +483,53 @@ async function main() {
     return 1;
   }
 
-  let release;
+  const verdictFor = (release) =>
+    decide({
+      environment: requested,
+      required: refs,
+      served: release.functions,
+      signatures: release.signatures,
+      expected,
+      dynamic,
+    });
+
   const servedFile = flag("--served");
+  let verdict;
+  let failure;
   if (servedFile) {
-    release = await readServedFile(servedFile);
+    verdict = verdictFor(await readServedFile(servedFile));
   } else {
-    try {
-      release = await readRelease(url);
-    } catch (error) {
-      console.error(
-        `[release] Cannot ask ${url} which functions it serves: ${error instanceof Error ? error.message : error}`,
-      );
-      console.error(`[release] ${HOW_TO_RELEASE}`);
-      return 1;
-    }
+    const waitSeconds = resolveWaitSeconds({
+      flagValue: flag("--wait"),
+      environment: process.env.VERCEL_ENV,
+    });
+    const outcome = await waitForVerdict({
+      read: () => readRelease(url),
+      decide: verdictFor,
+      waitSeconds,
+      onRetry: ({ attempt, verdict: pending, error, remainingMs }) => {
+        const detail =
+          pending?.detail ??
+          (error instanceof Error ? error.message : String(error));
+        console.log(
+          `[release] Not there yet (attempt ${attempt}, ${Math.ceil(remainingMs / 1000)}s left): ${detail}`,
+        );
+      },
+    });
+    verdict = outcome.verdict;
+    failure = outcome.error;
   }
 
-  const verdict = decide({
-    environment: requested,
-    required: refs,
-    served: release.functions,
-    signatures: release.signatures,
-    expected,
-    dynamic,
-  });
-  if (verdict.ok) {
+  if (verdict?.ok) {
     console.log(`[release] ${verdict.detail}`);
     return 0;
+  }
+  if (!verdict) {
+    console.error(
+      `[release] Cannot ask ${url} which functions it serves: ${failure instanceof Error ? failure.message : failure}`,
+    );
+    console.error(`[release] ${HOW_TO_RELEASE}`);
+    return 1;
   }
   console.error(`[release] Refusing to publish the site: ${verdict.detail}`);
   console.error(`[release] ${HOW_TO_RELEASE}`);

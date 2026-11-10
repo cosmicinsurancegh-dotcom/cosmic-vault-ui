@@ -325,6 +325,17 @@ first. That is what this gate is for - it refuses the bundle when the functions
 it calls are not there yet - and the deploy asks Vercel to rebuild the commit
 once they are, so the release completes instead of waiting for a person.
 
+That race is why the gate waits before judging a first answer. While the
+deployment is missing a function, validates one differently, has no stamp yet,
+or cannot be asked, the build asks again every 10 seconds for up to five
+minutes (`RELEASE_WAIT_SECONDS`, or `--wait <seconds>`) before refusing, so a
+functions deploy that is merely slower than the build no longer costs the push
+its first site build. Verdicts read from this checkout rather than the
+deployment - a dynamic `api[...]` reference, an empty scan, an unreadable local
+signature - are permanent and fail at once, because waiting cannot change them.
+Only a Vercel production build waits by default; `bun run release:check --
+--production` answers immediately, and a preview is not gated at all.
+
 On a production build the check collects every `api.<module>.<function>` the
 site's own source calls (`src`, minus the backend, codegen and tests) and
 compares that list with the functions production says it serves. When one is
@@ -380,7 +391,8 @@ by definition not in production yet.
 
 Run it by hand with `bun run release:check -- --production`; `--url <url>` checks
 another deployment and `--served <spec.json>` checks a saved function spec
-without asking one. `bun run convex:signatures -- --tree` prints this checkout's
+without asking one. `--wait <seconds>` makes a local run wait for the stamp, and
+`--wait 0` makes a Vercel build fail on the first answer. `bun run convex:signatures -- --tree` prints this checkout's
 stamp and `bun run convex:signatures -- --spec <spec.json>` prints a saved
 deployment's. `node scripts/release-expectation.mjs` prints what a build of this
 tree carries, which is what the dashboard compares against.
