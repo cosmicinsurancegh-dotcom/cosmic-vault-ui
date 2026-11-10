@@ -724,7 +724,7 @@ export default function DashboardLayout() {
 
   const notifications = useQuery(api.notifications.mine, { limit: 25 });
   const markAllRead = useMutation(api.notifications.markAllRead);
-  const status = useQuery(api.setup.status, {});
+  const status = useQuery(api.setup.status);
   const bootstrap = useMutation(api.setup.bootstrap);
 
   const role = normalizeRole(user?.role);

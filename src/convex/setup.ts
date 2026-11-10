@@ -1,4 +1,3 @@
-import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
@@ -522,9 +521,7 @@ async function seedCatalogue(ctx: MutationCtx, actorId?: Id<"users">) {
 }
 
 export const status = query({
-  // Temporary release-race probe: the argument is ignored by the handler and
-  // removed once the first-build wait has been verified in production.
-  args: { probe: v.optional(v.boolean()) },
+  args: {},
   handler: async (ctx) => {
     const viewer = await requireViewer(ctx, { allowSuspended: true });
     // Indexed lookup, not `users.take(200)`: once the table is larger than the
