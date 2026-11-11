@@ -1,4 +1,6 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
@@ -7,6 +9,7 @@ import {
   DEFAULT_CONVEX_URL,
   DEFAULT_RELEASE_WAIT_SECONDS,
   decide,
+  readRelease,
   resolveDeploymentUrl,
   resolveWaitSeconds,
   siteFunctionRefs,
@@ -53,6 +56,45 @@ afterEach(async () => {
       .map((directory) => rm(directory, { recursive: true, force: true })),
   );
 });
+
+/**
+ * A stub deployment that answers `setup:release` with each payload in turn and
+ * repeats the last one. A number is answered as that HTTP status instead.
+ */
+async function releaseStub(payloads: Array<Record<string, unknown> | number>) {
+  const requests: Array<Record<string, unknown>> = [];
+  let calls = 0;
+  const server = createServer((request, response) => {
+    let body = "";
+    request.on("data", (chunk: Buffer) => {
+      body += chunk.toString();
+    });
+    request.on("end", () => {
+      requests.push(JSON.parse(body) as Record<string, unknown>);
+      const payload = payloads[Math.min(calls, payloads.length - 1)];
+      calls += 1;
+      if (typeof payload === "number") {
+        response.writeHead(payload);
+        response.end("not ready");
+        return;
+      }
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify(payload));
+    });
+  });
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  const { port } = server.address() as AddressInfo;
+  return {
+    url: `http://127.0.0.1:${port}`,
+    requests,
+    close: () =>
+      new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      }),
+  };
+}
 
 describe("stripComments", () => {
   it("drops references written in comments", () => {
@@ -445,5 +487,66 @@ describe("waitForVerdict", () => {
     expect(outcome.ok).toBe(false);
     expect(outcome.error).toBe(failure);
     expect(outcome.attempts).toBe(2);
+  });
+});
+
+describe("the release gate over HTTP", () => {
+  /**
+   * The production race: the build asks while the functions deploy is still
+   * publishing. The first answer arrives over real HTTP and is one function
+   * short, so the gate has to fetch again rather than refuse the release.
+   */
+  it("waits until a stub deployment that starts a function short catches up", async () => {
+    const stub = await releaseStub([
+      {
+        status: "success",
+        value: {
+          functions: ["tickets:mine"],
+          signatures: { "tickets:mine": "aaaa" },
+        },
+      },
+      {
+        status: "success",
+        value: {
+          functions: ["tickets:mine", "tickets:queueSummary"],
+          signatures: { "tickets:mine": "aaaa", "tickets:queueSummary": "bbbb" },
+        },
+      },
+    ]);
+    let clock = 0;
+    const sleeps: number[] = [];
+    try {
+      const outcome = await waitForVerdict({
+        read: () => readRelease(stub.url),
+        decide: (release) =>
+          decide({
+            environment: "production",
+            required: ["tickets:mine", "tickets:queueSummary"],
+            served: release.functions,
+            signatures: release.signatures,
+            expected: { "tickets:mine": "aaaa", "tickets:queueSummary": "bbbb" },
+          }),
+        waitSeconds: 30,
+        retrySeconds: 5,
+        now: () => clock,
+        sleep: async (milliseconds) => {
+          sleeps.push(milliseconds);
+          clock += milliseconds;
+        },
+      });
+
+      expect(outcome.ok).toBe(true);
+      expect(outcome.attempts).toBe(2);
+      expect(sleeps).toEqual([5_000]);
+      expect(stub.requests).toHaveLength(2);
+      // The gate asks the query the deployment publishes its release through.
+      expect(stub.requests[0]).toMatchObject({
+        path: "setup:release",
+        args: {},
+        format: "json",
+      });
+    } finally {
+      await stub.close();
+    }
   });
 });
